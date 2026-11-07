@@ -128,13 +128,35 @@ func _run_smoke_test() -> void:
 		quit(1)
 		return
 	var player_node := instance.get_node("Player")
+	var hud_node := instance.get_node("HUD")
+	var screen_size: Vector2 = instance.get_viewport().get_visible_rect().size
 	var start_position: Vector3 = player_node.global_position
-	player_node.call("set_mobile_move_vector", Vector2(0.0, 1.0))
+
+	# Drive the actual HUD touch handler: left thumb down, then drag the virtual stick upward.
+	var touch_origin := Vector2(screen_size.x * 0.16, screen_size.y * 0.72)
+	var touch_press := InputEventScreenTouch.new()
+	touch_press.index = 7
+	touch_press.position = touch_origin
+	touch_press.pressed = true
+	hud_node.call("_input", touch_press)
+	var touch_drag := InputEventScreenDrag.new()
+	touch_drag.index = 7
+	touch_drag.position = touch_origin + Vector2(0.0, -72.0)
+	hud_node.call("_input", touch_drag)
+	var touch_vector: Vector2 = Vector2(player_node.get("touch_move_vector"))
+	if touch_vector.y < 0.75:
+		push_error("Smoke test failed: real left-stick touch drag did not reach the player movement controller.")
+		quit(1)
+		return
 	for frame in range(48):
 		await physics_frame
-	player_node.call("set_mobile_move_vector", Vector2.ZERO)
+	var touch_release := InputEventScreenTouch.new()
+	touch_release.index = 7
+	touch_release.position = touch_origin + Vector2(0.0, -72.0)
+	touch_release.pressed = false
+	hud_node.call("_input", touch_release)
 	if player_node.global_position.distance_to(start_position) < 0.45:
-		push_error("Smoke test failed: player did not respond to movement joystick input.")
+		push_error("Smoke test failed: player did not move after the HUD touch joystick drag.")
 		quit(1)
 		return
 	if player_node.global_position.y < start_position.y - 1.15:
@@ -146,7 +168,6 @@ func _run_smoke_test() -> void:
 		quit(1)
 		return
 
-	var screen_size: Vector2 = instance.get_viewport().get_visible_rect().size
 	var joystick_control := instance.get_node("HUD/Overlay/MovementJoystick") as Control
 	var fire_control := instance.get_node("HUD/Overlay/FireButton") as Control
 	var aim_control := instance.get_node("HUD/Overlay/AimButton") as Control
@@ -189,17 +210,47 @@ func _run_smoke_test() -> void:
 		quit(1)
 		return
 
-	# Check a real trigger press consumes one round, then cycle the actual ammo modes.
+	# Drive the real HUD button signals rather than calling the weapon methods directly.
 	set_current_scene(instance)
 	var ammo_before := int(weapon_controller.get("magazine_ammo"))
-	weapon_controller.call("_try_fire")
+	var fire_button := instance.get_node("HUD/Overlay/FireButton") as Button
+	fire_button.emit_signal("button_down")
+	await process_frame
+	await process_frame
+	fire_button.emit_signal("button_up")
+	await process_frame
 	if int(weapon_controller.get("magazine_ammo")) != ammo_before - 1:
-		push_error("Smoke test failed: firing did not consume one magazine round.")
+		push_error("Smoke test failed: touching FIRE did not consume one magazine round.")
 		quit(1)
 		return
-	weapon_controller.call("cycle_ammo_type")
+
+	var aim_button := instance.get_node("HUD/Overlay/AimButton") as Button
+	aim_button.emit_signal("pressed")
+	if not bool(weapon_controller.get("aim_enabled")):
+		push_error("Smoke test failed: AIM button did not engage aim-down-sights.")
+		quit(1)
+		return
+	aim_button.emit_signal("pressed")
+
+	var ammo_button := instance.get_node("HUD/Overlay/AmmoButton") as Button
+	ammo_button.emit_signal("pressed")
 	if int(weapon_controller.get("ammo_type_index")) != 1:
-		push_error("Smoke test failed: tracer ammunition mode did not activate.")
+		push_error("Smoke test failed: touching AMMO did not activate tracer ammunition.")
+		quit(1)
+		return
+
+	var reload_button := instance.get_node("HUD/Overlay/ReloadButton") as Button
+	reload_button.emit_signal("button_down")
+	await process_frame
+	await process_frame
+	reload_button.emit_signal("button_up")
+	await process_frame
+	if not bool(weapon_controller.get("is_reloading")):
+		push_error("Smoke test failed: touching RELOAD did not start a magazine reload.")
+		quit(1)
+		return
+	if weapon_animation.current_animation != "Rig|AK_Reload_full":
+		push_error("Smoke test failed: reload did not start the authored first-person reload animation.")
 		quit(1)
 		return
 

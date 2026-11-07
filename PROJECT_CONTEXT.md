@@ -395,3 +395,10 @@ Projectile behavior:
 - Android export then created and signed the APK successfully, but the workflow step returned failure because its final asset-existence assertions still checked obsolete files from the previous AK/AR asset pass (`ak47_27.ogg`, `ar15_24.ogg`) instead of the new six AK sample names and the new AK-74M model paths. This was a stale CI guard, not a Godot project import or GDScript failure.
 - Updated the export step's final required-file checks to require the actual pinned AK-74M glTF/bin/base-colour textures, current AK recording sample paths, sand footsteps and terrain PBR diffuse map. The next run must pass Android export, APK integrity, signature and ARM64 checks before an APK can be provided.
 - **Validation boundary:** this headless pass proves the player movement logic and collision interaction in Godot CI, but not the touch feel or visual composition on the user's actual phone. The new APK has not yet been produced by a fully green CI run.
+
+
+## Strengthen mobile touch-to-game acceptance checks — 2026-11-08
+
+- After the latest green smoke test, expanded it again to exercise the HUD's real touch-handling route instead of setting the player's mobile movement vector directly. The test injects a left-side screen-touch press and upward drag into HUD._input, verifies the emitted vector reaches the player controller, holds it over physics frames, releases the same touch index and verifies the player actually changes world position without falling through.
+- The test now emits the FIRE button's button_down/button_up signals and verifies a magazine round is consumed; emits AIM and verifies ADS toggles; emits AMMO and verifies the red tracer ammunition mode; and emits RELOAD and verifies that reloading starts with the authored full-reload animation clip.
+- This closes a gap between the earlier logic-only movement test and the actual mobile HUD event wiring. It is not yet a phone hardware test, but it gives CI a direct automated check of the touch-event → HUD → player/weapon-controller path.
