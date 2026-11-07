@@ -189,11 +189,11 @@ func _build_approach_track() -> void:
 		var left1 := Vector3(center1 - width1, _terrain_height(center1 - width1, z1) + 0.075, z1)
 		var right1 := Vector3(center1 + width1, _terrain_height(center1 + width1, z1) + 0.075, z1)
 		tool.add_vertex(left0)
-		tool.add_vertex(left1)
-		tool.add_vertex(right0)
 		tool.add_vertex(right0)
 		tool.add_vertex(left1)
+		tool.add_vertex(right0)
 		tool.add_vertex(right1)
+		tool.add_vertex(left1)
 	tool.generate_normals()
 	var track := MeshInstance3D.new()
 	track.name = "DustyApproachTrack"
@@ -382,9 +382,9 @@ func _create_hud() -> void:
 		player.attach_hud(hud)
 		var weapon_node := player.get_node_or_null("WeaponController")
 		if weapon_node != null:
-			hud.weapon_selected.connect(Callable(weapon_node, "select_weapon"))
-		hud.sensitivity_adjust_requested.connect(Callable(player, "adjust_sensitivity"))
-		hud.night_toggle_requested.connect(_toggle_night_from_hud)
+			hud.connect("weapon_selected", Callable(weapon_node, "select_weapon"))
+		hud.connect("sensitivity_adjust_requested", Callable(player, "adjust_sensitivity"))
+		hud.connect("night_toggle_requested", Callable(self, "_toggle_night_from_hud"))
 
 func _toggle_night_from_hud() -> void:
 	_set_night_mode(not night_mode)
