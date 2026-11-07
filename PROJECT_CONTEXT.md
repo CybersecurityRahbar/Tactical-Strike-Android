@@ -209,3 +209,15 @@ Projectile behavior:
 - Final standalone APK SHA-256: `566cc17eab9fdf6ca04d60b8c85fbcf45ce31636a1fb6cdd0ebb27394ac26692`.
 - APK size: 28,523,024 bytes. CI validation report confirms archive integrity, signature, manifest, DEX and ARM64 native library: all PASS.
 - Added `paths-ignore` for README, PROJECT_CONTEXT and documentation-only pushes so future context bookkeeping does not needlessly rebuild the unchanged Android APK. Manual workflow dispatch and actual code pushes continue to build.
+
+
+## Current final verified build artifact — 2026-11-07
+
+- Latest successful run after the workflow trigger cleanup: [42405706021](https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42405706021), commit `61de784136b37a83ed4e8142bda269657aa50d5b`.
+- Result: **success** across Godot import, core-script smoke test, APK export, ZIP integrity, APK signature, Android manifest/classes/ARM64 checks, and artifact upload.
+- Artifact ID: `13587581782`; artifact name: `TacticalStrike-Android-verified`; size: 28,309,884 bytes.
+- Exact artifact downloaded and independently rechecked: outer ZIP passes CRC/integrity test; extracted APK passes its own full ZIP/CRC test and is identified as an Android package.
+- Final APK size: 28,523,024 bytes.
+- Final APK SHA-256: `118252b53a0ea561c7c9c908da1d2cc9ac6d985a1928893caaa4a916029dcccc`.
+- The standalone copy supplied in the conversation and its `.sha256` sidecar were extracted from this exact final artifact. The small validation report confirms archive integrity, APK signature, AndroidManifest.xml, classes.dex and ARM64 native library all PASS.
+- Later documentation-only commits do not trigger another build because the workflow now ignores README, PROJECT_CONTEXT and `docs/**`. Code changes and manual workflow dispatches still trigger a build.

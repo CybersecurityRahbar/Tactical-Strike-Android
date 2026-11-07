@@ -26,13 +26,13 @@ See the [battlefield layout blueprint](docs/BATTLEFIELD_DESIGN.md) and its [top-
 ## Latest verified Android build
 
 The verified Android debug APK was rebuilt on 7 November 2026:
-- [Open the successful and verified GitHub Actions run](https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42405548021).
+- [Open the successful and verified GitHub Actions run](https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42405706021).
 - Godot project import and the full core-script smoke test passed.
 - The APK exported successfully.
 - APK internal ZIP integrity and signing checks passed.
 - Android manifest, DEX bytecode and ARM64 Godot native library checks passed.
 - The Actions artifact includes the APK, a SHA-256 checksum file and an APK validation report.
-- APK SHA-256: `566cc17eab9fdf6ca04d60b8c85fbcf45ce31636a1fb6cdd0ebb27394ac26692`.
+- APK SHA-256: `118252b53a0ea561c7c9c908da1d2cc9ac6d985a1928893caaa4a916029dcccc`.
 
 The APK has **not yet been installed or tested on a physical Android phone**. CI success confirms build/export and file-integrity checks, not on-device gameplay quality.
 
