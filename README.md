@@ -23,15 +23,22 @@ See the [battlefield layout blueprint](docs/BATTLEFIELD_DESIGN.md) and its [top-
 - Dust impacts, cover integrity, shallow-angle ricochet and directional near-miss audio.
 - Day and night environment settings.
 
-## Cloud build status
+## Latest verified Android build
 
-The first automated Android build completed successfully on 7 November 2026:
-- Godot headless import passed.
-- The strengthened smoke test confirmed all core scripts compile and the main scene creates the terrain, player and HUD.
-- Android debug APK export and artifact upload passed.
-- The exported APK is ARM64 and approximately 27 MB. It has **not yet been tested on a physical Android phone**.
+The verified Android debug APK was rebuilt on 7 November 2026:
+- [Open the successful and verified GitHub Actions run](https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42405392723).
+- Godot project import and the full core-script smoke test passed.
+- The APK exported successfully.
+- APK internal ZIP integrity and signing checks passed.
+- Android manifest, DEX bytecode and ARM64 Godot native library checks passed.
+- The Actions artifact includes the APK, a SHA-256 checksum file and an APK validation report.
+- APK SHA-256: `1d3efd4c492828791bf1d9f355e1d49c60154032af5f212d50c168110106e51f`.
 
-[Open the successful GitHub Actions build](https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42402765482).
+The APK has **not yet been installed or tested on a physical Android phone**. CI success confirms build/export and file-integrity checks, not on-device gameplay quality.
+
+## Download and installation note
+
+GitHub Actions automatically wraps uploaded artifact files in a ZIP archive. Extract the outer artifact ZIP once; inside it is `TacticalStrike-debug.apk`, which should be installed directly rather than extracted. A partial APK (for example, only 12 MB) is incomplete and must not be installed. The APK is already a ZIP-based Android package, so recompressing it with another ZIP or 7z container provides very little additional size reduction.
 
 ## What is still a prototype
 

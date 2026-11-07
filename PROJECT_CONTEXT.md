@@ -182,3 +182,19 @@ Projectile behavior:
 - Compression analysis: the outer GitHub ZIP is 28,309,482 bytes versus the inner APK at 28,523,024 bytes, a saving of only 213,542 bytes (0.75%). This is expected because APK is itself a ZIP container whose contents are already compressed. A local XZ level-9 test reduced the APK by only about 1.4%, so switching to 7z is not expected to materially speed up download.
 - For this conversation, extracted the verified APK from the exact current successful artifact as a standalone file so it can be installed directly without first extracting the GitHub artifact ZIP.
 - Hardened the GitHub Actions workflow: after export it must test APK ZIP integrity, verify the Android signature with `apksigner`, confirm the manifest/classes/ARM64 Godot library, and generate a SHA-256 checksum before the artifact is uploaded. The artifact now includes the APK and a small validation/checksum report, with maximum ZIP compression. This workflow change requires a fresh CI run; it is not treated as passed until that run succeeds.
+
+
+## Verified rebuild after extraction report — 2026-11-07
+
+- Added a mandatory post-export validation step to `.github/workflows/android.yml`.
+- New successful run: [42405392723](https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42405392723), commit `79333aca0d7247c9350fbab8306319bbf092049b`.
+- All required pipeline stages succeeded: Godot project import, full core-script smoke test, Android APK export, APK ZIP/CRC test, `apksigner verify`, Android manifest/classes checks, ARM64 native-library check and artifact upload.
+- New artifact: `TacticalStrike-Android-verified`, artifact ID `13587750085`, GitHub Actions run 42405392723.
+- Artifact ZIP size: 28,309,886 bytes. Inner APK size: 28,523,024 bytes.
+- The exact uploaded artifact was downloaded again and independently checked in the working environment: outer ZIP passed `unzip -t`; the extracted APK passed a complete ZIP/CRC test and was identified as an Android package.
+- APK SHA-256: `1d3efd4c492828791bf1d9f355e1d49c60154032af5f212d50c168110106e51f`.
+- GitHub Actions produced a matching `TacticalStrike-debug.apk.sha256` sidecar and `apk-validation.txt` report. All checks in the report are PASS.
+- A standalone copy of this verified APK was generated for the user in the conversation so installation does not require extracting the GitHub Actions outer ZIP.
+- Artifact ZIP compression is set to level 9. The APK itself is a ZIP-based Android package with already-compressed contents, so the outer archive is expected to be only about 0.75% smaller than the APK. Stronger 7z/LZMA compression is not expected to materially improve download size; a local high-compression XZ test improved size by only about 1.4%.
+- The prior partial 12 MB file is not the build output. Do not install partial files. The standalone APK and checksum above refer to the independently verified complete APK.
+- **Remaining limitation:** CI validates file integrity, signature and target ABI, but no physical Android device installation or in-game performance test has yet been carried out.
