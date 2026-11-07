@@ -40,14 +40,15 @@ jobs:
           curl -L --fail --retry 3 "https://downloads.godotengine.org/?flavor=stable&platform=linux.64&slug=linux.x86_64.zip&version=${{ env.GODOT_VERSION }}" -o godot.zip
           unzip -q godot.zip
           chmod +x "Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64"
-          echo "$PWD/Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64" >> "$GITHUB_PATH"
+          echo "GODOT_BIN=$PWD/Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64" >> "$GITHUB_ENV"
 
       - name: Install matching Android export templates
         run: |
           curl -L --fail --retry 3 "https://downloads.godotengine.org/?flavor=stable&platform=templates&slug=export_templates.tpz&version=${{ env.GODOT_VERSION }}" -o templates.tpz
+          mapfile -t android_templates < <(unzip -Z1 templates.tpz | grep -E '^templates/(android_debug\.apk|android_release\.apk|android_source\.zip)$')
+          test "${#android_templates[@]}" -eq 3
           mkdir -p "$HOME/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.stable"
-          mkdir -p /tmp/godot-templates
-          unzip -q templates.tpz -d /tmp/godot-templates
+          unzip -q templates.tpz "${android_templates[@]}" -d /tmp/godot-templates
           cp -a /tmp/godot-templates/templates/. "$HOME/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.stable/"
 
       - name: Configure Android SDK paths for Godot
@@ -62,15 +63,15 @@ jobs:
 
       - name: Import and parse project
         run: |
-          godot --headless --editor --path . --quit
+          "$GODOT_BIN" --headless --editor --path . --quit
 
       - name: Run headless scene smoke test
-        run: godot --headless --path . --script res://tests/smoke_test.gd
+        run: "$GODOT_BIN" --headless --path . --script res://tests/smoke_test.gd
 
       - name: Export Android debug APK
         run: |
           mkdir -p build
-          godot --headless --path . --export-debug "Android" build/TacticalStrike-debug.apk
+          "$GODOT_BIN" --headless --path . --export-debug "Android" build/TacticalStrike-debug.apk
           test -s build/TacticalStrike-debug.apk
 
       - name: Upload Android APK
