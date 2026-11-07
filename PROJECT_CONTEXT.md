@@ -108,3 +108,14 @@ Projectile behavior:
 5. Test GDScript parsing and scene startup in headless CI before exporting APK.
 6. After each major step, record files changed, tests run, results, and unresolved issues in this context file.
 7. Never claim a successful APK build without a successful Actions run and artifact verification.
+
+
+## CI follow-up — 2026-11-07
+
+- First Android workflow attempt stopped before project validation because the legacy Android SDK package name `tools` is no longer available from the current SDK package repository.
+- The workflow was changed to use the preinstalled GitHub-hosted Android SDK and install only current packages (`platform-tools`, Android platform 36 and build-tools 36.0.0). These installation steps succeeded in the next run.
+- The second attempt downloaded Godot and the Android export templates successfully, but the Godot executable was mistakenly appended to `GITHUB_PATH` as though it were a directory. The subsequent import step therefore could not find the `godot` command. The workflow is being corrected to persist the exact executable path in `GODOT_BIN` and invoke that executable explicitly.
+- Android export-template archive is approximately 1.2 GB. The workflow now extracts only the three Android template files instead of unpacking templates for every platform.
+- Android orientation changed to landscape to suit the first-person shooter layout.
+- Mobile one-shot HUD controls now send press/release on separate button-down/button-up events so reload and weapon-cycle actions can register as discrete input transitions.
+- **Validation status:** no successful Godot import, scene smoke test or Android APK export has been confirmed yet. The next CI run must pass all three before an APK can be offered as a tested build.
