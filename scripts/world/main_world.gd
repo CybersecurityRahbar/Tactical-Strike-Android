@@ -89,8 +89,8 @@ func _terrain_height(x: float, z: float) -> float:
 	var ridge_two := 6.0 * exp(-pow((z - (-72.0 + sin(x * 0.014) * 24.0)) / 48.0, 2.0))
 	var low_saddle := -1.4 * exp(-pow((z + 5.0) / 30.0, 2.0))
 	var height := rolling + broad + ridge_one + ridge_two + low_saddle
-	var attacker_trench := abs(z - (205.0 + sin(x * 0.055) * 2.2))
-	var defender_trench := abs(z - (-205.0 + sin(x * 0.045) * 2.4))
+	var attacker_trench: float = absf(z - (205.0 + sin(x * 0.055) * 2.2))
+	var defender_trench: float = absf(z - (-205.0 + sin(x * 0.045) * 2.4))
 	if attacker_trench < 3.0:
 		height -= (1.0 - attacker_trench / 3.0) * 1.0
 	if defender_trench < 3.0:
@@ -161,12 +161,12 @@ func _build_cover_layout() -> void:
 func _build_trench_line(center_z: float, x_start: float, x_end: float, count: int, prefix: String) -> void:
 	for i in range(count):
 		var t := float(i) / float(maxi(count - 1, 1))
-		var x := lerp(x_start, x_end, t)
+		var x: float = lerpf(x_start, x_end, t)
 		var z := center_z + sin(float(i) * 0.43) * 1.5
 		var ground := _terrain_height(x, z)
 		for row in range(2):
-			var offset_x := x + (0.45 if row == 1 else 0.0)
-			var offset_z := z + (0.12 if row == 1 else 0.0)
+			var offset_x: float = x + (0.45 if row == 1 else 0.0)
+			var offset_z: float = z + (0.12 if row == 1 else 0.0)
 			_add_cover(prefix + "_Sandbag", Vector3(offset_x, ground + 0.30 + float(row) * 0.48, offset_z), Vector3(1.9, 0.56, 0.82), sandbag_material, 580.0, 0.22)
 
 func _add_house(center: Vector3, footprint: Vector2, material: StandardMaterial3D, house_name: String) -> void:

@@ -125,3 +125,10 @@ Projectile behavior:
 
 - GitHub's server-side workflow validation rejected the revised workflow before creating a runner job. The cause was a malformed YAML scalar in the one-line smoke-test step: its shell command contained an embedded quoted executable path. Converted that step to a YAML block scalar. Earlier zero-job runs were workflow-file validation failures, not Godot compile failures.
 - Next expected check: workflow should now register its job; inspect Godot project import, scene smoke test, and Android export separately.
+
+
+## GDScript smoke-test repair — 2026-11-07
+
+- The first registered Godot run successfully downloaded Godot 4.7.2 and Android export templates and completed the project import step.
+- The headless scene smoke test then exposed strict GDScript typing errors in `main_world.gd`: generic `abs` / `lerp` inference and ternary numeric expressions inferred as Variant.
+- Corrected these expressions with explicit `float` annotations and float-specific `absf` / `lerpf` calls. The next run must confirm scene instantiation and then the APK export; no APK is confirmed from this failed smoke-test run.
