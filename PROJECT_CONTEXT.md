@@ -304,3 +304,11 @@ Projectile behavior:
 ### Validation state
 - All new asset downloads, Godot imports, strengthened movement/model smoke tests and Android exports must pass in the next CI run before an APK can be offered.
 - No claim of physical-device validation is made until the user installs and tests this exact new artifact.
+
+
+## CI correction after external asset integration attempt — 2026-11-07
+
+- The external-asset preparation step succeeded in GitHub Actions and downloaded/unpacked the AK glTF model, M4A1 FBX model, firearm recordings, sand footsteps and all three Rocky Gravel PBR maps.
+- The first Godot headless import also completed. The log reported a non-fatal attempt to process the included M4A1 Blender source project without Blender available; the Godot-ready FBX was present. The preparation script now deletes the source .blend files from the staged runtime directory after unpacking, keeping only engine-importable assets.
+- The strengthened smoke test did not run to completion because Godot 4.7.2 rejected inferred Boolean types for two touch-look-region variables in player_controller.gd. Both variables are now declared explicitly as bool.
+- The run stopped before Android export, so no APK was produced by this attempt. The type fix and Blender-source cleanup are committed for the next full import/smoke/export run.

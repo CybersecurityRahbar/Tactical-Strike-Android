@@ -19,6 +19,8 @@ download "https://opengameart.org/sites/default/files/ak_godotfiles_0.zip" "$TMP
 download "https://opengameart.org/sites/default/files/m4a1.zip" "$TMP/m4a1.zip"
 unzip -q -o "$TMP/ak_godotfiles.zip" -d assets/runtime/models/ak74
 unzip -q -o "$TMP/m4a1.zip" -d assets/runtime/models/m4a1
+# Blender source projects are retained at their public source but not imported by Godot headless CI.
+find assets/runtime/models -type f -name "*.blend" -delete
 
 download "$BASE/sfx/firearm_sfx/Prepared%20SFX%20Library/AK-47/C_27P.wav" "$TMP/ak47_27.wav"
 download "$BASE/sfx/firearm_sfx/Prepared%20SFX%20Library/AK-47/C_31P.wav" "$TMP/ak47_31.wav"

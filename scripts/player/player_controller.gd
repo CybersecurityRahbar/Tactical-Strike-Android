@@ -156,8 +156,8 @@ func _input(event: InputEvent) -> void:
 	elif event is InputEventScreenDrag and _is_touch_device():
 		var viewport_size := get_viewport().get_visible_rect().size
 		# Left third belongs to the movement joystick; the bottom-right strip belongs to action buttons.
-		var is_look_region := event.position.x > viewport_size.x * 0.38
-		var is_clear_vertical_region := event.position.y > 76.0 and event.position.y < viewport_size.y - 204.0
+		var is_look_region: bool = event.position.x > viewport_size.x * 0.38
+		var is_clear_vertical_region: bool = event.position.y > 76.0 and event.position.y < viewport_size.y - 204.0
 		if is_look_region and is_clear_vertical_region:
 			_apply_look(event.relative * mobile_look_multiplier)
 
