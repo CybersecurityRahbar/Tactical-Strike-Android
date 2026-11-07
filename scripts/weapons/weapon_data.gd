@@ -5,6 +5,7 @@ static func all_weapons() -> Array[Dictionary]:
 	return [
 		{
 			"id": "ak74", "name": "AK-74", "caliber": "5.45×39 mm",
+			"model_key": "ak74", "audio_profile": "ak",
 			"muzzle_velocity": 790.0, "drag_coefficient": 0.0000075,
 			"gravity_scale": 1.0, "damage": 38.0, "penetration": 0.34,
 			"max_range": 560.0, "magazine": 30, "fire_interval": 0.105,
@@ -12,6 +13,7 @@ static func all_weapons() -> Array[Dictionary]:
 		},
 		{
 			"id": "m4a1", "name": "M4A1", "caliber": "5.56×45 mm",
+			"model_key": "m4a1", "audio_profile": "ar15",
 			"muzzle_velocity": 850.0, "drag_coefficient": 0.0000068,
 			"gravity_scale": 1.0, "damage": 35.0, "penetration": 0.32,
 			"max_range": 540.0, "magazine": 30, "fire_interval": 0.095,

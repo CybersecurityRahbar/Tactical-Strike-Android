@@ -30,14 +30,14 @@ func _create_tracer_visual() -> void:
 		caliber_factor = 1.8
 	elif str(weapon_stats.get("caliber", "")).contains("7.62"):
 		caliber_factor = 1.25
-	streak.size = Vector3(0.018 * caliber_factor, 0.018 * caliber_factor, 0.68 * caliber_factor)
+	streak.size = Vector3(0.008 * caliber_factor, 0.008 * caliber_factor, 0.34 * caliber_factor)
 	tracer_visual.mesh = streak
 	var material := StandardMaterial3D.new()
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.albedo_color = Color(1.0, 0.10, 0.025)
+	material.albedo_color = Color(1.0, 0.32, 0.14)
 	material.emission_enabled = true
-	material.emission = Color(1.0, 0.055, 0.008)
-	material.emission_energy_multiplier = 2.2
+	material.emission = Color(0.72, 0.12, 0.045)
+	material.emission_energy_multiplier = 0.45
 	tracer_visual.material_override = material
 	add_child(tracer_visual)
 

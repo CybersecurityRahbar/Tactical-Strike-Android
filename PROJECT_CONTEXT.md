@@ -267,3 +267,40 @@ Projectile behavior:
 - APK size: `28,535,312` bytes. SHA-256: `32c0358640d1c6112d3e308ca4a071364829bc04f278fc6a01e296da7f042c75`.
 - The artifact validation report records PASS for archive integrity, APK signature, `AndroidManifest.xml`, `classes.dex`, and the ARM64 Godot native library.
 - **Important test boundary:** this is a successful source/scene/Android-export validation, not a physical-device playtest. The newly built APK has not yet been installed and interacted with on the user's phone. Touch-button placement, real movement/fire response, visual appearance on the phone, and performance still need the user's next playtest. The terrain and weapon shown are still procedural/low-poly prototype geometry, not final AAA-quality assets. Tactical AI and LAN multiplayer are not implemented.
+
+## Second user device playtest: acceptance failure and reference-led rework — 2026-11-07
+
+### User's actual phone feedback
+- The user installed the previously validated usability-repair APK and reported that the terrain looked essentially unchanged, the weapons still looked like crude primitive shapes, the muzzle glow was poor, firearm audio remained synthetic, and walking still did not work.
+- The user explicitly rejected that build as failing the intended game design. This supersedes any implication that the earlier CI/UI changes provided a playable or visually acceptable game.
+- The issue is now treated as a product-level failure, not a request to make small cosmetic adjustments. A successful APK export did not establish game quality; the previous source/scene checks were insufficient.
+
+### Reference research completed
+- Reviewed Special Forces Group 2 mobile control descriptions and gameplay screenshots. Its practical mobile pattern is movement input on the left, look/aim on the right, and separate right-side combat/action controls. Its control layout and sensitivity are customizable. This project uses those interaction principles as a reference only; no proprietary game code, models, textures, sounds or branding are copied. Reference: https://special-forces-group-2.en.uptodown.com/android
+- Reviewed Insurgency: Sandstorm and Squad / Kohat terrain screenshots as environmental art references. The target direction is a dry, rocky, rolling plateau with irregular ridgelines, gullies, exposed rock, sparse dry vegetation, tracks and defensible compounds—not a beige plane and not a dune desert. Reference imagery includes the Insurgency Sandstorm Outskirts preview and Squad Kohat outpost: https://steamcommunity.com/games/581320/announcements/detail/1616141061517089867 and https://joinsquad.com/
+- Selected Poly Haven's Rocky Gravel CC0 PBR material for the ground: diffuse/albedo, OpenGL normal and roughness maps. It depicts reddish-brown gravel with dense small rocks and dirt. Source: https://polyhaven.com/a/rocky_gravel
+- Selected two authored CC0 firearm meshes for the first model-integration milestone: loafbrr_1's AK (Godot-ready archive, 1K textures, approximately 2,670 triangles) and nisu / 3DModelsCC0's M4A1 model. These are real authored weapon meshes rather than hand-assembled box primitives. The AK mesh is a family stand-in, not an exact factory AK-74 mesh. Sources: https://opengameart.org/content/ak and https://opengameart.org/content/m4a1-assault-rifle
+- Selected the CC0 Free Firearm Sound Library's recorded AK-47 and AR-15 takes as the closest available recorded audio for the first two weapons, plus CC0 Fantozzi sand footsteps. These are actual recorded firearm samples, but they are not exact AK-74 and M4A1 recordings. The impact/ricochet layer remains a separate synthetic placeholder. Sources: https://opengameart.org/content/the-free-firearm-sound-library and https://opengameart.org/content/fantozzis-footsteps-grasssand-stone
+- Licensing was checked on the sources above. The build script pins the downloaded sample recordings to a specific public asset-kit commit and converts them to OGG for the game package. The phone does not need network access while playing.
+
+### Code and build changes prepared on main
+- Replaced the old four-button movement D-pad with a true analog virtual joystick on the left. The right half of the screen is reserved for free-look touch-drag; the right-side action cluster has fire, aim, sprint, jump, crouch, reload and next-weapon buttons.
+- Reworked the player controller around smooth ground acceleration, limited air acceleration, slope/floor snapping, crouch height, running cadence, small camera bob, touch look, and an aim-down-sights FOV transition. Added actual sand footstep playback from the CC0 footstep samples.
+- Replaced the previous primitive cube-based gun assembly with imported external weapon mesh scenes/meshes. The import helper normalizes the mesh dimensions and uses the model manifest to locate the authored AK and M4 assets. The first release's active armory is deliberately restricted to these two imported models rather than displaying fake models for PKM/RPG/SVD/DShK/M2, whose correct models have not yet been integrated.
+- Player firing now calls recorded firearm samples from the weapon_audio module, rather than the old generated firing tone. The muzzle effect has been reduced to a brief local light instead of the oversized glowing primitive. Tracer thickness and emissive intensity have also been reduced.
+- Increased terrain height variation and ridge/gully amplitudes, increased terrain mesh resolution, added UVs, and applied the Poly Haven Rocky Gravel diffuse/normal/roughness maps. Increased rock-outcrop geometry/count and moved the spawn slightly forward onto the terrain. Reduced atmospheric haze so the middle/far terrain remains visible.
+- Added tools/prepare_external_assets.sh to download the CC0 models, PBR maps, and recorded audio during CI, unpack/import them into the project and generate the runtime weapon manifest. Updated GitHub Actions to run this step before Godot import/export.
+- Expanded the smoke test to require imported weapon geometry, analog joystick/aim controls and a scripted player movement response; it no longer treats simply creating a HUD as proof that movement is implemented.
+- Added/updated docs/EXTERNAL_ASSET_SOURCES.md with source, licence, provenance and asset-specific limitations.
+
+### Explicit limits that remain
+- The newly imported AK and M4 meshes are static view models in this pass; production reload, firing, sprint and inspect animation clips, rigged first-person hands and animation blending still need to be implemented and playtested.
+- Only AK-74-family and M4A1-family meshes/audio proxies are enabled in this asset milestone. The rest of the planned armory is not yet represented by authentic imported models or exact recorded samples.
+- AK-47/AR-15 recordings are close family proxies and must not be described as exact AK-74/M4A1 original recordings. There is no verified exact PKM, RPG-7, SVD, DShK or M2 audio sample in this pass.
+- Impacts, ricochets and distant combat atmosphere still need recorded/commissioned sound design. This pass replaces the player's main rifle reports and movement footsteps, not every battlefield sound.
+- The external model orientation, scale, placement in the camera and tactile HUD positions still require the user's physical-phone playtest. CI can validate importing a mesh and scripted movement logic; it cannot certify that the gun looks correctly held or that movement feels as smooth as Special Forces Group 2 on the user's device.
+- Tactical AI, coordinated attacker/defender behavior and LAN/Wi-Fi multiplayer remain unimplemented.
+
+### Validation state
+- All new asset downloads, Godot imports, strengthened movement/model smoke tests and Android exports must pass in the next CI run before an APK can be offered.
+- No claim of physical-device validation is made until the user installs and tests this exact new artifact.

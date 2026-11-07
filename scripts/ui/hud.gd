@@ -3,6 +3,8 @@ extends CanvasLayer
 signal weapon_selected(index: int)
 signal night_toggle_requested
 signal sensitivity_adjust_requested(amount: float)
+signal movement_vector_changed(value: Vector2)
+signal aim_toggle_requested(enabled: bool)
 
 var root: Control
 var status_label: Label
@@ -12,10 +14,13 @@ var message_timer := 0.0
 var pause_panel: PanelContainer
 var settings_panel: PanelContainer
 var armory_panel: PanelContainer
+var movement_joystick: Control
+var aim_enabled := false
 
-const WEAPON_NAMES: Array[String] = [
-	"AK-74", "M4A1", "PKM", "RPG-7", "SVD Dragunov", "DShK 12.7", "M2 .50"
-]
+const JOYSTICK_SCRIPT = preload("res://scripts/ui/virtual_joystick.gd")
+
+# Only meshes imported and verified by the asset pipeline appear in this first playable loadout.
+const WEAPON_NAMES: Array[String] = ["AK-74", "M4A1"]
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -28,7 +33,7 @@ func _ready() -> void:
 	_create_crosshair()
 	_create_panels()
 	_create_top_buttons()
-	if _is_touch_device():
+	if _is_touch_device() or DisplayServer.get_name() == "headless":
 		_create_mobile_controls()
 
 func _is_touch_device() -> bool:
@@ -217,16 +222,54 @@ func _select_weapon(index: int) -> void:
 		pause_panel.visible = true
 
 func _create_mobile_controls() -> void:
-	_make_touch_button("MoveForward", "▲", "move_forward", 46.0, 184.0, 68.0, 62.0, false, false)
-	_make_touch_button("MoveBack", "▼", "move_back", 46.0, 42.0, 68.0, 62.0, false, false)
-	_make_touch_button("MoveLeft", "◀", "move_left", 0.0, 113.0, 68.0, 62.0, false, false)
-	_make_touch_button("MoveRight", "▶", "move_right", 92.0, 113.0, 68.0, 62.0, false, false)
-	_make_touch_button("FireButton", "FIRE", "fire", 30.0, 38.0, 128.0, 96.0, true, true)
-	_make_touch_button("SprintButton", "RUN", "sprint", 176.0, 42.0, 82.0, 60.0, false, true)
-	_make_touch_button("CrouchButton", "CROUCH", "crouch", 270.0, 42.0, 92.0, 60.0, false, true)
-	_make_touch_button("JumpButton", "JUMP", "jump", 176.0, 112.0, 82.0, 58.0, false, true)
-	_make_touch_button("ReloadButton", "RELOAD", "reload", 30.0, 150.0, 94.0, 52.0, false, true)
-	_make_touch_button("NextWeaponButton", "NEXT", "weapon_next", 136.0, 150.0, 82.0, 52.0, false, true)
+	movement_joystick = JOYSTICK_SCRIPT.new()
+	movement_joystick.name = "MovementJoystick"
+	movement_joystick.anchor_left = 0.0
+	movement_joystick.anchor_right = 0.0
+	movement_joystick.anchor_top = 1.0
+	movement_joystick.anchor_bottom = 1.0
+	movement_joystick.offset_left = 24.0
+	movement_joystick.offset_top = -202.0
+	movement_joystick.offset_right = 206.0
+	movement_joystick.offset_bottom = -20.0
+	movement_joystick.connect("value_changed", Callable(self, "_on_joystick_value_changed"))
+	root.add_child(movement_joystick)
+
+	# Primary combat controls are grouped on the right, leaving the center clear for look input.
+	_make_touch_button("FireButton", "FIRE", "fire", 18.0, 24.0, 122.0, 92.0, true, true)
+	_make_aim_button()
+	_make_touch_button("SprintButton", "RUN", "sprint", 248.0, 30.0, 82.0, 58.0, false, true)
+	_make_touch_button("JumpButton", "JUMP", "jump", 18.0, 130.0, 76.0, 56.0, false, true)
+	_make_touch_button("CrouchButton", "CROUCH", "crouch", 102.0, 130.0, 94.0, 56.0, false, true)
+	_make_touch_button("ReloadButton", "RELOAD", "reload", 204.0, 130.0, 94.0, 56.0, false, true)
+	_make_touch_button("NextWeaponButton", "NEXT", "weapon_next", 306.0, 130.0, 82.0, 56.0, false, true)
+
+func _on_joystick_value_changed(value: Vector2) -> void:
+	movement_vector_changed.emit(value)
+
+func _make_aim_button() -> void:
+	var button := Button.new()
+	button.name = "AimButton"
+	button.text = "AIM"
+	button.anchor_left = 1.0
+	button.anchor_right = 1.0
+	button.anchor_top = 1.0
+	button.anchor_bottom = 1.0
+	button.offset_left = -150.0
+	button.offset_right = -60.0
+	button.offset_top = -88.0
+	button.offset_bottom = -24.0
+	_style_button(button, false)
+	button.pressed.connect(_toggle_aim)
+	root.add_child(button)
+
+func _toggle_aim() -> void:
+	aim_enabled = not aim_enabled
+	aim_toggle_requested.emit(aim_enabled)
+	var button := root.get_node_or_null("AimButton") as Button
+	if button != null:
+		button.text = "AIM ON" if aim_enabled else "AIM"
+		button.modulate = Color(1.0, 0.84, 0.54, 0.96) if aim_enabled else Color(1.0, 1.0, 1.0, 0.82)
 
 func _make_touch_button(node_name: String, caption: String, action: String, left: float, bottom: float, width: float, height: float, accent: bool, align_right: bool) -> void:
 	if not InputMap.has_action(action):

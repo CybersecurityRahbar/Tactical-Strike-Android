@@ -2,40 +2,81 @@ extends Node3D
 
 const WEAPON_DATA = preload("res://scripts/weapons/weapon_data.gd")
 const PROJECTILE = preload("res://scripts/weapons/projectile.gd")
-const BALLISTIC_AUDIO = preload("res://scripts/effects/ballistic_audio.gd")
+const WEAPON_AUDIO = preload("res://scripts/effects/weapon_audio.gd")
 
 var camera: Camera3D
 var shooter: Node3D
 var hud: CanvasLayer
 var weapons: Array[Dictionary] = []
+var model_paths: Dictionary = {}
 var current_index := 0
 var magazine_ammo := 0
 var fire_cooldown := 0.0
 var total_shots := 0
 var tracer_mode := false
+var aiming := false
 var weapon_view_model: Node3D
+var imported_weapon: Node3D
 var recoil_amount := 0.0
-var view_model_base := Vector3(0.34, -0.29, -0.58)
+var aim_blend := 0.0
+var view_model_base := Vector3(0.34, -0.27, -0.58)
+var view_model_ads := Vector3(0.04, -0.205, -0.73)
+var sway_time := 0.0
+var current_fire_profile := ""
 
 func initialize(camera_ref: Camera3D, shooter_ref: Node3D) -> void:
 	camera = camera_ref
 	shooter = shooter_ref
-	weapons = WEAPON_DATA.all_weapons()
+	_read_model_manifest()
+	var all_weapons: Array[Dictionary] = WEAPON_DATA.all_weapons()
+	# Do not pretend that an unavailable PKM, RPG, SVD or heavy-gun model is present.
+	# The first playable asset pass exposes only the two weapons with actual imported meshes.
+	for spec in all_weapons:
+		var model_key := str(spec.get("model_key", ""))
+		if model_paths.has(model_key) and ResourceLoader.exists(str(model_paths[model_key])):
+			weapons.append(spec)
 	if weapons.is_empty():
+		push_error("No imported first-person weapon models were prepared for this build.")
 		return
 	magazine_ammo = int(weapons[0].magazine)
+	current_fire_profile = str(weapons[0].audio_profile)
 	_build_weapon_view_model()
 	_update_hud()
+
+func _read_model_manifest() -> void:
+	var path := "res://assets/runtime/weapon_manifest.json"
+	if not FileAccess.file_exists(path):
+		push_error("Weapon model manifest missing. External asset preparation did not run.")
+		return
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		push_error("Could not open weapon model manifest.")
+		return
+	var parsed = JSON.parse_string(file.get_as_text())
+	if not parsed is Dictionary:
+		push_error("Weapon model manifest is invalid JSON.")
+		return
+	model_paths = parsed
 
 func set_hud(hud_ref: CanvasLayer) -> void:
 	hud = hud_ref
 	_update_hud()
 
+func set_aiming(enabled: bool) -> void:
+	aiming = enabled
+
 func _process(delta: float) -> void:
 	fire_cooldown = maxf(0.0, fire_cooldown - delta)
-	recoil_amount = move_toward(recoil_amount, 0.0, delta * 2.8)
+	recoil_amount = move_toward(recoil_amount, 0.0, delta * 2.5)
+	aim_blend = move_toward(aim_blend, 1.0 if aiming else 0.0, delta * 7.0)
+	sway_time += delta
 	if weapon_view_model != null:
-		weapon_view_model.position = view_model_base + Vector3(0.0, recoil_amount * 0.28, recoil_amount)
+		var target_position := view_model_base.lerp(view_model_ads, aim_blend)
+		var sway := Vector3(sin(sway_time * 2.1) * 0.004, cos(sway_time * 4.2) * 0.004, 0.0)
+		weapon_view_model.position = target_position + sway + Vector3(0.0, recoil_amount * 0.16, recoil_amount)
+		weapon_view_model.rotation.x = -recoil_amount * 0.44
+	if weapons.is_empty():
+		return
 	if Input.is_action_just_pressed("weapon_next"):
 		select_weapon((current_index + 1) % weapons.size())
 	if Input.is_action_just_pressed("reload"):
@@ -54,16 +95,21 @@ func select_weapon(index: int) -> void:
 		return
 	current_index = index
 	magazine_ammo = int(weapons[current_index].magazine)
+	current_fire_profile = str(weapons[current_index].audio_profile)
 	_build_weapon_view_model()
 	_update_hud()
 
 func reload_weapon() -> void:
+	if weapons.is_empty():
+		return
 	magazine_ammo = int(weapons[current_index].magazine)
 	_update_hud()
 	if hud != null:
 		hud.set_message("MAGAZINE READY")
 
 func _try_fire() -> void:
+	if weapons.is_empty():
+		return
 	if fire_cooldown > 0.0 or magazine_ammo <= 0:
 		if magazine_ammo <= 0 and hud != null:
 			hud.set_message("EMPTY — RELOAD")
@@ -72,16 +118,18 @@ func _try_fire() -> void:
 	fire_cooldown = float(spec.fire_interval)
 	magazine_ammo -= 1
 	total_shots += 1
-	recoil_amount = 0.075
+	recoil_amount = 0.12 if aiming else 0.085
+	if is_instance_valid(shooter) and shooter.has_method("add_weapon_recoil"):
+		shooter.call("add_weapon_recoil", 0.018 if aiming else 0.012)
 	var automatic_tracer := int(spec.tracer_every) > 0 and total_shots % int(spec.tracer_every) == 0
-	var use_tracer := tracer_mode or automatic_tracer or str(spec.projectile_kind) == "rocket"
+	var use_tracer := tracer_mode or automatic_tracer
 	var forward := -camera.global_transform.basis.z.normalized()
-	var muzzle := camera.global_position + camera.global_transform.basis * Vector3(0.34, -0.30, -1.30)
+	var muzzle := camera.global_position + camera.global_transform.basis * Vector3(0.27, -0.19, -1.14)
 	var projectile := PROJECTILE.new()
 	get_tree().current_scene.add_child(projectile)
 	projectile.setup(muzzle, forward * float(spec.muzzle_velocity), spec, shooter, use_tracer)
-	BALLISTIC_AUDIO.play_at(get_tree().current_scene, muzzle, 0.105, 0.75, 185.0)
-	_spawn_muzzle_flash()
+	WEAPON_AUDIO.play_fire(get_tree().current_scene, muzzle, str(spec.audio_profile), -1.0 if not aiming else -2.5)
+	_spawn_muzzle_light(muzzle)
 	_update_hud()
 
 func _build_weapon_view_model() -> void:
@@ -93,78 +141,93 @@ func _build_weapon_view_model() -> void:
 	weapon_view_model.name = "WeaponViewModel"
 	weapon_view_model.position = view_model_base
 	camera.add_child(weapon_view_model)
-	var metal := StandardMaterial3D.new()
-	metal.albedo_color = Color(0.105, 0.115, 0.105)
-	metal.metallic = 0.62
-	metal.roughness = 0.48
-	var dark_metal := StandardMaterial3D.new()
-	dark_metal.albedo_color = Color(0.045, 0.052, 0.049)
-	dark_metal.metallic = 0.38
-	dark_metal.roughness = 0.72
-	var furniture := StandardMaterial3D.new()
-	furniture.albedo_color = Color(0.18, 0.145, 0.095)
-	furniture.roughness = 0.92
-	var cloth := StandardMaterial3D.new()
-	cloth.albedo_color = Color(0.16, 0.19, 0.145)
-	cloth.roughness = 1.0
-	var weapon_id := str(weapons[current_index].id)
-	var is_launcher := weapon_id == "rpg7"
-	var is_heavy := weapon_id == "dshk" or weapon_id == "m2" or weapon_id == "pkm"
-	var barrel_length := 0.82 if is_heavy else 0.68
-	if is_launcher:
-		barrel_length = 0.94
-	_add_box(weapon_view_model, "Receiver", Vector3(0.19, 0.17, 0.40), Vector3(0.0, 0.0, 0.02), metal)
-	_add_box(weapon_view_model, "TopCover", Vector3(0.17, 0.045, 0.37), Vector3(0.0, 0.105, -0.015), dark_metal)
-	_add_box(weapon_view_model, "Handguard", Vector3(0.135, 0.12, barrel_length * 0.62), Vector3(0.0, -0.005, -0.28), furniture)
-	_add_box(weapon_view_model, "Barrel", Vector3(0.055, 0.055, barrel_length), Vector3(0.0, 0.025, -0.34 - barrel_length * 0.46), metal)
-	_add_box(weapon_view_model, "Muzzle", Vector3(0.075, 0.075, 0.10), Vector3(0.0, 0.025, -0.39 - barrel_length), dark_metal)
-	_add_box(weapon_view_model, "Stock", Vector3(0.15, 0.13, 0.34), Vector3(0.0, -0.01, 0.36), furniture)
-	_add_box(weapon_view_model, "Magazine", Vector3(0.13, 0.25, 0.16), Vector3(0.0, -0.205, 0.055), dark_metal, Vector3(-9.0, 0.0, 0.0))
-	_add_box(weapon_view_model, "PistolGrip", Vector3(0.09, 0.19, 0.12), Vector3(0.055, -0.17, 0.20), furniture, Vector3(-12.0, 0.0, -7.0))
-	_add_box(weapon_view_model, "RearSight", Vector3(0.065, 0.07, 0.045), Vector3(0.0, 0.16, 0.08), dark_metal)
-	_add_box(weapon_view_model, "FrontSight", Vector3(0.045, 0.085, 0.045), Vector3(0.0, 0.085, -0.62), dark_metal)
-	_add_box(weapon_view_model, "LeftSleeve", Vector3(0.17, 0.16, 0.42), Vector3(-0.22, -0.20, -0.25), cloth, Vector3(-12.0, -8.0, -16.0))
-	_add_box(weapon_view_model, "RightSleeve", Vector3(0.15, 0.15, 0.34), Vector3(0.23, -0.19, 0.10), cloth, Vector3(8.0, 10.0, 18.0))
-	_add_box(weapon_view_model, "LeftGlove", Vector3(0.13, 0.10, 0.16), Vector3(-0.12, -0.12, -0.38), dark_metal)
-	_add_box(weapon_view_model, "RightGlove", Vector3(0.12, 0.11, 0.15), Vector3(0.12, -0.10, 0.05), dark_metal)
-	if is_launcher:
-		_add_box(weapon_view_model, "LauncherTube", Vector3(0.22, 0.22, 0.98), Vector3(0.0, 0.07, -0.50), dark_metal)
-	elif weapon_id == "svd":
-		_add_box(weapon_view_model, "Optic", Vector3(0.10, 0.11, 0.25), Vector3(0.0, 0.22, -0.03), dark_metal)
-	elif is_heavy:
-		_add_box(weapon_view_model, "TopRail", Vector3(0.07, 0.035, 0.42), Vector3(0.0, 0.14, -0.22), dark_metal)
+	var key := str(weapons[current_index].model_key)
+	var resource_path := str(model_paths.get(key, ""))
+	var loaded = load(resource_path)
+	if loaded is PackedScene:
+		var instance := (loaded as PackedScene).instantiate()
+		if not instance is Node3D:
+			instance.queue_free()
+			push_error("Imported weapon scene root is not Node3D: " + resource_path)
+			return
+		imported_weapon = instance as Node3D
+	elif loaded is Mesh:
+		var mesh_instance := MeshInstance3D.new()
+		mesh_instance.mesh = loaded as Mesh
+		imported_weapon = mesh_instance
+	else:
+		push_error("Imported weapon asset is neither a PackedScene nor a Mesh: " + resource_path)
+		return
+	imported_weapon.name = "ImportedWeaponModel"
+	weapon_view_model.add_child(imported_weapon)
+	_fit_weapon_to_view_model(imported_weapon)
+	imported_weapon.position += Vector3(0.0, 0.0, -0.02)
 
-func _add_box(parent: Node3D, node_name: String, size: Vector3, position: Vector3, material: Material, rotation := Vector3.ZERO) -> void:
-	var mesh_instance := MeshInstance3D.new()
-	mesh_instance.name = node_name
-	var box := BoxMesh.new()
-	box.size = size
-	mesh_instance.mesh = box
-	mesh_instance.position = position
-	mesh_instance.rotation_degrees = rotation
-	mesh_instance.material_override = material
-	parent.add_child(mesh_instance)
+func _fit_weapon_to_view_model(model: Node3D) -> void:
+	var points: Array[Vector3] = []
+	_collect_mesh_corners(model, Transform3D.IDENTITY, points)
+	if points.is_empty():
+		push_error("Imported weapon model has no visible MeshInstance3D children.")
+		return
+	var bounds := _bounds_from_points(points)
+	# Orient the model's longest authored axis along the camera's forward view axis.
+	if bounds.size.x >= bounds.size.z and bounds.size.x >= bounds.size.y:
+		model.rotation_degrees.y = 90.0
+	elif bounds.size.y >= bounds.size.z and bounds.size.y >= bounds.size.x:
+		model.rotation_degrees.x = 90.0
+	points.clear()
+	_collect_mesh_corners(model, Transform3D.IDENTITY, points)
+	bounds = _bounds_from_points(points)
+	var longest := maxf(bounds.size.x, maxf(bounds.size.y, bounds.size.z))
+	if longest <= 0.001:
+		push_error("Imported weapon mesh has invalid dimensions.")
+		return
+	var target_length := 0.94
+	var scale_factor := target_length / longest
+	model.scale = Vector3.ONE * scale_factor
+	model.position = -bounds.get_center() * scale_factor
+	model.position.y -= 0.015
 
-func _spawn_muzzle_flash() -> void:
-	var flash := MeshInstance3D.new()
-	var sphere := SphereMesh.new()
-	sphere.radius = 0.095
-	sphere.height = 0.19
-	flash.mesh = sphere
-	var material := StandardMaterial3D.new()
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.albedo_color = Color(1.0, 0.30, 0.055, 1.0)
-	material.emission_enabled = true
-	material.emission = Color(1.0, 0.15, 0.02)
-	material.emission_energy_multiplier = 2.0
-	flash.material_override = material
-	camera.add_child(flash)
-	flash.position = Vector3(0.34, -0.30, -1.30)
+func _collect_mesh_corners(node: Node, parent_transform: Transform3D, points: Array[Vector3]) -> void:
+	var local_transform := parent_transform
+	if node is Node3D:
+		local_transform = parent_transform * (node as Node3D).transform
+	if node is MeshInstance3D:
+		var mesh_instance := node as MeshInstance3D
+		if mesh_instance.mesh != null:
+			var box := mesh_instance.mesh.get_aabb()
+			for ix in range(2):
+				for iy in range(2):
+					for iz in range(2):
+						var corner := Vector3(
+							box.position.x + box.size.x * float(ix),
+							box.position.y + box.size.y * float(iy),
+							box.position.z + box.size.z * float(iz)
+						)
+						points.append(local_transform * corner)
+	for child in node.get_children():
+		_collect_mesh_corners(child, local_transform, points)
+
+func _bounds_from_points(points: Array[Vector3]) -> AABB:
+	var bounds := AABB(points[0], Vector3.ZERO)
+	for i in range(1, points.size()):
+		bounds = bounds.expand(points[i])
+	return bounds
+
+func _spawn_muzzle_light(world_position: Vector3) -> void:
+	var light := OmniLight3D.new()
+	light.name = "MuzzleFlashLight"
+	light.light_color = Color(1.0, 0.58, 0.28)
+	light.light_energy = 1.35
+	light.omni_range = 2.2
+	light.shadow_enabled = false
+	get_tree().current_scene.add_child(light)
+	light.global_position = world_position
 	var timer := Timer.new()
 	timer.one_shot = true
-	timer.wait_time = 0.045
-	timer.timeout.connect(flash.queue_free)
-	flash.add_child(timer)
+	timer.wait_time = 0.035
+	timer.timeout.connect(light.queue_free)
+	light.add_child(timer)
 	timer.start()
 
 func _update_hud() -> void:
@@ -176,5 +239,5 @@ func _update_hud() -> void:
 		str(spec.caliber),
 		magazine_ammo,
 		int(spec.magazine),
-		"TRACER" if tracer_mode else "STANDARD"
+		"AIM" if aiming else ("TRACER" if tracer_mode else "STANDARD")
 	)

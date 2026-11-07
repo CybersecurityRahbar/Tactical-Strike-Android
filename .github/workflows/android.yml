@@ -22,6 +22,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
+      - name: Prepare CC0 weapon, terrain and recorded audio assets
+        run: |
+          set -euo pipefail
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
+          bash tools/prepare_external_assets.sh
+
       - name: Set up Java 17
         uses: actions/setup-java@v6
         with:
@@ -86,6 +95,11 @@ jobs:
           mkdir -p build
           "$GODOT_BIN" --headless --path . --export-debug "Android" build/TacticalStrike-debug.apk
           test -s build/TacticalStrike-debug.apk
+          test -s assets/runtime/weapon_manifest.json
+          test -s assets/runtime/audio/ak47_27.ogg
+          test -s assets/runtime/audio/ar15_24.ogg
+          test -s assets/runtime/audio/sand_l.ogg
+          test -s assets/runtime/terrain/rocky_gravel_diff_1k.jpg
 
       - name: Validate APK archive, signature and ARM64 payload
         run: |
