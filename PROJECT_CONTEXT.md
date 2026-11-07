@@ -254,3 +254,16 @@ Projectile behavior:
 - Removed the obsolete second implementation while retaining the new higher-detail terrain and approach-track mesh. A source-level check confirms exactly one `_build_terrain()` declaration remains.
 - The follow-up commit also retains the HUD signal connection and approach-mesh winding corrections.
 - **Build status:** the fix is committed; it is not considered validated until the next complete CI run passes project import, script/scene smoke test, Android export, APK signature/integrity checks and artifact upload.
+
+
+## Successful CI validation of the usability repair — 2026-11-07
+
+- Corrected the duplicate `_build_terrain()` declaration found by the first repair CI run. The corrected file contains exactly one terrain-builder declaration.
+- The new main-branch commit is `41eba7c0e3e0337d1d415a4e8c767b249d297562`.
+- GitHub Actions run [42407702148](https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42407702148) completed with **success**.
+- Passed stages: Godot project import, strengthened headless scene smoke test (including camera weapon view-model and pause/armory/settings UI presence), Android debug APK export, ZIP archive validation, Android APK signature verification, manifest/classes checks, ARM64 Godot native-library check, and artifact upload.
+- Verified artifact ID: `13588008097`, artifact name `TacticalStrike-Android-verified`.
+- Downloaded the exact artifact and independently checked the outer ZIP and inner APK; both passed full ZIP/CRC tests with no errors.
+- APK size: `28,535,312` bytes. SHA-256: `32c0358640d1c6112d3e308ca4a071364829bc04f278fc6a01e296da7f042c75`.
+- The artifact validation report records PASS for archive integrity, APK signature, `AndroidManifest.xml`, `classes.dex`, and the ARM64 Godot native library.
+- **Important test boundary:** this is a successful source/scene/Android-export validation, not a physical-device playtest. The newly built APK has not yet been installed and interacted with on the user's phone. Touch-button placement, real movement/fire response, visual appearance on the phone, and performance still need the user's next playtest. The terrain and weapon shown are still procedural/low-poly prototype geometry, not final AAA-quality assets. Tactical AI and LAN multiplayer are not implemented.
