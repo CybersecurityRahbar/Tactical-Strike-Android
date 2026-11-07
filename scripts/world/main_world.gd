@@ -71,7 +71,16 @@ func _build_environment() -> void:
 	environment.sky = sky
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
 	environment.ambient_light_energy = 0.75
-	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+		environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	# Soft depth haze preserves distant silhouettes while gently reducing contrast.
+	environment.fog_enabled = true
+	environment.fog_mode = Environment.FOG_MODE_DEPTH
+	environment.fog_depth_begin = 185.0
+	environment.fog_depth_end = 860.0
+	environment.fog_depth_curve = 1.15
+	environment.fog_density = 0.18
+	environment.fog_light_color = Color(0.64, 0.55, 0.43)
+	environment.fog_sky_affect = 0.65
 	world_environment.environment = environment
 	add_child(world_environment)
 
@@ -286,8 +295,10 @@ func _set_night_mode(enabled: bool) -> void:
 	night_mode = enabled
 	if sun != null:
 		sun.light_energy = 0.14 if night_mode else 1.15
-	if world_environment != null:
+		if world_environment != null:
 		world_environment.environment.ambient_light_energy = 0.24 if night_mode else 0.75
+		world_environment.environment.fog_light_color = Color(0.035, 0.045, 0.075) if night_mode else Color(0.64, 0.55, 0.43)
+		world_environment.environment.fog_density = 0.14 if night_mode else 0.18
 	if sky_material != null:
 		sky_material.sky_top_color = Color(0.012, 0.018, 0.035) if night_mode else Color(0.27, 0.34, 0.39)
 		sky_material.sky_horizon_color = Color(0.055, 0.065, 0.09) if night_mode else Color(0.72, 0.61, 0.45)

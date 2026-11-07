@@ -42,7 +42,15 @@ jobs:
           chmod +x "Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64"
           echo "GODOT_BIN=$PWD/Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64" >> "$GITHUB_ENV"
 
+      - name: Cache Godot Android export templates
+        id: godot-template-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.stable
+          key: ${{ runner.os }}-godot-${{ env.GODOT_VERSION }}-android-templates-v1
+
       - name: Install matching Android export templates
+        if: steps.godot-template-cache.outputs.cache-hit != 'true'
         run: |
           curl -L --fail --retry 3 "https://downloads.godotengine.org/?flavor=stable&platform=templates&slug=export_templates.tpz&version=${{ env.GODOT_VERSION }}" -o templates.tpz
           mapfile -t android_templates < <(unzip -Z1 templates.tpz | grep -E '^templates/(android_debug\.apk|android_release\.apk|android_source\.zip)$')

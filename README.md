@@ -1,28 +1,40 @@
 # Tactical Strike
 
-**Android-first, offline-capable tactical infantry game.**
+**An original Android-first tactical infantry game.**
 
-The game is being built in this repository with Godot 4.7.2 stable. Development, validation, and Android APK export are intended to run through GitHub Actions; no desktop editor is required for the planned workflow.
+The project is built with Godot 4.7.2 and maintained entirely in this GitHub repository. GitHub Actions performs project validation and exports the Android APK; the developer's local computer is not part of the required workflow.
 
 ## Battlefield direction
 
-One large, semi-arid plateau map with long sightlines: a relatively open attacker sector, rolling and broken ground through the middle, and a distant defender sector with two separated buildings, trenches, sandbag positions, brick and stone cover, and barriers. The ground is dusty brown earth, not desert dunes and not lush green terrain.
+The first and only initial map is a wide 700 m × 700 m plateau battlefield with long sightlines. The attacker begins on one side of the map; the distant defensive sector is roughly 500 m away along the main firing direction. The terrain uses dusty brown earth, rolling high and low ridges, shallow cuts and open approach ground—not sand dunes and not lush green terrain.
 
-## Gameplay direction
+The defensive sector is built around two separated buildings, main and fallback trench lines, sandbag positions, brick walls, stone cover and barriers. The middle ground uses irregular ridges and scattered firing cover to create long-range engagements.
+
+See the [battlefield layout blueprint](docs/BATTLEFIELD_DESIGN.md) and its [top-down SVG map](docs/battlefield-layout.svg).
+
+## Combat direction
 
 - First-person Android controls.
-- Single-player battle with tactical AI soldiers.
+- Offline single-player against tactical AI soldiers.
 - Local Wi-Fi / hotspot multiplayer without an internet server.
-- AK-74, M4A1, PKM, RPG-7, SVD/Dragunov, DShK 12.7 mm, and optional .50-calibre heavy machine gun.
-- Normal and red tracer ammunition variants.
-- Game-tuned projectile velocity, drag, gravity, range, penetration, and damage by weapon.
-- Dust impacts, cover damage, ricochet and directional bullet audio.
-- Day and night lighting.
+- AK-74, M4A1, PKM, RPG-7, SVD/Dragunov, DShK 12.7 mm and .50-calibre heavy machine gun.
+- Standard and red tracer ammunition variants.
+- Configurable game-ballistics: muzzle velocity, drag, gravity, drop, effective range, damage and penetration.
+- Dust impacts, cover integrity, shallow-angle ricochet and directional near-miss audio.
+- Day and night environment settings.
 
-## Current milestone
+## Cloud build status
 
-The first commit establishes the Godot project, procedural terrain and cover layout, first-person controller, configurable weapon data, projectile simulation, tracer visuals, impact dust, synthesized placeholder audio, HUD, and Android build workflow.
+The first automated Android build completed successfully on 7 November 2026:
+- Godot headless import passed.
+- The strengthened smoke test confirmed all core scripts compile and the main scene creates the terrain, player and HUD.
+- Android debug APK export and artifact upload passed.
+- The exported APK is ARM64 and approximately 27 MB. It has **not yet been tested on a physical Android phone**.
 
-**Not yet complete:** tactical bot decision-making, attacker/defender coordination, finished weapon/character art and animation, real recorded sound libraries, LAN multiplayer, and performance validation on target phones. These will be implemented and tested in later milestones.
+[Open the successful GitHub Actions build](https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42402765482).
 
-See [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) for the cumulative requirements and implementation record.
+## What is still a prototype
+
+The current battlefield is procedural greybox geometry. Distant soldiers are static visual placeholders, not the final AI. Tactical defense/reposition/withdrawal, cautious attacker advances and coordinated assaults are **not implemented yet**. Local LAN / hotspot multiplayer is also **not implemented yet**. Final soldier and weapon models, animations, recorded weapon sounds, material-specific impacts, polished touch controls and device performance validation remain future milestones.
+
+See [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) for the cumulative requirements, implementation record, test results and known limitations.

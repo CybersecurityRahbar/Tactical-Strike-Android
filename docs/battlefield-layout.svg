@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1120" viewBox="0 0 1000 1120" role="img" aria-labelledby="title desc">
+<title id="title">Plateau Sector 01 battlefield layout</title>
+<desc id="desc">Top-down schematic of a large brown-earth plateau, with the defensive area and two separated buildings at the far end, main and fallback trenches, rolling ridges through the middle, forward attacker cover and player start at the near end.</desc>
+<defs>
+  <linearGradient id="soil" x1="0" y1="0" x2="0.8" y2="1">
+    <stop offset="0" stop-color="#ad916d"/>
+    <stop offset="0.52" stop-color="#987b5b"/>
+    <stop offset="1" stop-color="#806347"/>
+  </linearGradient>
+  <pattern id="grain" width="31" height="29" patternUnits="userSpaceOnUse">
+    <circle cx="5" cy="7" r="1.2" fill="#5f4b39" opacity=".22"/>
+    <circle cx="19" cy="18" r="1.7" fill="#d5b68a" opacity=".25"/>
+    <circle cx="27" cy="4" r=".8" fill="#e1c397" opacity=".28"/>
+  </pattern>
+  <pattern id="sandbag" width="22" height="16" patternUnits="userSpaceOnUse">
+    <rect x="1" y="2" width="19" height="12" rx="5" fill="#c2a77b" stroke="#574b38" stroke-width="1.2"/>
+  </pattern>
+  <marker id="arrow" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto">
+    <path d="M0 0 L7 3 L0 6 Z" fill="#f0d6ac"/>
+  </marker>
+  <style>
+    .heading{font:700 25px sans-serif;letter-spacing:2px;fill:#f2e7d3}
+    .label{font:700 16px sans-serif;letter-spacing:1px;fill:#fff1d9}
+    .small{font:13px sans-serif;fill:#eadcc5}
+    .micro{font:11px sans-serif;fill:#f5e8d4}
+    .ridge{fill:none;stroke:#6e533b;stroke-width:3;opacity:.58}
+    .ridge2{fill:none;stroke:#d5b68b;stroke-width:2;opacity:.45}
+    .trench{fill:none;stroke:#594a36;stroke-width:23;stroke-linecap:round;stroke-linejoin:round}
+    .trenchEdge{fill:none;stroke:#d0b184;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+  </style>
+</defs>
+<rect width="1000" height="1120" fill="#171d19"/>
+<text x="70" y="52" class="heading">TACTICAL STRIKE / PLATEAU SECTOR 01</text>
+<text x="70" y="78" class="small">TOP-DOWN BATTLEFIELD BLUEPRINT · 700 m × 700 m · SCHEMATIC, NOT TO SCALE</text>
+<rect x="70" y="110" width="860" height="860" rx="24" fill="url(#soil)" stroke="#d4b68c" stroke-width="4"/>
+<rect x="70" y="110" width="860" height="860" rx="24" fill="url(#grain)"/>
+
+<!-- Distant defensive sector -->
+<rect x="92" y="132" width="816" height="205" rx="14" fill="#534d3b" opacity=".16" stroke="#e0c69e" stroke-dasharray="8 7"/>
+<text x="112" y="158" class="label">DEFENDER SECTOR · DISTANT OBJECTIVE</text>
+<path d="M310 273 C376 252 432 275 494 258 C561 242 625 262 704 244" class="trench"/>
+<path d="M310 273 C376 252 432 275 494 258 C561 242 625 262 704 244" class="trenchEdge"/>
+<text x="113" y="280" class="small">MAIN FIRING TRENCH</text>
+<path d="M382 205 C414 197 441 213 469 204 M548 192 C575 181 603 198 625 188" class="trench"/>
+<path d="M382 205 C414 197 441 213 469 204 M548 192 C575 181 603 198 625 188" class="trenchEdge"/>
+<text x="650" y="199" class="small">FALLBACK POSITIONS</text>
+
+<!-- Two separated buildings -->
+<g transform="translate(384 224)">
+  <rect x="0" y="0" width="52" height="43" rx="3" fill="#754f3d" stroke="#e0c4a0" stroke-width="3"/>
+  <path d="M-5 0 L26 -19 L57 0" fill="#4b3b2c" stroke="#e0c4a0" stroke-width="3"/>
+  <rect x="9" y="13" width="10" height="11" fill="#c8b18e"/>
+  <rect x="33" y="13" width="10" height="11" fill="#c8b18e"/>
+  <rect x="22" y="28" width="10" height="15" fill="#42392f"/>
+</g>
+<g transform="translate(558 204)">
+  <rect x="0" y="0" width="57" height="47" rx="3" fill="#6b6a5e" stroke="#e0c4a0" stroke-width="3"/>
+  <path d="M-5 0 L28 -20 L62 0" fill="#48483f" stroke="#e0c4a0" stroke-width="3"/>
+  <rect x="10" y="14" width="11" height="12" fill="#c8b18e"/>
+  <rect x="36" y="14" width="11" height="12" fill="#c8b18e"/>
+  <rect x="24" y="31" width="11" height="16" fill="#42392f"/>
+</g>
+<text x="362" y="292" class="small">HOUSE A</text>
+<text x="558" y="276" class="small">HOUSE B</text>
+<path d="M442 264 L526 264" stroke="#f2d7aa" stroke-width="2" stroke-dasharray="4 5"/>
+<text x="452" y="286" class="micro">SEPARATED</text>
+
+<!-- Walls and firing positions around defender area -->
+<g fill="#915f4a" stroke="#d6b79a" stroke-width="3">
+  <rect x="330" y="304" width="49" height="11" rx="2"/>
+  <rect x="386" y="310" width="45" height="11" rx="2"/>
+  <rect x="621" y="286" width="52" height="11" rx="2"/>
+  <rect x="680" y="279" width="47" height="11" rx="2"/>
+</g>
+<g fill="#77776d" stroke="#d7d0bf" stroke-width="2">
+  <rect x="286" y="228" width="20" height="14" rx="3"/>
+  <rect x="734" y="230" width="20" height="14" rx="3"/>
+  <rect x="746" y="310" width="23" height="16" rx="3"/>
+</g>
+
+<!-- Midfield ridges and saddle -->
+<path d="M100 398 C235 352 316 391 427 369 C550 344 663 384 897 335" class="ridge"/>
+<path d="M100 419 C228 376 324 412 430 391 C559 365 690 405 897 359" class="ridge2"/>
+<path d="M98 494 C220 455 315 478 432 453 C564 425 715 465 903 428" class="ridge"/>
+<path d="M98 520 C225 477 323 504 437 480 C566 455 713 489 903 456" class="ridge2"/>
+<path d="M98 583 C222 552 311 574 424 550 C554 523 690 557 903 526" class="ridge"/>
+<path d="M98 610 C223 578 316 599 430 575 C560 548 701 581 903 554" class="ridge2"/>
+<text x="113" y="376" class="label">ROLLING HIGH / LOW RIDGES</text>
+<text x="113" y="448" class="small">BROKEN GROUND · SHALLOW DIPS · LONG SIGHTLINES</text>
+<text x="113" y="545" class="small">LOW SADDLE / APPROACH CORRIDOR</text>
+
+<!-- Scattered stone/brick cover -->
+<g fill="#77776d" stroke="#cfc7b8" stroke-width="2">
+  <path d="M281 586 l23 -12 19 13 -12 19 -26 -4 Z"/>
+  <path d="M359 624 l24 -13 18 15 -14 18 -24 -5 Z"/>
+  <path d="M474 590 l22 -9 18 13 -12 18 -27 -4 Z"/>
+  <path d="M608 627 l25 -12 15 17 -14 17 -25 -7 Z"/>
+  <path d="M700 582 l20 -10 18 14 -10 17 -25 -4 Z"/>
+</g>
+<g fill="#915f4a" stroke="#d6b79a" stroke-width="2">
+  <rect x="238" y="663" width="37" height="12" rx="2"/>
+  <rect x="522" y="674" width="42" height="12" rx="2"/>
+  <rect x="760" y="650" width="41" height="12" rx="2"/>
+</g>
+
+<!-- Forward attacker trench -->
+<path d="M387 758 C421 748 449 766 483 755 C516 747 548 757 582 746" class="trench"/>
+<path d="M387 758 C421 748 449 766 483 755 C516 747 548 757 582 746" class="trenchEdge"/>
+<path d="M398 779 C433 769 465 784 495 777 C530 768 555 781 582 769" fill="none" stroke="url(#sandbag)" stroke-width="14" stroke-linecap="round"/>
+<text x="112" y="754" class="label">ATTACKER FORWARD POSITION</text>
+<text x="112" y="782" class="small">SAND BAG / BRICK / STONE COVER</text>
+
+<!-- Attack direction -->
+<path d="M500 880 L500 323" stroke="#f0d6ac" stroke-width="3" stroke-dasharray="12 10" marker-end="url(#arrow)" opacity=".88"/>
+<rect x="519" y="474" width="250" height="40" rx="9" fill="#292a22" opacity=".84"/>
+<text x="536" y="499" class="small">LONG-RANGE ENGAGEMENT AXIS</text>
+<circle cx="500" cy="899" r="14" fill="#e35a40" stroke="#f9e0bf" stroke-width="4"/>
+<text x="529" y="904" class="label">PLAYER START</text>
+<text x="529" y="927" class="small">≈ 500 m FROM MAIN DEFENCE LINE</text>
+<text x="113" y="935" class="small">ATTACKER APPROACH · OPEN DUSTY PLATEAU</text>
+
+<!-- Legend -->
+<g transform="translate(80 1000)">
+  <text x="0" y="0" class="label">MAP KEY</text>
+  <rect x="0" y="18" width="42" height="13" rx="6" fill="url(#sandbag)" stroke="#554a38"/>
+  <text x="54" y="30" class="small">Sandbag parapet</text>
+  <rect x="235" y="18" width="38" height="13" rx="2" fill="#915f4a" stroke="#d6b79a"/>
+  <text x="285" y="30" class="small">Brick wall</text>
+  <rect x="438" y="17" width="29" height="15" rx="3" fill="#77776d" stroke="#d7d0bf"/>
+  <text x="479" y="30" class="small">Stone cover</text>
+  <rect x="653" y="14" width="27" height="22" fill="#754f3d" stroke="#e0c4a0"/>
+  <text x="690" y="30" class="small">Building</text>
+  <text x="0" y="67" class="micro">DESIGN BLUEPRINT ONLY — current APK uses simple procedural greybox geometry; final assets, bot tactics and LAN play are future milestones.</text>
+</g>
+</svg>

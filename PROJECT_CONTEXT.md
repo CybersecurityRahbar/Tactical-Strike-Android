@@ -142,3 +142,23 @@ Projectile behavior:
 - Enabled `textures/vram_compression/import_etc2_astc=true` in the project rendering settings for Android compatibility.
 - Strengthened `tests/smoke_test.gd` to load every core project script and fail when any script cannot instantiate, before creating the battlefield scene.
 - **Validation status at this point:** Android SDK setup, Godot download, export-template installation, and headless project import succeeded. The previous run's scene smoke test returned exit code 0 but its log showed the dependency parse error; therefore it is not treated as a clean validation. Android export failed on ETC2/ASTC configuration. The next CI run must show a clean script smoke test and a successful APK export before a build can be shared.
+
+
+## First successful cloud build — 2026-11-07
+
+- GitHub Actions run [42402765482](https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42402765482) completed with **success**.
+- Godot 4.7.2 headless project import succeeded.
+- The strengthened script smoke test reported: `SMOKE TEST PASSED: all required scripts compile; main scene, terrain, player and HUD initialized.`
+- Android debug APK export and artifact upload both succeeded.
+- Uploaded artifact: `TacticalStrike-Android-debug` (artifact ID `13585962872`), available for 14 days from the build date.
+- The downloaded APK archive was inspected: it contained one APK; ZIP integrity passed; the APK contained `AndroidManifest.xml` and the ARM64 Godot native library. APK size was approximately 27 MB.
+- The APK was **not installed or tested on a physical Android device**. CI success proves script/scene smoke validation and APK export, not touch-control quality, frame rate, actual device compatibility, tactical AI or LAN behavior.
+- The export log also showed a non-blocking missing project-icon warning. A project icon is added in the next visual refinement pass.
+
+## Visual refinement and repeatable cloud builds — 2026-11-07
+
+- Added an original vector application icon and configured it in `project.godot`.
+- Added a GitHub-renderable top-down map blueprint in `docs/battlefield-layout.svg` and explanatory notes in `docs/BATTLEFIELD_DESIGN.md`.
+- Added subtle depth haze to support the requested long sightlines and distant-silhouette effect; day/night toggling changes the haze tint as well as the lighting.
+- Added a GitHub Actions cache for the Godot Android export templates so subsequent builds can avoid re-downloading and extracting the large template archive.
+- **Validation status:** these visual and workflow refinements are committed, but require their own clean CI run. The already successful earlier APK remains the only build confirmed at this point.
