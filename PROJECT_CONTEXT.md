@@ -198,3 +198,14 @@ Projectile behavior:
 - Artifact ZIP compression is set to level 9. The APK itself is a ZIP-based Android package with already-compressed contents, so the outer archive is expected to be only about 0.75% smaller than the APK. Stronger 7z/LZMA compression is not expected to materially improve download size; a local high-compression XZ test improved size by only about 1.4%.
 - The prior partial 12 MB file is not the build output. Do not install partial files. The standalone APK and checksum above refer to the independently verified complete APK.
 - **Remaining limitation:** CI validates file integrity, signature and target ABI, but no physical Android device installation or in-game performance test has yet been carried out.
+
+
+## Final re-verification after the user's extraction issue — 2026-11-07
+
+- Rebuilt the same main-branch game code after the README/context update using GitHub Actions run [42405548021](https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42405548021), head commit `eb066f6de38bdf9d44158ba5d9bb4913597935d8`.
+- Run completed **successfully**. Godot import, script smoke test, APK export, APK integrity/signature/ARM64 validation and upload all passed.
+- Verified artifact: `TacticalStrike-Android-verified`, artifact ID `13586967951`, size 28,309,889 bytes.
+- Independently downloaded the exact artifact again. The outer ZIP passed `unzip -t`; the extracted APK passed its complete ZIP/CRC test and was identified as an Android APK.
+- Final standalone APK SHA-256: `566cc17eab9fdf6ca04d60b8c85fbcf45ce31636a1fb6cdd0ebb27394ac26692`.
+- APK size: 28,523,024 bytes. CI validation report confirms archive integrity, signature, manifest, DEX and ARM64 native library: all PASS.
+- Added `paths-ignore` for README, PROJECT_CONTEXT and documentation-only pushes so future context bookkeeping does not needlessly rebuild the unchanged Android APK. Manual workflow dispatch and actual code pushes continue to build.

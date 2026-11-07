@@ -3,6 +3,10 @@ name: Android Build
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "README.md"
+      - "PROJECT_CONTEXT.md"
+      - "docs/**"
   workflow_dispatch:
 
 permissions:
