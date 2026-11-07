@@ -49,8 +49,8 @@ func _run_smoke_test() -> void:
 		quit(1)
 		return
 	var terrain_mesh_instance := instance.get_node("BattlefieldTerrain") as MeshInstance3D
-	var terrain_arrays := terrain_mesh_instance.mesh.surface_get_arrays(0)
-	var terrain_tangents = terrain_arrays[Mesh.ARRAY_TANGENT]
+	var terrain_arrays: Array = terrain_mesh_instance.mesh.surface_get_arrays(0)
+	var terrain_tangents: PackedFloat32Array = terrain_arrays[Mesh.ARRAY_TANGENT]
 	if terrain_tangents == null or terrain_tangents.is_empty():
 		push_error("Smoke test failed: terrain mesh has no generated tangents for its normal map.")
 		quit(1)
@@ -92,7 +92,7 @@ func _run_smoke_test() -> void:
 		quit(1)
 		return
 	var weapon_animation := animation_players[0] as AnimationPlayer
-	for clip in ["Rig|AK_Idle", "Rig|AK_Draw", "Rig|AK_Walk", "Rig|AK_Run", "Rig|AK_Shot", "Rig|AK_Reload_full"]:
+	for clip: String in ["Rig|AK_Idle", "Rig|AK_Draw", "Rig|AK_Walk", "Rig|AK_Run", "Rig|AK_Shot", "Rig|AK_Reload_full"]:
 		if not weapon_animation.has_animation(clip):
 			push_error("Smoke test failed: missing authored weapon animation " + clip)
 			quit(1)
@@ -125,10 +125,13 @@ func _run_smoke_test() -> void:
 		quit(1)
 		return
 
-	var screen_size := instance.get_viewport().get_visible_rect().size
-	var joystick_rect := instance.get_node("HUD/Overlay/MovementJoystick").get_global_rect()
-	var fire_rect := instance.get_node("HUD/Overlay/FireButton").get_global_rect()
-	var aim_rect := instance.get_node("HUD/Overlay/AimButton").get_global_rect()
+	var screen_size: Vector2 = instance.get_viewport().get_visible_rect().size
+	var joystick_control := instance.get_node("HUD/Overlay/MovementJoystick") as Control
+	var fire_control := instance.get_node("HUD/Overlay/FireButton") as Control
+	var aim_control := instance.get_node("HUD/Overlay/AimButton") as Control
+	var joystick_rect: Rect2 = joystick_control.get_global_rect()
+	var fire_rect: Rect2 = fire_control.get_global_rect()
+	var aim_rect: Rect2 = aim_control.get_global_rect()
 	if joystick_rect.position.x > screen_size.x * 0.30:
 		push_error("Smoke test failed: movement joystick is not anchored on the left side.")
 		quit(1)
@@ -146,7 +149,7 @@ func _run_smoke_test() -> void:
 		quit(1)
 		return
 
-	var weapon_audio_paths := [
+	var weapon_audio_paths: Array[String] = [
 		"res://assets/runtime/audio/ak_C_27P.ogg",
 		"res://assets/runtime/audio/ak_C_28P.ogg",
 		"res://assets/runtime/audio/ak_C_29P.ogg",

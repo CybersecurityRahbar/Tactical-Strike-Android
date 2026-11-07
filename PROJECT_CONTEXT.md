@@ -339,3 +339,10 @@ Projectile behavior:
 - The smoke test now validates exact imported animation clip names, left/right control placement, non-overlapping fire/aim hit rectangles, six available recorded firearm takes, a real firing action consuming a magazine round, ammo-mode cycling and player displacement. It also checks that player height does not fall through the terrain collision surface.
 - The prior procedural noise audio calls were removed from bullet impact, ricochet and near-miss paths. The user's shot plays a randomized one of six recorded field takes, not a generated legacy tone layered under it. The takes are AK-47 recordings used as the closest available proxy for the AK-74M, not falsely labelled exact AK-74M recordings.
 - These refinements are not considered complete until the next Godot import, acceptance smoke test, APK export, archive/signature checks and user phone playtest succeed. No current device-side result is claimed. Bots and multiplayer remain deferred.
+
+
+## Godot strict-typing correction — 2026-11-08
+
+- The first screenshot-driven rebuild run [42417049347](https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42417049347) successfully prepared the licensed AK-74M asset, all six firearm sample files, footsteps and PBR terrain maps. Godot imported the authored glTF scene successfully.
+- The expanded headless test then caught strict GDScript inference failures on one mobile-touch Vector2 temporary and three UI Rect2 temporaries, with additional explicit typing added for terrain arrays/tangents and test string/audio arrays.
+- Corrected the HUD anchor to an explicit Vector2 and the smoke-test screen/control rectangles to explicit Vector2/Rect2 types. No APK was exported from the failed run. The next CI run must pass the new terrain tangents/material/relief checks, animation clip checks, LTR layout/non-overlap checks, player displacement/floor stability checks, recorded audio resource checks and real fire/ammo state checks before export.

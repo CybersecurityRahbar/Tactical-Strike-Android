@@ -261,7 +261,7 @@ func _input(event: InputEvent) -> void:
 			_movement_touch_index = event.index
 			_movement_touch_active = true
 			_movement_touch_origin = event.position
-			var anchor := event.position - Vector2(91.0, 91.0)
+			var anchor: Vector2 = event.position - Vector2(91.0, 91.0)
 			movement_joystick.position = anchor
 			_update_movement_stick(event.position)
 			get_viewport().set_input_as_handled()
