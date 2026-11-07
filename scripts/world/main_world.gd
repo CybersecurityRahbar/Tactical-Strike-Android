@@ -226,7 +226,7 @@ func _build_terrain() -> void:
 			tool.set_uv(Vector2(x0 * uv_scale, z1 * uv_scale))
 			tool.add_vertex(p01)
 	tool.index()
-	tool.generate_normals(true)
+	tool.generate_normals()
 	tool.generate_tangents()
 	var terrain_mesh := tool.commit()
 	var terrain := MeshInstance3D.new()

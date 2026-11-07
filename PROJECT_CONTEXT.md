@@ -364,3 +364,10 @@ Projectile behavior:
 - The terrain collision shape is explicitly created as ConcavePolygonShape3D with backface collision enabled. This ensures contact from either side while the triangle winding and normal-map lighting are being validated, so a local winding transition in a gully cannot drop the player's capsule through the surface.
 - Terrain material is temporarily rendered two-sided for the same visual diagnosis. The next smoke test explicitly checks that the collision shape has backface collision enabled, then proceeds to player movement and vertical stability.
 - This is not declared fixed until that subsequent player movement test passes, followed by APK export and signature/file validation.
+
+
+## Terrain normal direction measurement — 2026-11-08
+
+- The next CI run [42417621963](https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42417621963) confirmed that collision backface support was configured, but the full normal-array test measured mean normal Y = -0.905 with 0 of 66,049 normals pointing upward.
+- This gave a decisive measurement: the extra `flip=true` argument was inverting the terrain's generated normals. Removed that flip; the mesh now keeps the current triangle order, generates standard normals, then generates tangents. Two-sided terrain rendering and two-sided concave collision remain enabled while the player floor test validates the collision.
+- No APK was exported in this failed run. The next run is expected to re-evaluate normal direction first, then continue to player floor stability and the remaining weapon/UI/ammo checks.
