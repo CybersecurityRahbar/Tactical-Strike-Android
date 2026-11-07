@@ -67,9 +67,9 @@ func _run_smoke_test() -> void:
 		push_error("Smoke test failed: terrain normals are not consistently oriented upward (mean Y %.3f, upward %d/%d)." % [mean_normal_y, upward_normals, terrain_normals.size()])
 		quit(1)
 		return
-	var terrain_collision := instance.get_node("TerrainCollision/CollisionShape3D").shape as ConcavePolygonShape3D
-	if terrain_collision == null or not terrain_collision.backface_collision:
-		push_error("Smoke test failed: terrain collision must accept contact from both face sides.")
+	var terrain_collision := instance.get_node("TerrainCollision/HeightmapCollision").shape as HeightMapShape3D
+	if terrain_collision == null or terrain_collision.map_width != 257 or terrain_collision.map_depth != 257 or terrain_collision.map_data.size() != 257 * 257:
+		push_error("Smoke test failed: optimized terrain heightmap collision was not initialized with the expected full map.")
 		quit(1)
 		return
 	if terrain_tangents.is_empty():

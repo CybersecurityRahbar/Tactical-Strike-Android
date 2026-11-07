@@ -238,13 +238,24 @@ func _build_terrain() -> void:
 	body.name = "TerrainCollision"
 	body.collision_layer = 1
 	body.collision_mask = 1
+	var heightmap := HeightMapShape3D.new()
+	heightmap.map_width = TERRAIN_DIVISIONS + 1
+	heightmap.map_depth = TERRAIN_DIVISIONS + 1
+	var height_samples := PackedFloat32Array()
+	height_samples.resize((TERRAIN_DIVISIONS + 1) * (TERRAIN_DIVISIONS + 1))
+	for iz in range(TERRAIN_DIVISIONS + 1):
+		for ix in range(TERRAIN_DIVISIONS + 1):
+			var sample_x := -half + float(ix) * step
+			var sample_z := -half + float(iz) * step
+			var sample_index := iz * (TERRAIN_DIVISIONS + 1) + ix
+			# HeightMapShape3D samples a unit grid; use one uniform scale on all
+			# axes and pre-scale the stored heights back to world units.
+			height_samples[sample_index] = _terrain_height(sample_x, sample_z) / step
+	heightmap.map_data = height_samples
 	var shape := CollisionShape3D.new()
-	var terrain_collision := terrain_mesh.create_trimesh_shape() as ConcavePolygonShape3D
-	# A generated terrain can contain steep faces and small winding transitions around
-	# gullies. Allow contacts from either side to prevent the first-person capsule
-	# from falling through due to a back-facing triangle in the physics mesh.
-	terrain_collision.backface_collision = true
-	shape.shape = terrain_collision
+	shape.name = "HeightmapCollision"
+	shape.shape = heightmap
+	shape.scale = Vector3(step, step, step)
 	body.add_child(shape)
 	add_child(body)
 

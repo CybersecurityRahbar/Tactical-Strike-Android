@@ -371,3 +371,12 @@ Projectile behavior:
 - The next CI run [42417621963](https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42417621963) confirmed that collision backface support was configured, but the full normal-array test measured mean normal Y = -0.905 with 0 of 66,049 normals pointing upward.
 - This gave a decisive measurement: the extra `flip=true` argument was inverting the terrain's generated normals. Removed that flip; the mesh now keeps the current triangle order, generates standard normals, then generates tangents. Two-sided terrain rendering and two-sided concave collision remain enabled while the player floor test validates the collision.
 - No APK was exported in this failed run. The next run is expected to re-evaluate normal direction first, then continue to player floor stability and the remaining weapon/UI/ammo checks.
+
+
+## Replace expensive concave collision with a native terrain heightmap — 2026-11-08
+
+- CI confirmed the terrain's full vertex-normal field was inverted by `generate_normals(true)`; the flip flag was removed and the standard generated normals are used.
+- The subsequent headless job remained slow while evaluating the full 256×256 concave trimesh during the movement/floor stability test. The terrain is a heightfield with no caves or overhangs, so a HeightMapShape3D is the correct physics representation and much faster than a general concave triangle soup.
+- Replaced the collision mesh with a HeightMapShape3D using 257×257 samples from the exact same _terrain_height(x,z) function and the same visual-grid spacing. The heightmap uses a uniform scale on all axes, with stored heights divided by that spacing to preserve the exact world height.
+- The new smoke test explicitly checks HeightMapShape3D size/data and then exercises the actual player's movement and floor-stability assertions. This should test the same hilly surface while avoiding a heavyweight concave physics shape.
+- The prior run [42417767291](https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42417767291) failed before reaching player movement because the generated terrain normals were inverted (mean Y -0.905). No APK was exported. The new heightmap build remains pending full CI validation.
