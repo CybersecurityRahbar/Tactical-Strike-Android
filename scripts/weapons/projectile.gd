@@ -110,7 +110,8 @@ func _apply_explosion(center: Vector3) -> void:
 	for cover in get_tree().get_nodes_in_group("destructible_cover"):
 		if is_instance_valid(cover) and cover.global_position.distance_to(center) <= radius:
 			if cover.has_method("apply_ballistic_damage"):
-				var distance_factor := 1.0 - cover.global_position.distance_to(center) / radius
+				var cover_distance: float = cover.global_position.distance_to(center)
+				var distance_factor: float = clampf(1.0 - cover_distance / radius, 0.0, 1.0)
 				cover.call("apply_ballistic_damage", float(weapon_stats.damage) * maxf(distance_factor, 0.12), float(weapon_stats.penetration), "Rocket")
 
 func _check_bullet_whiz() -> void:

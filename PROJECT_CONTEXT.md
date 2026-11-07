@@ -132,3 +132,13 @@ Projectile behavior:
 - The first registered Godot run successfully downloaded Godot 4.7.2 and Android export templates and completed the project import step.
 - The headless scene smoke test then exposed strict GDScript typing errors in `main_world.gd`: generic `abs` / `lerp` inference and ternary numeric expressions inferred as Variant.
 - Corrected these expressions with explicit `float` annotations and float-specific `absf` / `lerpf` calls. The next run must confirm scene instantiation and then the APK export; no APK is confirmed from this failed smoke-test run.
+
+
+## Android export and projectile script fixes — 2026-11-07
+
+- The next CI attempt confirmed that the Godot import step completed and the map/player/HUD scene smoke test reached runtime, but the log still exposed a dependency parse error in `scripts/weapons/projectile.gd`: inferred Variant type for `distance_factor`. The smoke test was too permissive because it checked scene children without explicitly asserting that every required script was instantiable.
+- Android export was blocked by the missing ETC2/ASTC texture-compression import setting required by Godot's Android exporter.
+- Corrected the projectile explosion-distance calculations with explicit float types and clamped distance factor.
+- Enabled `textures/vram_compression/import_etc2_astc=true` in the project rendering settings for Android compatibility.
+- Strengthened `tests/smoke_test.gd` to load every core project script and fail when any script cannot instantiate, before creating the battlefield scene.
+- **Validation status at this point:** Android SDK setup, Godot download, export-template installation, and headless project import succeeded. The previous run's scene smoke test returned exit code 0 but its log showed the dependency parse error; therefore it is not treated as a clean validation. Android export failed on ETC2/ASTC configuration. The next CI run must show a clean script smoke test and a successful APK export before a build can be shared.

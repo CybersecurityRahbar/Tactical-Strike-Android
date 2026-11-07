@@ -1,9 +1,32 @@
 extends SceneTree
 
+const REQUIRED_SCRIPTS: Array[String] = [
+	"res://scripts/world/main_world.gd",
+	"res://scripts/world/cover_piece.gd",
+	"res://scripts/player/player_controller.gd",
+	"res://scripts/weapons/weapon_data.gd",
+	"res://scripts/weapons/weapon_controller.gd",
+	"res://scripts/weapons/projectile.gd",
+	"res://scripts/effects/impact_fx.gd",
+	"res://scripts/effects/ballistic_audio.gd",
+	"res://scripts/ui/hud.gd"
+]
+
 func _initialize() -> void:
 	call_deferred("_run_smoke_test")
 
 func _run_smoke_test() -> void:
+	for script_path in REQUIRED_SCRIPTS:
+		var script_resource := load(script_path) as Script
+		if script_resource == null:
+			push_error("Smoke test failed: could not load script %s." % script_path)
+			quit(1)
+			return
+		if not script_resource.can_instantiate():
+			push_error("Smoke test failed: script cannot instantiate %s." % script_path)
+			quit(1)
+			return
+
 	var packed := load("res://scenes/main.tscn") as PackedScene
 	if packed == null:
 		push_error("Smoke test failed: main scene could not be loaded.")
@@ -27,5 +50,5 @@ func _run_smoke_test() -> void:
 		quit(1)
 		return
 
-	print("SMOKE TEST PASSED: main scene, terrain, player and HUD initialized.")
+	print("SMOKE TEST PASSED: all required scripts compile; main scene, terrain, player and HUD initialized.")
 	quit(0)
