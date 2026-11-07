@@ -1,0 +1,110 @@
+# Tactical Strike — Project Context
+
+> This file is cumulative. Add confirmed requirements, design decisions, implementation status, test results, and known issues here after each meaningful project step. Do not record unrelated entertainment conversations or other projects here.
+
+## Project identity and workflow
+
+- Repository: https://github.com/CybersecurityRahbar/Tactical-Strike-Android
+- Primary platform: Android.
+- Engine: Godot 4.7.2 stable (do not switch to a beta engine version without a reason).
+- Renderer: Compatibility renderer, initially targeting broad Android compatibility and modest hardware.
+- All source, scene files, configuration, documentation, and CI build definitions live in this repository.
+- The user does not want to use their own computer for development. Code changes and Android builds should happen in GitHub; GitHub Actions should validate and export APK artifacts. The user's Android phone is used to install and test APK builds.
+- Work on the `main` branch, keeping the workflow straightforward and avoiding unnecessary branches.
+- A GitHub APK artifact is a test build, not proof that gameplay is correct. Device testing remains necessary.
+
+## High-level game concept
+
+Create an original, small-scope but polished first-person tactical infantry game. It may be inspired by the broad genre of SFG2 / tactical shooters, but it must have its own name, map, interface, assets, code, and identity. The first release focuses on one large, carefully designed map rather than many small maps.
+
+The intended experience is deliberate, long-range and positional rather than dominated by close-quarters run-and-gun combat.
+
+## Battlefield — user's requirements
+
+- One wide battlefield as the only initial map.
+- Long sightlines. The opposing defensive position should be far away. Soldiers at long distance should naturally appear small or atmospheric silhouettes, and become more visually detailed as the player approaches.
+- The terrain is a semi-level plateau with rolling, broken and irregular ground: alternating low and high ridges, rises, shallow dips and uneven approaches.
+- Soil is dry, dusty brown plateau earth. It is **not** a sand-dune desert and **not** lush or green terrain.
+- The attacker sector should include open approach ground and forward cover.
+- The central approach should contain varied low and high ground that breaks lines of sight and creates tactical decisions.
+- The defender sector should be distant and contain two separated houses/buildings, multiple trenches, sandbag positions, barriers, walls and firing positions.
+- Defensive and attacker cover should include earth-filled sandbags, brick, stone and solid walls.
+- Bullet impacts on the ground and cover should raise dust. Large-calibre impacts should create stronger, wider and more forceful dust effects than rifle-calibre impacts.
+
+## Combat and AI — user's requirements
+
+- Defenders generally hold prepared trenches and firing positions.
+- Defenders should move between cover positions when their current position is under heavy fire.
+- A defender may withdraw to a safer fallback position when pressure becomes too high.
+- Attackers should advance slowly and cautiously, use suppressive fire, and avoid rushing into a strong defensive position.
+- Attackers should try to weaken or suppress the defenders before committing to an assault.
+- Attackers should advance after the defensive line becomes sufficiently weakened.
+- Bot behavior should have readable tactical states such as hold, suppress, reposition, advance and retreat; it should not be random rushing.
+- The human player remains free to move and choose their own approach.
+
+## Weapons and game-ballistics — user's requirements
+
+Initial weapon list:
+- AK-74.
+- M4A1.
+- PKM (Russian general-purpose machine gun).
+- RPG-7.
+- SVD / Dragunov sniper rifle.
+- DShK 12.7 mm heavy machine gun.
+- Optionally include a .50-calibre heavy machine gun as a second heavy-weapon choice.
+
+Ammunition:
+- Each applicable firearm should support a normal ammunition mode and a visible red tracer mode.
+- Tracer visibility and apparent size should vary by game-calibre class; do not make every projectile look identical.
+- Tracer rounds are a visual gameplay feature; they are not to be described as incendiary unless a separate incendiary mechanic is explicitly implemented.
+
+Projectile behavior:
+- Each weapon/calibre needs its own configurable game values for muzzle speed, drag, gravity response, effective range, damage, penetration and firing cadence.
+- Projectiles should leave the muzzle quickly; velocity should decrease gradually over distance rather than appearing slow at launch.
+- Long shots should show a visible ballistic arc/drop. The player should be able to adjust aim smoothly using normal first-person look controls; later add a dedicated sight/zeroing or elevation adjustment where appropriate.
+- Higher-calibre rounds should have greater game impact on cover and terrain than small-arms rounds.
+- Include directional shot cracks / bullet whiz when hostile rounds pass near the player.
+- Include impact sounds and occasional ricochet / deflection sounds when a round strikes at a shallow angle.
+- Values in the first prototype are **gameplay tuning values**, not a claim of exact real-world firing tables. Refine them by playtesting and keep the data configurable.
+
+## Game modes and networking
+
+- Offline single-player mode against AI.
+- Local multiplayer over Wi-Fi hotspot / LAN without requiring internet access or a remote game server.
+- Start with a small player-count target (2–8 local players) and validate network authority, synchronization and performance before raising it.
+- The single-player and LAN modes should share the same combat, map, weapon and match systems where practical.
+
+## Initial implementation status — 2026-11-07
+
+### Added in this commit
+- Godot 4.7.2 project scaffold using the Compatibility renderer.
+- A procedural 700 m × 700 m brown-earth plateau greybox with rolling ridges, shallow trench cuts and varied elevation.
+- Attacker-side and defender-side cover layouts, including sandbag lines, stone/brick barriers and two separated simple defensive buildings.
+- Distant low-poly defender silhouettes to establish scale and sightline.
+- First-person controller and starter desktop/mobile input bindings.
+- Weapon data for AK-74, M4A1, PKM, RPG-7, SVD, DShK and .50-calibre heavy machine gun.
+- Configurable projectile simulation with gravity, drag, range, damage and penetration parameters.
+- Optional visible red tracer projectile streaks.
+- Dust impact particles, destructible cover integrity, shallow-angle ricochet behavior, and procedurally synthesized placeholder shot/impact audio.
+- Basic HUD and an Android export preset.
+- GitHub Actions workflow for headless validation and Android APK artifact export.
+- A headless scene smoke test.
+
+### Explicitly not yet implemented / not yet verified
+- Distant defender silhouettes are placeholders, not the final tactical AI.
+- The full attacker/defender behavior tree described above is a next milestone.
+- AI suppression sensing, cover selection, fallback movement and coordinated assault are not yet complete.
+- Local Wi-Fi / hotspot multiplayer is not yet implemented.
+- The project currently uses procedural greybox geometry; final high-quality weapon, soldier, building, sandbag and environment assets remain to be created or sourced with clear licences.
+- Audio is synthesized placeholder audio, not recorded firearm or battlefield sound design.
+- Android APK export and on-device performance are not confirmed until the GitHub Actions run completes and the APK is tested on an Android phone.
+
+## Quality rules
+
+1. Do not call a placeholder a finished feature.
+2. Do not add many small maps; polish the initial wide map first.
+3. Keep the distant sightline and terrain readability central to level design.
+4. Keep code modular and configuration-driven.
+5. Test GDScript parsing and scene startup in headless CI before exporting APK.
+6. After each major step, record files changed, tests run, results, and unresolved issues in this context file.
+7. Never claim a successful APK build without a successful Actions run and artifact verification.
