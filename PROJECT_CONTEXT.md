@@ -312,3 +312,18 @@ Projectile behavior:
 - The first Godot headless import also completed. The log reported a non-fatal attempt to process the included M4A1 Blender source project without Blender available; the Godot-ready FBX was present. The preparation script now deletes the source .blend files from the staged runtime directory after unpacking, keeping only engine-importable assets.
 - The strengthened smoke test did not run to completion because Godot 4.7.2 rejected inferred Boolean types for two touch-look-region variables in player_controller.gd. Both variables are now declared explicitly as bool.
 - The run stopped before Android export, so no APK was produced by this attempt. The type fix and Blender-source cleanup are committed for the next full import/smoke/export run.
+
+
+## External asset integration and analog-movement CI validation passed — 2026-11-07
+
+- Final corrected commit: `6a316880f7776fe4195c08b99f2dfbe6d12f8ab7`.
+- GitHub Actions run [42411928830](https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42411928830) completed with **success**.
+- The external asset download/preparation step passed: both AK and M4A1 source archives, firearm field recordings, Fantozzi sand footfalls and the three Poly Haven Rocky Gravel PBR maps were downloaded and staged. Blender-only .blend source files are excluded from the headless Godot import.
+- Godot project import passed. The strengthened smoke test passed, including loading a real imported weapon mesh, creating the analog movement joystick and aim controls, finding the pause/armory/settings UI, and confirming that the player position changes when a movement-vector input is applied.
+- Android debug APK export passed. APK archive CRC validation, Android signature verification, AndroidManifest.xml, classes.dex and ARM64 native-library checks all passed.
+- Verified GitHub Actions artifact: `TacticalStrike-Android-verified`, artifact ID `13589489249`.
+- The exact uploaded artifact was downloaded locally. The outer ZIP passed `unzip -t`; the extracted APK also passed a complete ZIP/CRC test and was identified as an Android package.
+- APK size: `47,041,431` bytes. SHA-256: `e9d37e3f2eef27569e59a99a5b1ab66bba4dff2d2cdff8de5d5c6ad6d9309cb3`.
+- A standalone copy of the APK, checksum sidecar and validation report were prepared for the user to avoid extracting the outer GitHub artifact ZIP.
+- **Important boundary:** CI proves asset download, engine import, scripted movement logic, visible imported mesh instantiation, Android packaging and file/signature integrity. It does not prove that the user sees the rifle at the correct scale/orientation, that the touch joystick feels right on the phone, or that the overall visual quality meets the target. This exact APK has not yet been tested on the user's physical phone.
+- **Known content limits:** only AK and M4 have imported firearm meshes in this pass; the AK asset is a close AK-family visual model, not an exact AK-74 factory mesh. The firearm recordings are real AK-47 and AR-15 takes, not exact AK-74/M4A1 takes. First-person arm animations, reload/walk/sprint weapon animation, tactical AI and local multiplayer remain unfinished.
