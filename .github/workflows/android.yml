@@ -83,10 +83,36 @@ jobs:
           "$GODOT_BIN" --headless --path . --export-debug "Android" build/TacticalStrike-debug.apk
           test -s build/TacticalStrike-debug.apk
 
-      - name: Upload Android APK
+      - name: Validate APK archive, signature and ARM64 payload
+        run: |
+          set -euo pipefail
+          unzip -t build/TacticalStrike-debug.apk > build/apk-zip-validation.txt
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs build/TacticalStrike-debug.apk > build/apk-signature-validation.txt 2>&1
+          unzip -Z1 build/TacticalStrike-debug.apk > build/apk-entries.txt
+          grep -Fxq "AndroidManifest.xml" build/apk-entries.txt
+          grep -Fxq "classes.dex" build/apk-entries.txt
+          grep -Fxq "lib/arm64-v8a/libgodot_android.so" build/apk-entries.txt
+          sha256sum build/TacticalStrike-debug.apk > build/TacticalStrike-debug.apk.sha256
+          {
+            echo "Tactical Strike Android APK validation"
+            echo "APK size: $(stat -c '%s bytes' build/TacticalStrike-debug.apk)"
+            echo "APK SHA-256:"
+            cat build/TacticalStrike-debug.apk.sha256
+            echo "Archive integrity: PASS"
+            echo "APK signature: PASS"
+            echo "AndroidManifest.xml: PASS"
+            echo "classes.dex: PASS"
+            echo "ARM64 native library: PASS"
+          } > build/apk-validation.txt
+
+      - name: Upload verified Android APK and integrity report
         uses: actions/upload-artifact@v7
         with:
-          name: TacticalStrike-Android-debug
-          path: build/TacticalStrike-debug.apk
+          name: TacticalStrike-Android-verified
+          path: |
+            build/TacticalStrike-debug.apk
+            build/TacticalStrike-debug.apk.sha256
+            build/apk-validation.txt
+          compression-level: 9
           if-no-files-found: error
           retention-days: 14

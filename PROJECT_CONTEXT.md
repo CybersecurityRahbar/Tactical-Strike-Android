@@ -170,3 +170,15 @@ Projectile behavior:
 - The strengthened script smoke test caught a GDScript indentation error introduced while adding depth haze and day/night haze tinting in `scripts/world/main_world.gd`. It correctly failed the job before Android APK export; no artifact was produced by that run.
 - Corrected the extra indentation on the environment tonemapping statement and moved the day/night environment block out from under the sun-null check. This keeps haze tint switching independent of the sun node's state.
 - The next CI run must confirm all scripts compile, the main scene initializes, and Android export succeeds before the refined APK is shared.
+
+
+## User-reported Android artifact extraction failure — 2026-11-07
+
+- User reported that the successful fog/refinement build downloaded from GitHub Actions was approximately 27.20 MB, but Android archive extraction stopped with an error and left only a partial APK of around 12 MB.
+- Inspected the exact successful Actions artifact from run [42403356849](https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42403356849), artifact ID `13586278101`, uploaded from commit `8e353a2b5ef01aaded93af81535834b693e53d92`.
+- Downloaded the artifact through the connected GitHub integration and verified its complete ZIP CRC table with `unzip -t`: **PASS**, no corrupt entries. The archive contains exactly one `TacticalStrike-debug.apk` entry, 28,523,024 bytes.
+- Extracted that exact entry separately. The APK was identified as an Android package, contains 125 ZIP entries including `AndroidManifest.xml`, `classes.dex`, and `lib/arm64-v8a/libgodot_android.so`; a full APK CRC check also passed with no errors.
+- Conclusion: the stored GitHub artifact and the APK inside it are not corrupt. The 12 MB output reported by the user is consistent with an interrupted/partial extraction or a damaged/incomplete local download, but the precise device-side cause cannot be identified without the actual local archive/error screenshot. No evidence indicates that the Godot build itself produced a 12 MB APK.
+- Compression analysis: the outer GitHub ZIP is 28,309,482 bytes versus the inner APK at 28,523,024 bytes, a saving of only 213,542 bytes (0.75%). This is expected because APK is itself a ZIP container whose contents are already compressed. A local XZ level-9 test reduced the APK by only about 1.4%, so switching to 7z is not expected to materially speed up download.
+- For this conversation, extracted the verified APK from the exact current successful artifact as a standalone file so it can be installed directly without first extracting the GitHub artifact ZIP.
+- Hardened the GitHub Actions workflow: after export it must test APK ZIP integrity, verify the Android signature with `apksigner`, confirm the manifest/classes/ARM64 Godot library, and generate a SHA-256 checksum before the artifact is uploaded. The artifact now includes the APK and a small validation/checksum report, with maximum ZIP compression. This workflow change requires a fresh CI run; it is not treated as passed until that run succeeds.
