@@ -51,7 +51,12 @@ func _run_smoke_test() -> void:
 	var terrain_mesh_instance := instance.get_node("BattlefieldTerrain") as MeshInstance3D
 	var terrain_arrays: Array = terrain_mesh_instance.mesh.surface_get_arrays(0)
 	var terrain_tangents: PackedFloat32Array = terrain_arrays[Mesh.ARRAY_TANGENT]
-	if terrain_tangents == null or terrain_tangents.is_empty():
+	var terrain_normals: PackedVector3Array = terrain_arrays[Mesh.ARRAY_NORMAL]
+	if terrain_normals.is_empty() or terrain_normals[0].y < 0.15:
+		push_error("Smoke test failed: terrain triangle normals do not point upward.")
+		quit(1)
+		return
+	if terrain_tangents.is_empty():
 		push_error("Smoke test failed: terrain mesh has no generated tangents for its normal map.")
 		quit(1)
 		return

@@ -74,7 +74,7 @@ func _setup_noise() -> void:
 func _create_materials() -> void:
 	earth_material = _make_material(Color.WHITE)
 	earth_material.vertex_color_use_as_albedo = true
-	earth_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	earth_material.cull_mode = BaseMaterial3D.CULL_BACK
 	earth_material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	var diffuse_path := "res://assets/runtime/terrain/rocky_gravel_diff_1k.jpg"
 	var normal_path := "res://assets/runtime/terrain/rocky_gravel_nor_gl_1k.jpg"
@@ -205,26 +205,28 @@ func _build_terrain() -> void:
 			var p10 := Vector3(x1, _terrain_height(x1, z0), z0)
 			var p01 := Vector3(x0, _terrain_height(x0, z1), z1)
 			var p11 := Vector3(x1, _terrain_height(x1, z1), z1)
+			# Godot triangle fronts are clockwise. Keep the collision triangles front-facing
+			# from above while flipping the generated normals back toward +Y.
 			tool.set_color(_soil_color(x0, z0))
 			tool.set_uv(Vector2(x0 * uv_scale, z0 * uv_scale))
 			tool.add_vertex(p00)
-			tool.set_color(_soil_color(x0, z1))
-			tool.set_uv(Vector2(x0 * uv_scale, z1 * uv_scale))
-			tool.add_vertex(p01)
-			tool.set_color(_soil_color(x1, z0))
-			tool.set_uv(Vector2(x1 * uv_scale, z0 * uv_scale))
-			tool.add_vertex(p10)
 			tool.set_color(_soil_color(x1, z0))
 			tool.set_uv(Vector2(x1 * uv_scale, z0 * uv_scale))
 			tool.add_vertex(p10)
 			tool.set_color(_soil_color(x0, z1))
 			tool.set_uv(Vector2(x0 * uv_scale, z1 * uv_scale))
 			tool.add_vertex(p01)
+			tool.set_color(_soil_color(x1, z0))
+			tool.set_uv(Vector2(x1 * uv_scale, z0 * uv_scale))
+			tool.add_vertex(p10)
 			tool.set_color(_soil_color(x1, z1))
 			tool.set_uv(Vector2(x1 * uv_scale, z1 * uv_scale))
 			tool.add_vertex(p11)
+			tool.set_color(_soil_color(x0, z1))
+			tool.set_uv(Vector2(x0 * uv_scale, z1 * uv_scale))
+			tool.add_vertex(p01)
 	tool.index()
-	tool.generate_normals()
+	tool.generate_normals(true)
 	tool.generate_tangents()
 	var terrain_mesh := tool.commit()
 	var terrain := MeshInstance3D.new()

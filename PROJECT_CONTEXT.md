@@ -346,3 +346,12 @@ Projectile behavior:
 - The first screenshot-driven rebuild run [42417049347](https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42417049347) successfully prepared the licensed AK-74M asset, all six firearm sample files, footsteps and PBR terrain maps. Godot imported the authored glTF scene successfully.
 - The expanded headless test then caught strict GDScript inference failures on one mobile-touch Vector2 temporary and three UI Rect2 temporaries, with additional explicit typing added for terrain arrays/tangents and test string/audio arrays.
 - Corrected the HUD anchor to an explicit Vector2 and the smoke-test screen/control rectangles to explicit Vector2/Rect2 types. No APK was exported from the failed run. The next CI run must pass the new terrain tangents/material/relief checks, animation clip checks, LTR layout/non-overlap checks, player displacement/floor stability checks, recorded audio resource checks and real fire/ammo state checks before export.
+
+
+## Terrain winding and collision-root-cause correction — 2026-11-08
+
+- The stricter movement/floor-stability test exposed that the player was falling through the generated terrain even though its scene and collision node existed. This is the actual root cause of the "I can look but cannot walk" failure in the latest candidate.
+- Godot uses clockwise triangle winding for front faces. The procedural terrain vertices were previously emitted in the opposite order. Reversed both triangles per terrain cell so the heightfield faces upward as a front-facing surface for Godot's one-sided triangle collision.
+- Because reversing the triangle order also reverses the generated geometric normals, the mesh now calls SurfaceTool.generate_normals(true) to keep its lighting normals pointing upward, then generates tangents for the PBR normal map. The terrain material uses normal back-face culling again rather than showing its underside.
+- Strengthened the smoke test to inspect the terrain's generated normal array and fail if the surface does not point upward, in addition to verifying height relief, diffuse/normal texture bindings, player movement displacement and vertical floor stability.
+- This fix was triggered by a failing test, not by guesswork; the next run must demonstrate the player stays above the terrain collision surface before Android export.
