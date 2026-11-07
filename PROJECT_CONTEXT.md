@@ -221,3 +221,27 @@ Projectile behavior:
 - Final APK SHA-256: `118252b53a0ea561c7c9c908da1d2cc9ac6d985a1928893caaa4a916029dcccc`.
 - The standalone copy supplied in the conversation and its `.sha256` sidecar were extracted from this exact final artifact. The small validation report confirms archive integrity, APK signature, AndroidManifest.xml, classes.dex and ARM64 native library all PASS.
 - Later documentation-only commits do not trigger another build because the workflow now ignores README, PROJECT_CONTEXT and `docs/**`. Code changes and manual workflow dispatches still trigger a build.
+
+
+## User playtest feedback and first-person usability repair — 2026-11-07
+
+### User-reported result
+- User installed the Android APK and reported that the first screen looked like a largely empty beige plane with a very thin dark horizon, black side bars, clipped status text, and almost no visible controls.
+- User could rotate the view but could not move, fire, reload, switch weapons, or access settings. The result did not feel like a playable game.
+- This feedback is accepted as a real usability failure; a successful APK export and a headless scene-start test did not prove that the Android touch experience was usable.
+
+### Source review findings
+- The Android viewport was fixed at 1280×720 but did not specify an expanding aspect policy. On a wider phone display this can preserve a 16:9 game area and leave unused side regions.
+- The battlefield used one flat earth material, a 100×100 terrain grid, only 160 small rock instances, and relatively strong early distance haze. At the player's long-range spawn point this produced very weak visible surface detail and hid the defensive sector too much.
+- Weapon definitions and projectile code existed, but there was no first-person weapon mesh attached to the camera. Therefore a weapon name/ammunition count in the HUD did not look or feel like holding a weapon.
+- The mobile HUD was only a few fixed-position buttons and had no pause, armory, or settings menus. The previous smoke test checked script/scene initialization, not the presence of a usable first-person weapon model or game UI.
+- AI combatants, final quality assets and local multiplayer remain separate incomplete milestones; they must not be described as already complete.
+
+### Repair committed for validation
+- Changed the mobile stretch aspect policy to `expand` so the game viewport can fill wider landscape displays without fixed 16:9 side pillars.
+- Increased terrain tessellation and height variation; added per-vertex dry-earth color variation, a visible dusty approach track, more ground stones and lighter, more distant haze.
+- Added a low-poly first-person weapon-and-arms view model, weapon switching model refresh, recoil movement and a muzzle flash aligned with the visible weapon.
+- Rebuilt the HUD with a pause menu, settings panel, weapon armory, night/day toggle, sensitivity controls, and explicit mobile movement/fire/reload/sprint/crouch/jump controls. Screen dragging is restricted to the open look region so movement/action controls do not intentionally rotate the camera.
+- Wired HUD selection/settings signals to the player, weapon controller and day/night system.
+- Expanded the headless smoke test to require the first-person weapon model and pause/armory/settings controls in addition to the existing world/player/HUD checks.
+- **Validation boundary:** these changes are pending the next GitHub Actions run. Even after CI passes, an on-device Android playtest is still required to verify that touch buttons render in the expected positions and register correctly. These changes do not complete tactical AI, final 3D art or LAN multiplayer.

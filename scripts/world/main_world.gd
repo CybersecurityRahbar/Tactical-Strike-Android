@@ -5,9 +5,10 @@ const HUD_SCRIPT = preload("res://scripts/ui/hud.gd")
 const COVER_SCRIPT = preload("res://scripts/world/cover_piece.gd")
 
 const MAP_SIZE := 700.0
-const TERRAIN_DIVISIONS := 100
+const TERRAIN_DIVISIONS := 160
 
 var terrain_noise := FastNoiseLite.new()
+var detail_noise := FastNoiseLite.new()
 var sun: DirectionalLight3D
 var world_environment: WorldEnvironment
 var sky_material: ProceduralSkyMaterial
@@ -28,6 +29,7 @@ func _ready() -> void:
 	_build_environment()
 	_build_terrain()
 	_build_cover_layout()
+	_build_approach_track()
 	_scatter_ground_details()
 	_place_distant_defenders()
 	_spawn_player()
@@ -40,9 +42,16 @@ func _setup_noise() -> void:
 	terrain_noise.fractal_octaves = 4
 	terrain_noise.fractal_lacunarity = 2.0
 	terrain_noise.fractal_gain = 0.48
+	detail_noise.seed = 741208
+	detail_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
+	detail_noise.frequency = 0.052
+	detail_noise.fractal_octaves = 3
+	detail_noise.fractal_lacunarity = 2.1
+	detail_noise.fractal_gain = 0.52
 
 func _create_materials() -> void:
-	earth_material = _make_material(Color(0.34, 0.27, 0.19))
+	earth_material = _make_material(Color.WHITE)
+	earth_material.vertex_color_use_as_albedo = true
 	sandbag_material = _make_material(Color(0.47, 0.40, 0.29))
 	brick_material = _make_material(Color(0.39, 0.29, 0.23))
 	stone_material = _make_material(Color(0.37, 0.36, 0.32))
@@ -63,24 +72,24 @@ func _build_environment() -> void:
 	environment.background_mode = Environment.BG_SKY
 	var sky := Sky.new()
 	sky_material = ProceduralSkyMaterial.new()
-	sky_material.sky_top_color = Color(0.27, 0.34, 0.39)
-	sky_material.sky_horizon_color = Color(0.72, 0.61, 0.45)
-	sky_material.ground_bottom_color = Color(0.20, 0.18, 0.14)
-	sky_material.ground_horizon_color = Color(0.55, 0.45, 0.33)
+	sky_material.sky_top_color = Color(0.34, 0.42, 0.47)
+	sky_material.sky_horizon_color = Color(0.72, 0.62, 0.47)
+	sky_material.ground_bottom_color = Color(0.16, 0.14, 0.11)
+	sky_material.ground_horizon_color = Color(0.45, 0.36, 0.26)
 	sky.sky_material = sky_material
 	environment.sky = sky
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	environment.ambient_light_energy = 0.75
+	environment.ambient_light_energy = 0.88
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	# Soft depth haze preserves distant silhouettes while gently reducing contrast.
 	environment.fog_enabled = true
 	environment.fog_mode = Environment.FOG_MODE_DEPTH
-	environment.fog_depth_begin = 185.0
-	environment.fog_depth_end = 860.0
-	environment.fog_depth_curve = 1.15
-	environment.fog_density = 0.18
-	environment.fog_light_color = Color(0.64, 0.55, 0.43)
-	environment.fog_sky_affect = 0.65
+	environment.fog_depth_begin = 285.0
+	environment.fog_depth_end = 1250.0
+	environment.fog_depth_curve = 1.05
+	environment.fog_density = 0.055
+	environment.fog_light_color = Color(0.56, 0.47, 0.35)
+	environment.fog_sky_affect = 0.32
 	world_environment.environment = environment
 	add_child(world_environment)
 
@@ -92,19 +101,105 @@ func _build_environment() -> void:
 	add_child(sun)
 
 func _terrain_height(x: float, z: float) -> float:
-	var rolling := terrain_noise.get_noise_2d(x, z) * 2.4
-	var broad := sin(x * 0.008) * 1.5 + cos(z * 0.010) * 1.4
-	var ridge_one := 5.2 * exp(-pow((z - (52.0 + sin(x * 0.018) * 18.0)) / 42.0, 2.0))
-	var ridge_two := 6.0 * exp(-pow((z - (-72.0 + sin(x * 0.014) * 24.0)) / 48.0, 2.0))
-	var low_saddle := -1.4 * exp(-pow((z + 5.0) / 30.0, 2.0))
-	var height := rolling + broad + ridge_one + ridge_two + low_saddle
+	var rolling := terrain_noise.get_noise_2d(x, z) * 4.2
+	var fine := detail_noise.get_noise_2d(x, z) * 0.95
+	var broad := sin(x * 0.0062) * 2.3 + cos(z * 0.0078) * 2.1
+	var ridge_one := 8.2 * exp(-pow((z - (82.0 + sin(x * 0.018) * 22.0)) / 48.0, 2.0))
+	var ridge_two := 9.0 * exp(-pow((z - (-72.0 + sin(x * 0.014) * 28.0)) / 50.0, 2.0))
+	var ridge_three := 5.8 * exp(-pow((z - (151.0 + sin(x * 0.031) * 13.0)) / 31.0, 2.0))
+	var low_saddle := -1.6 * exp(-pow((z + 5.0) / 30.0, 2.0))
+	var height := rolling + fine + broad + ridge_one + ridge_two + ridge_three + low_saddle
 	var attacker_trench: float = absf(z - (205.0 + sin(x * 0.055) * 2.2))
 	var defender_trench: float = absf(z - (-205.0 + sin(x * 0.045) * 2.4))
 	if attacker_trench < 3.0:
-		height -= (1.0 - attacker_trench / 3.0) * 1.0
+		height -= (1.0 - attacker_trench / 3.0) * 1.35
 	if defender_trench < 3.0:
-		height -= (1.0 - defender_trench / 3.0) * 1.15
+		height -= (1.0 - defender_trench / 3.0) * 1.5
 	return height
+
+func _soil_color(x: float, z: float) -> Color:
+	var broad_variation := terrain_noise.get_noise_2d(x * 0.42, z * 0.42)
+	var fine_variation := detail_noise.get_noise_2d(x * 0.9, z * 0.9)
+	var shade := broad_variation * 0.035 + fine_variation * 0.045
+	return Color(
+		clampf(0.36 + shade, 0.27, 0.43),
+		clampf(0.275 + shade * 0.78, 0.20, 0.34),
+		clampf(0.185 + shade * 0.58, 0.13, 0.24),
+		1.0
+	)
+
+func _build_terrain() -> void:
+	var tool := SurfaceTool.new()
+	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+	tool.set_material(earth_material)
+	var half := MAP_SIZE * 0.5
+	var step := MAP_SIZE / float(TERRAIN_DIVISIONS)
+	for ix in range(TERRAIN_DIVISIONS):
+		for iz in range(TERRAIN_DIVISIONS):
+			var x0 := -half + float(ix) * step
+			var x1 := x0 + step
+			var z0 := -half + float(iz) * step
+			var z1 := z0 + step
+			var p00 := Vector3(x0, _terrain_height(x0, z0), z0)
+			var p10 := Vector3(x1, _terrain_height(x1, z0), z0)
+			var p01 := Vector3(x0, _terrain_height(x0, z1), z1)
+			var p11 := Vector3(x1, _terrain_height(x1, z1), z1)
+			tool.set_color(_soil_color(x0, z0))
+			tool.add_vertex(p00)
+			tool.set_color(_soil_color(x0, z1))
+			tool.add_vertex(p01)
+			tool.set_color(_soil_color(x1, z0))
+			tool.add_vertex(p10)
+			tool.set_color(_soil_color(x1, z0))
+			tool.add_vertex(p10)
+			tool.set_color(_soil_color(x0, z1))
+			tool.add_vertex(p01)
+			tool.set_color(_soil_color(x1, z1))
+			tool.add_vertex(p11)
+	tool.generate_normals()
+	var terrain_mesh := tool.commit()
+	var terrain := MeshInstance3D.new()
+	terrain.name = "BattlefieldTerrain"
+	terrain.mesh = terrain_mesh
+	terrain.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(terrain)
+	var body := StaticBody3D.new()
+	body.name = "TerrainCollision"
+	var shape := CollisionShape3D.new()
+	shape.shape = terrain_mesh.create_trimesh_shape()
+	body.add_child(shape)
+	add_child(body)
+
+func _build_approach_track() -> void:
+	var track_material := _make_material(Color(0.255, 0.192, 0.128))
+	track_material.roughness = 1.0
+	var tool := SurfaceTool.new()
+	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+	tool.set_material(track_material)
+	var segments := 132
+	for i in range(segments):
+		var z0 := 282.0 - float(i) * 4.35
+		var z1 := z0 - 4.35
+		var center0 := sin(z0 * 0.014) * 11.0
+		var center1 := sin(z1 * 0.014) * 11.0
+		var width0 := 4.2 + sin(float(i) * 0.19) * 0.55
+		var width1 := 4.2 + sin(float(i + 1) * 0.19) * 0.55
+		var left0 := Vector3(center0 - width0, _terrain_height(center0 - width0, z0) + 0.075, z0)
+		var right0 := Vector3(center0 + width0, _terrain_height(center0 + width0, z0) + 0.075, z0)
+		var left1 := Vector3(center1 - width1, _terrain_height(center1 - width1, z1) + 0.075, z1)
+		var right1 := Vector3(center1 + width1, _terrain_height(center1 + width1, z1) + 0.075, z1)
+		tool.add_vertex(left0)
+		tool.add_vertex(left1)
+		tool.add_vertex(right0)
+		tool.add_vertex(right0)
+		tool.add_vertex(left1)
+		tool.add_vertex(right1)
+	tool.generate_normals()
+	var track := MeshInstance3D.new()
+	track.name = "DustyApproachTrack"
+	track.mesh = tool.commit()
+	track.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(track)
 
 func _build_terrain() -> void:
 	var tool := SurfaceTool.new()
@@ -222,19 +317,19 @@ func _scatter_ground_details() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 741207
 	var rock_mesh := SphereMesh.new()
-	rock_mesh.radius = 0.48
-	rock_mesh.height = 0.72
+	rock_mesh.radius = 0.62
+	rock_mesh.height = 0.88
 	rock_mesh.radial_segments = 6
 	rock_mesh.rings = 3
 	var multi := MultiMesh.new()
 	multi.transform_format = MultiMesh.TRANSFORM_3D
 	multi.mesh = rock_mesh
-	multi.instance_count = 160
+	multi.instance_count = 920
 	for i in range(multi.instance_count):
 		var x := rng.randf_range(-325.0, 325.0)
 		var z := rng.randf_range(-325.0, 325.0)
 		var y := _terrain_height(x, z) + 0.14
-		var scale := Vector3(rng.randf_range(0.28, 1.1), rng.randf_range(0.18, 0.55), rng.randf_range(0.30, 0.9))
+		var scale := Vector3(rng.randf_range(0.34, 1.35), rng.randf_range(0.22, 0.68), rng.randf_range(0.32, 1.15))
 		var basis := Basis().scaled(scale)
 		multi.set_instance_transform(i, Transform3D(basis, Vector3(x, y, z)))
 	var rocks := MultiMeshInstance3D.new()
@@ -285,6 +380,14 @@ func _create_hud() -> void:
 	hud.set_battle_status("PLATEAU SECTOR 01  |  DAY  |  DEFENDERS: DISTANT")
 	if player != null and player.has_method("attach_hud"):
 		player.attach_hud(hud)
+		var weapon_node := player.get_node_or_null("WeaponController")
+		if weapon_node != null:
+			hud.weapon_selected.connect(Callable(weapon_node, "select_weapon"))
+		hud.sensitivity_adjust_requested.connect(Callable(player, "adjust_sensitivity"))
+		hud.night_toggle_requested.connect(_toggle_night_from_hud)
+
+func _toggle_night_from_hud() -> void:
+	_set_night_mode(not night_mode)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
@@ -298,7 +401,7 @@ func _set_night_mode(enabled: bool) -> void:
 	if world_environment != null:
 		world_environment.environment.ambient_light_energy = 0.24 if night_mode else 0.75
 		world_environment.environment.fog_light_color = Color(0.035, 0.045, 0.075) if night_mode else Color(0.64, 0.55, 0.43)
-		world_environment.environment.fog_density = 0.14 if night_mode else 0.18
+		world_environment.environment.fog_density = 0.04 if night_mode else 0.055
 	if sky_material != null:
 		sky_material.sky_top_color = Color(0.012, 0.018, 0.035) if night_mode else Color(0.27, 0.34, 0.39)
 		sky_material.sky_horizon_color = Color(0.055, 0.065, 0.09) if night_mode else Color(0.72, 0.61, 0.45)

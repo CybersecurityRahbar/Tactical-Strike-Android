@@ -49,6 +49,14 @@ func _run_smoke_test() -> void:
 		push_error("Smoke test failed: HUD was not created.")
 		quit(1)
 		return
+	if not instance.has_node("Player/Camera3D/WeaponViewModel"):
+		push_error("Smoke test failed: first-person weapon view model was not created.")
+		quit(1)
+		return
+	if not instance.has_node("HUD/Overlay/PauseButton") or not instance.has_node("HUD/Overlay/ArmoryButton") or not instance.has_node("HUD/Overlay/SettingsButton"):
+		push_error("Smoke test failed: pause, armory or settings UI is missing.")
+		quit(1)
+		return
 
-	print("SMOKE TEST PASSED: all required scripts compile; main scene, terrain, player and HUD initialized.")
+	print("SMOKE TEST PASSED: scripts, battlefield, player, visible weapon model and game UI initialized.")
 	quit(0)
