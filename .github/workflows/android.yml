@@ -22,7 +22,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Prepare CC0 weapon, terrain and recorded audio assets
+      - name: Prepare licensed weapon, terrain and recorded audio assets
         run: |
           set -euo pipefail
           if ! command -v ffmpeg >/dev/null 2>&1; then

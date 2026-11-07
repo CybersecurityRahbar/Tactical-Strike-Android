@@ -209,6 +209,8 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	_update_camera_motion(delta, moving, sprinting)
 	_update_footsteps(delta, moving, sprinting)
+	if weapon_controller != null and weapon_controller.has_method("set_movement_state"):
+		weapon_controller.call("set_movement_state", moving, sprinting)
 
 func _process(delta: float) -> void:
 	camera_kick = move_toward(camera_kick, 0.0, delta * 1.7)

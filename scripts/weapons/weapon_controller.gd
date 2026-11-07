@@ -4,42 +4,55 @@ const WEAPON_DATA = preload("res://scripts/weapons/weapon_data.gd")
 const PROJECTILE = preload("res://scripts/weapons/projectile.gd")
 const WEAPON_AUDIO = preload("res://scripts/effects/weapon_audio.gd")
 
+const IDLE_ANIM := "Rig|AK_Idle"
+const DRAW_ANIM := "Rig|AK_Draw"
+const WALK_ANIM := "Rig|AK_Walk"
+const RUN_ANIM := "Rig|AK_Run"
+const FIRE_ANIM := "Rig|AK_Shot"
+const RELOAD_ANIM := "Rig|AK_Reload_full"
+
+const AMMO_NAMES: Array[String] = ["FMJ", "TRACER", "AP"]
+const AMMO_RESERVE_START := 120
+
 var camera: Camera3D
 var shooter: Node3D
 var hud: CanvasLayer
 var weapons: Array[Dictionary] = []
 var model_paths: Dictionary = {}
 var current_index := 0
-var magazine_ammo := 0
+var magazine_ammo := 30
+var reserve_ammo := AMMO_RESERVE_START
+var ammo_type_index := 0
 var fire_cooldown := 0.0
+var reload_remaining := 0.0
 var total_shots := 0
-var tracer_mode := false
-var aiming := false
-var weapon_view_model: Node3D
-var imported_weapon: Node3D
+var aim_enabled := false
+var is_reloading := false
+var view_model: Node3D
+var weapon_scene: Node3D
+var animation_player: AnimationPlayer
+var action_animation_active := false
 var recoil_amount := 0.0
 var aim_blend := 0.0
-var view_model_base := Vector3(0.34, -0.27, -0.58)
-var view_model_ads := Vector3(0.04, -0.205, -0.73)
+var view_model_base := Vector3(0.16, -0.29, -0.66)
+var view_model_ads := Vector3(0.025, -0.22, -0.74)
 var sway_time := 0.0
-var current_fire_profile := ""
+var movement_state := "idle"
+var last_locomotion_animation := ""
 
 func initialize(camera_ref: Camera3D, shooter_ref: Node3D) -> void:
 	camera = camera_ref
 	shooter = shooter_ref
 	_read_model_manifest()
 	var all_weapons: Array[Dictionary] = WEAPON_DATA.all_weapons()
-	# Do not pretend that an unavailable PKM, RPG, SVD or heavy-gun model is present.
-	# The first playable asset pass exposes only the two weapons with actual imported meshes.
 	for spec in all_weapons:
 		var model_key := str(spec.get("model_key", ""))
 		if model_paths.has(model_key) and ResourceLoader.exists(str(model_paths[model_key])):
 			weapons.append(spec)
 	if weapons.is_empty():
-		push_error("No imported first-person weapon models were prepared for this build.")
+		push_error("No authentic animated weapon model was prepared for this build.")
 		return
 	magazine_ammo = int(weapons[0].magazine)
-	current_fire_profile = str(weapons[0].audio_profile)
 	_build_weapon_view_model()
 	_update_hud()
 
@@ -63,30 +76,46 @@ func set_hud(hud_ref: CanvasLayer) -> void:
 	_update_hud()
 
 func set_aiming(enabled: bool) -> void:
-	aiming = enabled
+	aim_enabled = enabled
+
+func set_movement_state(walking: bool, running: bool) -> void:
+	if running:
+		movement_state = "run"
+	elif walking:
+		movement_state = "walk"
+	else:
+		movement_state = "idle"
+	_play_locomotion_if_ready()
+
+func cycle_ammo_type() -> void:
+	ammo_type_index = (ammo_type_index + 1) % AMMO_NAMES.size()
+	_update_hud()
+	if hud != null:
+		hud.set_message("AMMUNITION: " + AMMO_NAMES[ammo_type_index])
 
 func _process(delta: float) -> void:
 	fire_cooldown = maxf(0.0, fire_cooldown - delta)
-	recoil_amount = move_toward(recoil_amount, 0.0, delta * 2.5)
-	aim_blend = move_toward(aim_blend, 1.0 if aiming else 0.0, delta * 7.0)
+	recoil_amount = move_toward(recoil_amount, 0.0, delta * 2.7)
+	aim_blend = move_toward(aim_blend, 1.0 if aim_enabled else 0.0, delta * 6.5)
 	sway_time += delta
-	if weapon_view_model != null:
+	if view_model != null:
 		var target_position := view_model_base.lerp(view_model_ads, aim_blend)
-		var sway := Vector3(sin(sway_time * 2.1) * 0.004, cos(sway_time * 4.2) * 0.004, 0.0)
-		weapon_view_model.position = target_position + sway + Vector3(0.0, recoil_amount * 0.16, recoil_amount)
-		weapon_view_model.rotation.x = -recoil_amount * 0.44
+		var sway := Vector3(sin(sway_time * 1.8) * 0.0025, cos(sway_time * 3.6) * 0.0025, 0.0)
+		view_model.position = target_position + sway + Vector3(0.0, recoil_amount * 0.12, recoil_amount)
+		view_model.rotation.x = -recoil_amount * 0.34
+
+	if is_reloading:
+		reload_remaining = maxf(0.0, reload_remaining - delta)
+		if reload_remaining <= 0.0:
+			_finish_reload()
 	if weapons.is_empty():
 		return
 	if Input.is_action_just_pressed("weapon_next"):
 		select_weapon((current_index + 1) % weapons.size())
+	if Input.is_action_just_pressed("ammo_cycle"):
+		cycle_ammo_type()
 	if Input.is_action_just_pressed("reload"):
 		reload_weapon()
-	if Input.is_action_just_pressed("toggle_tracer"):
-		tracer_mode = not tracer_mode
-		_update_hud()
-	for i in range(weapons.size()):
-		if Input.is_action_just_pressed("weapon_%d" % (i + 1)):
-			select_weapon(i)
 	if Input.is_action_pressed("fire"):
 		_try_fire()
 
@@ -95,139 +124,183 @@ func select_weapon(index: int) -> void:
 		return
 	current_index = index
 	magazine_ammo = int(weapons[current_index].magazine)
-	current_fire_profile = str(weapons[current_index].audio_profile)
 	_build_weapon_view_model()
 	_update_hud()
 
 func reload_weapon() -> void:
-	if weapons.is_empty():
+	if weapons.is_empty() or is_reloading or reserve_ammo <= 0:
 		return
-	magazine_ammo = int(weapons[current_index].magazine)
+	var capacity := int(weapons[current_index].magazine)
+	var required := capacity - magazine_ammo
+	if required <= 0:
+		if hud != null:
+			hud.set_message("MAGAZINE FULL")
+		return
+	is_reloading = true
+	action_animation_active = true
+	reload_remaining = 2.15
+	if animation_player != null and _has_animation(RELOAD_ANIM):
+		var clip := animation_player.get_animation(RELOAD_ANIM)
+		reload_remaining = maxf(clip.length, 1.25)
+		animation_player.play(RELOAD_ANIM)
+	if hud != null:
+		hud.set_message("RELOADING")
+	_update_hud()
+
+func _finish_reload() -> void:
+	if not is_reloading or weapons.is_empty():
+		return
+	var capacity := int(weapons[current_index].magazine)
+	var missing := capacity - magazine_ammo
+	var transferred := mini(missing, reserve_ammo)
+	magazine_ammo += transferred
+	reserve_ammo -= transferred
+	is_reloading = false
+	action_animation_active = false
+	_play_locomotion_if_ready()
 	_update_hud()
 	if hud != null:
-		hud.set_message("MAGAZINE READY")
+		hud.set_message("RELOAD COMPLETE")
 
 func _try_fire() -> void:
-	if weapons.is_empty():
+	if weapons.is_empty() or is_reloading or fire_cooldown > 0.0:
 		return
-	if fire_cooldown > 0.0 or magazine_ammo <= 0:
-		if magazine_ammo <= 0 and hud != null:
-			hud.set_message("EMPTY — RELOAD")
+	if magazine_ammo <= 0:
+		if hud != null:
+			hud.set_message("EMPTY MAGAZINE — RELOAD")
 		return
+
 	var spec: Dictionary = weapons[current_index]
 	fire_cooldown = float(spec.fire_interval)
 	magazine_ammo -= 1
 	total_shots += 1
-	recoil_amount = 0.12 if aiming else 0.085
+	recoil_amount = 0.11 if aim_enabled else 0.085
 	if is_instance_valid(shooter) and shooter.has_method("add_weapon_recoil"):
-		shooter.call("add_weapon_recoil", 0.018 if aiming else 0.012)
+		shooter.call("add_weapon_recoil", 0.022 if aim_enabled else 0.014)
+
+	var shot_spec := spec.duplicate(true)
+	var ammo_name := AMMO_NAMES[ammo_type_index]
+	if ammo_name == "AP":
+		shot_spec.damage = float(shot_spec.damage) * 1.12
+		shot_spec.penetration = float(shot_spec.penetration) * 1.42
 	var automatic_tracer := int(spec.tracer_every) > 0 and total_shots % int(spec.tracer_every) == 0
-	var use_tracer := tracer_mode or automatic_tracer
+	var use_tracer := ammo_name == "TRACER" or automatic_tracer
+	shot_spec["ammo_type"] = ammo_name
+	shot_spec["tracer_color"] = Color(1.0, 0.16, 0.045)
+
 	var forward := -camera.global_transform.basis.z.normalized()
-	var muzzle := camera.global_position + camera.global_transform.basis * Vector3(0.27, -0.19, -1.14)
+	var muzzle := camera.global_position + camera.global_transform.basis * Vector3(0.18, -0.19, -1.05)
 	var projectile := PROJECTILE.new()
 	get_tree().current_scene.add_child(projectile)
-	projectile.setup(muzzle, forward * float(spec.muzzle_velocity), spec, shooter, use_tracer)
-	WEAPON_AUDIO.play_fire(get_tree().current_scene, muzzle, str(spec.audio_profile), -1.0 if not aiming else -2.5)
-	_spawn_muzzle_light(muzzle)
+	projectile.setup(muzzle, forward * float(spec.muzzle_velocity), shot_spec, shooter, use_tracer)
+
+	# One recorded report per shot. Procedural legacy gunshot/impact tones are disabled.
+	WEAPON_AUDIO.play_fire(get_tree().current_scene, muzzle, str(spec.audio_profile), -0.8 if not aim_enabled else -1.8)
+	if animation_player != null and animation_player.current_animation != FIRE_ANIM:
+		_play_action_animation(FIRE_ANIM)
+	_spawn_muzzle_flash(muzzle)
 	_update_hud()
 
 func _build_weapon_view_model() -> void:
 	if camera == null or weapons.is_empty():
 		return
-	if is_instance_valid(weapon_view_model):
-		weapon_view_model.queue_free()
-	weapon_view_model = Node3D.new()
-	weapon_view_model.name = "WeaponViewModel"
-	weapon_view_model.position = view_model_base
-	camera.add_child(weapon_view_model)
+	if is_instance_valid(view_model):
+		view_model.queue_free()
+	view_model = Node3D.new()
+	view_model.name = "WeaponViewModel"
+	view_model.position = view_model_base
+	camera.add_child(view_model)
+
 	var key := str(weapons[current_index].model_key)
 	var resource_path := str(model_paths.get(key, ""))
-	var loaded = load(resource_path)
-	if loaded is PackedScene:
-		var instance := (loaded as PackedScene).instantiate()
-		if not instance is Node3D:
-			instance.queue_free()
-			push_error("Imported weapon scene root is not Node3D: " + resource_path)
+	var packed := load(resource_path) as PackedScene
+	if packed == null:
+		push_error("Could not load animated first-person weapon scene: " + resource_path)
+		return
+	weapon_scene = packed.instantiate() as Node3D
+	if weapon_scene == null:
+		push_error("The imported first-person weapon scene root is not Node3D.")
+		return
+	weapon_scene.name = "AK74M_ArmsAndWeapon"
+	weapon_scene.scale = Vector3.ONE * 0.72
+	view_model.add_child(weapon_scene)
+
+	var players := weapon_scene.find_children("*", "AnimationPlayer", true, false)
+	if players.is_empty():
+		push_error("AK74M first-person model has no AnimationPlayer.")
+		return
+	animation_player = players[0] as AnimationPlayer
+	for required_clip in [IDLE_ANIM, DRAW_ANIM, WALK_ANIM, RUN_ANIM, FIRE_ANIM, RELOAD_ANIM]:
+		if not animation_player.has_animation(required_clip):
+			push_error("AK74M animation clip missing: " + required_clip)
 			return
-		imported_weapon = instance as Node3D
-	elif loaded is Mesh:
-		var mesh_instance := MeshInstance3D.new()
-		mesh_instance.mesh = loaded as Mesh
-		imported_weapon = mesh_instance
-	else:
-		push_error("Imported weapon asset is neither a PackedScene nor a Mesh: " + resource_path)
+	animation_player.animation_finished.connect(_on_animation_finished)
+	_set_animation_loop(IDLE_ANIM, true)
+	_set_animation_loop(WALK_ANIM, true)
+	_set_animation_loop(RUN_ANIM, true)
+	_play_action_animation(DRAW_ANIM)
+	_update_hud()
+
+func _set_animation_loop(animation_name: String, enabled: bool) -> void:
+	if not _has_animation(animation_name):
 		return
-	imported_weapon.name = "ImportedWeaponModel"
-	weapon_view_model.add_child(imported_weapon)
-	_fit_weapon_to_view_model(imported_weapon)
-	imported_weapon.position += Vector3(0.0, 0.0, -0.02)
+	var clip := animation_player.get_animation(animation_name)
+	clip.loop_mode = Animation.LOOP_LINEAR if enabled else Animation.LOOP_NONE
 
-func _fit_weapon_to_view_model(model: Node3D) -> void:
-	var points: Array[Vector3] = []
-	_collect_mesh_corners(model, Transform3D.IDENTITY, points)
-	if points.is_empty():
-		push_error("Imported weapon model has no visible MeshInstance3D children.")
+func _has_animation(animation_name: String) -> bool:
+	return animation_player != null and animation_player.has_animation(animation_name)
+
+func _play_action_animation(animation_name: String) -> void:
+	if not _has_animation(animation_name):
+		push_warning("Requested AK74M animation is missing: " + animation_name)
 		return
-	var bounds := _bounds_from_points(points)
-	# Orient the model's longest authored axis along the camera's forward view axis.
-	if bounds.size.x >= bounds.size.z and bounds.size.x >= bounds.size.y:
-		model.rotation_degrees.y = 90.0
-	elif bounds.size.y >= bounds.size.z and bounds.size.y >= bounds.size.x:
-		model.rotation_degrees.x = 90.0
-	points.clear()
-	_collect_mesh_corners(model, Transform3D.IDENTITY, points)
-	bounds = _bounds_from_points(points)
-	var longest := maxf(bounds.size.x, maxf(bounds.size.y, bounds.size.z))
-	if longest <= 0.001:
-		push_error("Imported weapon mesh has invalid dimensions.")
+	action_animation_active = true
+	animation_player.play(animation_name)
+
+func _play_locomotion_if_ready() -> void:
+	if animation_player == null or is_reloading or action_animation_active:
 		return
-	var target_length := 0.94
-	var scale_factor := target_length / longest
-	model.scale = Vector3.ONE * scale_factor
-	model.position = -bounds.get_center() * scale_factor
-	model.position.y -= 0.015
+	var desired := IDLE_ANIM
+	if movement_state == "walk":
+		desired = WALK_ANIM
+	elif movement_state == "run":
+		desired = RUN_ANIM
+	if not _has_animation(desired) or last_locomotion_animation == desired:
+		return
+	last_locomotion_animation = desired
+	animation_player.play(desired)
 
-func _collect_mesh_corners(node: Node, parent_transform: Transform3D, points: Array[Vector3]) -> void:
-	var local_transform := parent_transform
-	if node is Node3D:
-		local_transform = parent_transform * (node as Node3D).transform
-	if node is MeshInstance3D:
-		var mesh_instance := node as MeshInstance3D
-		if mesh_instance.mesh != null:
-			var box := mesh_instance.mesh.get_aabb()
-			for ix in range(2):
-				for iy in range(2):
-					for iz in range(2):
-						var corner := Vector3(
-							box.position.x + box.size.x * float(ix),
-							box.position.y + box.size.y * float(iy),
-							box.position.z + box.size.z * float(iz)
-						)
-						points.append(local_transform * corner)
-	for child in node.get_children():
-		_collect_mesh_corners(child, local_transform, points)
+func _on_animation_finished(animation_name: StringName) -> void:
+	var name := str(animation_name)
+	if name == RELOAD_ANIM and is_reloading:
+		_finish_reload()
+	elif name == FIRE_ANIM or name == DRAW_ANIM:
+		action_animation_active = false
+		last_locomotion_animation = ""
+		_play_locomotion_if_ready()
 
-func _bounds_from_points(points: Array[Vector3]) -> AABB:
-	var bounds := AABB(points[0], Vector3.ZERO)
-	for i in range(1, points.size()):
-		bounds = bounds.expand(points[i])
-	return bounds
-
-func _spawn_muzzle_light(world_position: Vector3) -> void:
-	var light := OmniLight3D.new()
-	light.name = "MuzzleFlashLight"
-	light.light_color = Color(1.0, 0.58, 0.28)
-	light.light_energy = 1.35
-	light.omni_range = 2.2
-	light.shadow_enabled = false
-	get_tree().current_scene.add_child(light)
-	light.global_position = world_position
+func _spawn_muzzle_flash(world_position: Vector3) -> void:
+	var flash := MeshInstance3D.new()
+	flash.name = "BriefMuzzleFlash"
+	var quad := QuadMesh.new()
+	quad.size = Vector2(0.13, 0.07)
+	flash.mesh = quad
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.albedo_color = Color(1.0, 0.64, 0.22, 0.82)
+	material.emission_enabled = true
+	material.emission = Color(1.0, 0.26, 0.055)
+	material.emission_energy_multiplier = 1.2
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	flash.material_override = material
+	get_tree().current_scene.add_child(flash)
+	flash.global_position = world_position
+	flash.look_at(world_position + -camera.global_transform.basis.z, Vector3.UP)
 	var timer := Timer.new()
 	timer.one_shot = true
-	timer.wait_time = 0.035
-	timer.timeout.connect(light.queue_free)
-	light.add_child(timer)
+	timer.wait_time = 0.045
+	timer.timeout.connect(flash.queue_free)
+	flash.add_child(timer)
 	timer.start()
 
 func _update_hud() -> void:
@@ -239,5 +312,7 @@ func _update_hud() -> void:
 		str(spec.caliber),
 		magazine_ammo,
 		int(spec.magazine),
-		"AIM" if aiming else ("TRACER" if tracer_mode else "STANDARD")
+		reserve_ammo,
+		AMMO_NAMES[ammo_type_index],
+		"ADS" if aim_enabled else "AUTO"
 	)

@@ -5,10 +5,12 @@ const HUD_SCRIPT = preload("res://scripts/ui/hud.gd")
 const COVER_SCRIPT = preload("res://scripts/world/cover_piece.gd")
 
 const MAP_SIZE := 700.0
-const TERRAIN_DIVISIONS := 192
+const TERRAIN_DIVISIONS := 256
 
 var terrain_noise := FastNoiseLite.new()
 var detail_noise := FastNoiseLite.new()
+var ridge_noise := FastNoiseLite.new()
+var gully_noise := FastNoiseLite.new()
 var terrain_texture_enabled := false
 var sun: DirectionalLight3D
 var world_environment: WorldEnvironment
@@ -37,22 +39,43 @@ func _ready() -> void:
 	_create_hud()
 
 func _setup_noise() -> void:
-	terrain_noise.seed = 20261107
+	terrain_noise.seed = 20261108
 	terrain_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
-	terrain_noise.frequency = 0.012
-	terrain_noise.fractal_octaves = 4
+	terrain_noise.frequency = 0.0045
+	terrain_noise.fractal_octaves = 5
 	terrain_noise.fractal_lacunarity = 2.0
 	terrain_noise.fractal_gain = 0.48
+	terrain_noise.domain_warp_enabled = true
+	terrain_noise.domain_warp_amplitude = 72.0
+	terrain_noise.domain_warp_frequency = 0.0038
+	terrain_noise.domain_warp_fractal_octaves = 3
+
 	detail_noise.seed = 741208
 	detail_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
-	detail_noise.frequency = 0.052
-	detail_noise.fractal_octaves = 3
+	detail_noise.frequency = 0.027
+	detail_noise.fractal_octaves = 4
 	detail_noise.fractal_lacunarity = 2.1
 	detail_noise.fractal_gain = 0.52
 
+	ridge_noise.seed = 20261109
+	ridge_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
+	ridge_noise.frequency = 0.006
+	ridge_noise.fractal_octaves = 4
+	ridge_noise.fractal_lacunarity = 2.0
+	ridge_noise.fractal_gain = 0.52
+
+	gully_noise.seed = 20261110
+	gully_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
+	gully_noise.frequency = 0.005
+	gully_noise.fractal_octaves = 3
+	gully_noise.fractal_lacunarity = 2.0
+	gully_noise.fractal_gain = 0.48
+
 func _create_materials() -> void:
-	earth_material = _make_material(Color(0.91, 0.83, 0.68))
+	earth_material = _make_material(Color.WHITE)
 	earth_material.vertex_color_use_as_albedo = true
+	earth_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	earth_material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	var diffuse_path := "res://assets/runtime/terrain/rocky_gravel_diff_1k.jpg"
 	var normal_path := "res://assets/runtime/terrain/rocky_gravel_nor_gl_1k.jpg"
 	var roughness_path := "res://assets/runtime/terrain/rocky_gravel_rough_1k.jpg"
@@ -62,14 +85,14 @@ func _create_materials() -> void:
 	if ResourceLoader.exists(normal_path):
 		earth_material.normal_enabled = true
 		earth_material.normal_texture = load(normal_path) as Texture2D
-		earth_material.normal_scale = 0.72
+		earth_material.normal_scale = 1.0
 	if ResourceLoader.exists(roughness_path):
 		earth_material.roughness_texture = load(roughness_path) as Texture2D
-	earth_material.roughness = 0.97
+	earth_material.roughness = 0.96
 	earth_material.metallic = 0.0
 	sandbag_material = _make_material(Color(0.47, 0.40, 0.29))
 	brick_material = _make_material(Color(0.39, 0.29, 0.23))
-	stone_material = _make_material(Color(0.42, 0.40, 0.34))
+	stone_material = _make_material(Color(0.50, 0.46, 0.39))
 	dark_material = _make_material(Color(0.20, 0.19, 0.16))
 	soldier_material = _make_material(Color(0.18, 0.22, 0.17))
 
@@ -116,17 +139,27 @@ func _build_environment() -> void:
 	add_child(sun)
 
 func _terrain_height(x: float, z: float) -> float:
-	var rolling := terrain_noise.get_noise_2d(x, z) * 6.2
-	var fine := detail_noise.get_noise_2d(x, z) * 1.65
-	var broad := sin(x * 0.0048) * 4.0 + cos(z * 0.0056) * 3.6
-	var ridge_one := 14.0 * exp(-pow((z - (152.0 + sin(x * 0.013) * 34.0)) / 61.0, 2.0))
-	var ridge_two := 12.0 * exp(-pow((z - (40.0 + sin(x * 0.011) * 39.0)) / 55.0, 2.0))
-	var ridge_three := 10.0 * exp(-pow((z - (-108.0 + sin(x * 0.015) * 31.0)) / 48.0, 2.0))
-	var ridge_four := 6.5 * exp(-pow((z - (-185.0 + sin(x * 0.023) * 18.0)) / 34.0, 2.0))
-	var saddle_one := -3.5 * exp(-pow((z + 30.0) / 24.0, 2.0))
-	var saddle_two := -2.0 * exp(-pow((z - 105.0) / 23.0, 2.0))
-	var gullies := detail_noise.get_noise_2d(x * 0.55, z * 0.16) * 1.35
-	var height := rolling + fine + broad + ridge_one + ridge_two + ridge_three + ridge_four + saddle_one + saddle_two + gullies
+	var warp_x := x + terrain_noise.get_noise_2d(x * 0.004, z * 0.004) * 46.0
+	var warp_z := z + terrain_noise.get_noise_2d(x * 0.004 + 117.0, z * 0.004 - 83.0) * 54.0
+	var broad := terrain_noise.get_noise_2d(warp_x, warp_z) * 11.5
+	var ridge_sample := ridge_noise.get_noise_2d(warp_x, warp_z)
+	var ridges := pow(maxf(0.0, 1.0 - absf(ridge_sample)), 2.1) * 24.0
+	var rolling := detail_noise.get_noise_2d(warp_x * 1.65, warp_z * 1.65) * 4.2
+	var fine := detail_noise.get_noise_2d(warp_x * 4.2, warp_z * 4.2) * 0.72
+	# Four broad, wind-cut ridge chains run across the valley with irregular shoulders.
+	var ridge_axis_a := z - (174.0 + sin(x * 0.0065) * 46.0 + ridge_noise.get_noise_2d(x, z + 91.0) * 17.0)
+	var ridge_axis_b := z - (72.0 + sin(x * 0.0080) * 34.0 + ridge_noise.get_noise_2d(x + 131.0, z) * 18.0)
+	var ridge_axis_c := z - (-52.0 + sin(x * 0.0072) * 38.0 + ridge_noise.get_noise_2d(x - 83.0, z + 47.0) * 16.0)
+	var ridge_axis_d := z - (-167.0 + sin(x * 0.0090) * 24.0 + ridge_noise.get_noise_2d(x + 193.0, z - 63.0) * 12.0)
+	var ridge_a := 21.0 * exp(-pow(ridge_axis_a / 68.0, 2.0))
+	var ridge_b := 24.0 * exp(-pow(ridge_axis_b / 58.0, 2.0))
+	var ridge_c := 19.0 * exp(-pow(ridge_axis_c / 55.0, 2.0))
+	var ridge_d := 13.0 * exp(-pow(ridge_axis_d / 44.0, 2.0))
+	var gully_sample := absf(gully_noise.get_noise_2d(warp_x, warp_z))
+	var gully_cut := pow(maxf(0.0, 0.22 - gully_sample), 2.0) * 105.0
+	var lateral_shelf := 6.0 * exp(-pow((x - (118.0 + sin(z * 0.009) * 29.0)) / 48.0, 2.0))
+	var valley := -5.5 * exp(-pow((z - 12.0) / 39.0, 2.0))
+	var height := broad + rolling + fine + ridge_a + ridge_b + ridge_c + ridge_d + lateral_shelf - gully_cut + valley
 	var attacker_trench: float = absf(z - (205.0 + sin(x * 0.055) * 2.2))
 	var defender_trench: float = absf(z - (-205.0 + sin(x * 0.045) * 2.4))
 	if attacker_trench < 3.0:
@@ -161,7 +194,7 @@ func _build_terrain() -> void:
 	tool.set_material(earth_material)
 	var half := MAP_SIZE * 0.5
 	var step := MAP_SIZE / float(TERRAIN_DIVISIONS)
-	var uv_scale := 0.22
+	var uv_scale := 0.18
 	for ix in range(TERRAIN_DIVISIONS):
 		for iz in range(TERRAIN_DIVISIONS):
 			var x0 := -half + float(ix) * step
@@ -190,7 +223,9 @@ func _build_terrain() -> void:
 			tool.set_color(_soil_color(x1, z1))
 			tool.set_uv(Vector2(x1 * uv_scale, z1 * uv_scale))
 			tool.add_vertex(p11)
+	tool.index()
 	tool.generate_normals()
+	tool.generate_tangents()
 	var terrain_mesh := tool.commit()
 	var terrain := MeshInstance3D.new()
 	terrain.name = "BattlefieldTerrain"
@@ -315,25 +350,26 @@ func _scatter_ground_details() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 741207
 	var rock_mesh := SphereMesh.new()
-	rock_mesh.radius = 1.45
-	rock_mesh.height = 1.95
-	rock_mesh.radial_segments = 8
+	rock_mesh.radius = 0.56
+	rock_mesh.height = 0.92
+	rock_mesh.radial_segments = 7
 	rock_mesh.rings = 4
 	var multi := MultiMesh.new()
 	multi.transform_format = MultiMesh.TRANSFORM_3D
 	multi.mesh = rock_mesh
-	multi.instance_count = 1480
+	multi.instance_count = 520
 	for i in range(multi.instance_count):
 		var x := rng.randf_range(-335.0, 335.0)
 		var z := rng.randf_range(-335.0, 335.0)
-		var y := _terrain_height(x, z) + 0.24
-		var scale := Vector3(rng.randf_range(0.38, 1.55), rng.randf_range(0.20, 0.72), rng.randf_range(0.35, 1.35))
+		var y := _terrain_height(x, z) + 0.08
+		var scale := Vector3(rng.randf_range(0.65, 1.8), rng.randf_range(0.28, 0.68), rng.randf_range(0.65, 1.6))
 		var basis := Basis().scaled(scale)
 		multi.set_instance_transform(i, Transform3D(basis, Vector3(x, y, z)))
 	var rocks := MultiMeshInstance3D.new()
 	rocks.name = "DryGroundStones"
 	rocks.multimesh = multi
 	rocks.material_override = stone_material
+	rocks.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(rocks)
 
 func _place_distant_defenders() -> void:
@@ -383,6 +419,8 @@ func _create_hud() -> void:
 			hud.connect("weapon_selected", Callable(weapon_node, "select_weapon"))
 		hud.connect("sensitivity_adjust_requested", Callable(player, "adjust_sensitivity"))
 		hud.connect("night_toggle_requested", Callable(self, "_toggle_night_from_hud"))
+		if weapon_node != null and weapon_node.has_method("cycle_ammo_type"):
+			hud.connect("ammo_type_changed", Callable(weapon_node, "cycle_ammo_type"))
 
 func _toggle_night_from_hud() -> void:
 	_set_night_mode(not night_mode)

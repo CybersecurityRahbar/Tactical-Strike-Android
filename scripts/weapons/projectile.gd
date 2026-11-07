@@ -1,7 +1,6 @@
 extends Node3D
 
 const IMPACT_FX = preload("res://scripts/effects/impact_fx.gd")
-const BALLISTIC_AUDIO = preload("res://scripts/effects/ballistic_audio.gd")
 
 var velocity := Vector3.ZERO
 var weapon_stats: Dictionary = {}
@@ -30,14 +29,15 @@ func _create_tracer_visual() -> void:
 		caliber_factor = 1.8
 	elif str(weapon_stats.get("caliber", "")).contains("7.62"):
 		caliber_factor = 1.25
-	streak.size = Vector3(0.008 * caliber_factor, 0.008 * caliber_factor, 0.34 * caliber_factor)
+	streak.size = Vector3(0.014 * caliber_factor, 0.014 * caliber_factor, 2.25 * caliber_factor)
 	tracer_visual.mesh = streak
 	var material := StandardMaterial3D.new()
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.albedo_color = Color(1.0, 0.32, 0.14)
+	var tracer_color: Color = weapon_stats.get("tracer_color", Color(1.0, 0.16, 0.045))
+	material.albedo_color = tracer_color
 	material.emission_enabled = true
-	material.emission = Color(0.72, 0.12, 0.045)
-	material.emission_energy_multiplier = 0.45
+	material.emission = tracer_color
+	material.emission_energy_multiplier = 1.1
 	tracer_visual.material_override = material
 	add_child(tracer_visual)
 
@@ -83,7 +83,6 @@ func _try_ricochet(hit: Dictionary) -> bool:
 	weapon_stats.damage = float(weapon_stats.damage) * 0.28
 	global_position = point + normal * 0.12
 	IMPACT_FX.spawn_dust(get_tree().current_scene, point, normal, false)
-	BALLISTIC_AUDIO.play_at(get_tree().current_scene, point, 0.19, 0.52, 720.0)
 	return true
 
 func _apply_impact(hit: Dictionary) -> void:
@@ -102,7 +101,6 @@ func _apply_impact(hit: Dictionary) -> void:
 		_apply_explosion(point)
 	heavy = heavy or str(weapon_stats.get("projectile_kind", "")) == "rocket"
 	IMPACT_FX.spawn_dust(get_tree().current_scene, point, normal, heavy)
-	BALLISTIC_AUDIO.play_at(get_tree().current_scene, point, 0.15 if not heavy else 0.25, 0.72 if not heavy else 1.0, 115.0)
 	queue_free()
 
 func _apply_explosion(center: Vector3) -> void:
@@ -123,4 +121,3 @@ func _check_bullet_whiz() -> void:
 	var target_camera := player.get_node_or_null("Camera3D") as Camera3D
 	if target_camera != null and target_camera.global_position.distance_to(global_position) < 4.8:
 		whiz_played = true
-		BALLISTIC_AUDIO.play_at(get_tree().current_scene, global_position, 0.12, 0.42, 980.0)

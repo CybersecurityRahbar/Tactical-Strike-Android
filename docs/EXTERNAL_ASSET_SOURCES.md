@@ -1,25 +1,38 @@
-# External runtime assets
+# External asset sources and licences
 
-The Android build prepares a small, pinned set of external game assets. They are bundled in the APK; the user's phone does not need network access at runtime.
+All runtime assets are staged by tools/prepare_external_assets.sh during GitHub Actions. They are bundled into the APK and are not downloaded by the phone at runtime.
 
-## 3D weapons
+## First-person AK-74M, arms and animation clips
 
-- AK model: “AK” by loafbrr_1, OpenGameArt, CC0 1.0. The author lists 2,670 triangles and 1K textures, with a Godot-ready archive. Source: https://opengameart.org/content/ak
-- M4A1 model: “M4A1 Assault Rifle” by nisu / 3DModelsCC0, OpenGameArt, CC0 1.0. Source: https://opengameart.org/content/m4a1-assault-rifle
+- Model title: FPS AK-74m animations.
+- Model author: Cransh.
+- Original source: https://sketchfab.com/3d-models/fps-ak-74m-animations-94be8385c402474cacd39bc096c6ca14
+- Repository containing the Godot-ready glTF, binary mesh and textures: https://github.com/Ayush-Mohanty/FPS-Arms-3D
+- Model licence: Creative Commons Attribution 4.0 International (CC-BY-4.0). Commercial use and modification are allowed, with attribution.
+- Included parts: skinned first-person arms, AK-74M mesh, magazine mesh, skeleton, and eight animations: idle, draw, walk, run, shot, reload and reload variants.
+- Model source commit is pinned in the asset-preparation script. Base-colour maps are resized to 2K JPEG; normal/metallic/roughness maps are resized to 1K PNG for Android memory and package size.
+- Required credit:
+  This work is based on "FPS AK-74m animations" (https://sketchfab.com/3d-models/fps-ak-74m-animations-94be8385c402474cacd39bc096c6ca14) by Cransh (https://sketchfab.com/ccransh) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/).
 
-The AK model is a close visual stand-in for the AK-74 family, not a claim that the mesh is a factory-exact AK-74. The M4 mesh is the M4A1 family asset.
+## Terrain surface
 
-## Terrain material
+- Rocky Gravel by Poly Haven.
+- Source: https://polyhaven.com/a/rocky_gravel
+- Licence: CC0.
+- Maps used: diffuse/albedo, OpenGL tangent-space normal, and roughness at 1K.
 
-- Rocky Gravel by Poly Haven, CC0. 1K diffuse, OpenGL normal and roughness maps create a visible dry rocky surface. Source: https://polyhaven.com/a/rocky_gravel
+## Firearm reports and movement footsteps
 
-## Firearm recordings and footsteps
+- The Free Firearm Sound Library, by Ben Jaszczak, Brian Nelson, Kevin Heras and Matthew Nanney.
+- Source: https://opengameart.org/content/the-free-firearm-sound-library
+- Licence: CC0.
+- Six recorded AK-47 field-recording takes are used as the closest available audio proxy for the AK-74M. They are real field recordings, but not a claim that the samples were recorded from the exact AK-74M weapon model.
+- Fantozzi's Footsteps by Fantozzi.
+- Source: https://opengameart.org/content/fantozzis-footsteps-grasssand-stone
+- Licence: CC0. Four sand-footstep variations are used.
+- The former generated noise-based ballistic audio has been removed from the hit, ricochet and near-miss paths. Weapon reports are triggered once by the weapon controller from the recorded samples; no synthetic legacy gunshot is played over them.
 
-- The Free Firearm Sound Library by Ben Jaszczak, Brian Nelson, Kevin Heras and Matthew Nanney, CC0. The build uses recorded AK-47, AR-15 and Tikka takes; these are real recorded firearm takes but are not exact AK-74, M4A1, PKM or DShK recordings. Source: https://opengameart.org/content/the-free-firearm-sound-library
-- Fantozzi's Footsteps by Fantozzi, OpenGameArt, CC0. Four sand footstep takes are used for the player's movement. Source: https://opengameart.org/content/fantozzis-footsteps-grasssand-stone
+## Scope and limitations
 
-Audio sources are pinned to commit a19b7458a593598211c95ec46ef4eb4b6d1f94d7 in petroulacl/fps-asset-kit. They are converted to OGG Vorbis during the build to reduce APK size.
-
-## Notes
-
-These assets improve the prototype but do not constitute a complete animated weapon system. Reload, aim, sway, and recoil presentation still require playtesting and iteration. Separate exact weapon models and recorded samples are still needed for PKM, RPG-7, SVD, DShK and M2 if the project is to represent every weapon accurately.
+- The current playable first-person weapon is the animated AK-74M model above. M4A1, PKM, RPG-7, SVD, DShK and M2 models should only be exposed after each has an imported model, verified material set, animation workflow and appropriate sound source.
+- Tactical AI, coordinated bots and LAN multiplayer are intentionally out of scope until the first-person movement, weapon handling, ammunition, firing and battlefield presentation pass physical-device testing.

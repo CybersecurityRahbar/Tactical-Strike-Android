@@ -5,6 +5,11 @@ signal night_toggle_requested
 signal sensitivity_adjust_requested(amount: float)
 signal movement_vector_changed(value: Vector2)
 signal aim_toggle_requested(enabled: bool)
+signal ammo_type_changed
+
+var _movement_touch_index := -1
+var _movement_touch_origin := Vector2.ZERO
+var _movement_touch_active := false
 
 var root: Control
 var status_label: Label
@@ -20,13 +25,17 @@ var aim_enabled := false
 const JOYSTICK_SCRIPT = preload("res://scripts/ui/virtual_joystick.gd")
 
 # Only meshes imported and verified by the asset pipeline appear in this first playable loadout.
-const WEAPON_NAMES: Array[String] = ["AK-74", "M4A1"]
+const WEAPON_NAMES: Array[String] = ["AK-74M"]
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	set_process_input(true)
 	root = Control.new()
 	root.name = "Overlay"
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	# The device uses an Arabic RTL locale. Keep FPS touch positions in a fixed LTR layout
+	# so left movement and right fire/aim controls do not silently swap sides.
+	root.layout_direction = Control.LAYOUT_DIRECTION_LTR
 	root.mouse_filter = Control.MOUSE_FILTER_PASS
 	add_child(root)
 	_create_header()
@@ -84,7 +93,7 @@ func _create_header() -> void:
 	column.add_child(status_label)
 	weapon_label = Label.new()
 	weapon_label.name = "WeaponStatus"
-	weapon_label.text = "AK-74  |  5.45×39 mm  |  30/30"
+	weapon_label.text = "AK-74M  |  5.45×39 mm  |  30/30"
 	weapon_label.add_theme_font_size_override("font_size", 14)
 	weapon_label.add_theme_color_override("font_color", Color(0.93, 0.72, 0.42))
 	column.add_child(weapon_label)
@@ -228,40 +237,53 @@ func _create_mobile_controls() -> void:
 	movement_joystick.anchor_right = 0.0
 	movement_joystick.anchor_top = 1.0
 	movement_joystick.anchor_bottom = 1.0
-	movement_joystick.offset_left = 24.0
-	movement_joystick.offset_top = -202.0
-	movement_joystick.offset_right = 206.0
-	movement_joystick.offset_bottom = -20.0
-	movement_joystick.connect("value_changed", Callable(self, "_on_joystick_value_changed"))
+	movement_joystick.offset_left = 28.0
+	movement_joystick.offset_top = -210.0
+	movement_joystick.offset_right = 210.0
+	movement_joystick.offset_bottom = -28.0
+	movement_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(movement_joystick)
 
-	# Primary combat controls are grouped on the right, leaving the center clear for look input.
-	_make_touch_button("FireButton", "FIRE", "fire", 18.0, 24.0, 122.0, 92.0, true, true)
-	_make_aim_button()
-	_make_touch_button("SprintButton", "RUN", "sprint", 248.0, 30.0, 82.0, 58.0, false, true)
-	_make_touch_button("JumpButton", "JUMP", "jump", 18.0, 130.0, 76.0, 56.0, false, true)
-	_make_touch_button("CrouchButton", "CROUCH", "crouch", 102.0, 130.0, 94.0, 56.0, false, true)
-	_make_touch_button("ReloadButton", "RELOAD", "reload", 204.0, 130.0, 94.0, 56.0, false, true)
-	_make_touch_button("NextWeaponButton", "NEXT", "weapon_next", 306.0, 130.0, 82.0, 56.0, false, true)
+	# Match the SFG2 convention: floating movement stick on the left, combat controls on the right.
+	_make_touch_button("FireButton", "FIRE", "fire", 22.0, 24.0, 118.0, 86.0, true, true)
+	_make_touch_button("AimButton", "AIM", "aim_toggle", 126.0, 122.0, 82.0, 58.0, false, true)
+	_make_touch_button("SprintButton", "RUN", "sprint", 152.0, 24.0, 82.0, 58.0, false, true)
+	_make_touch_button("JumpButton", "JUMP", "jump", 18.0, 118.0, 76.0, 54.0, false, true)
+	_make_touch_button("CrouchButton", "CROUCH", "crouch", 100.0, 118.0, 88.0, 54.0, false, true)
+	_make_touch_button("ReloadButton", "RELOAD", "reload", 194.0, 118.0, 88.0, 54.0, false, true)
+	_make_touch_button("AmmoButton", "AMMO", "ammo_cycle", 288.0, 118.0, 78.0, 54.0, false, true)
+	_make_touch_button("NextWeaponButton", "NEXT", "weapon_next", 292.0, 24.0, 78.0, 58.0, false, true)
 
-func _on_joystick_value_changed(value: Vector2) -> void:
+func _input(event: InputEvent) -> void:
+	var viewport_size := get_viewport().get_visible_rect().size
+	if event is InputEventScreenTouch:
+		if event.pressed and _movement_touch_index == -1 and event.position.x < viewport_size.x * 0.42 and event.position.y > viewport_size.y * 0.46:
+			_movement_touch_index = event.index
+			_movement_touch_active = true
+			_movement_touch_origin = event.position
+			var anchor := event.position - Vector2(91.0, 91.0)
+			movement_joystick.position = anchor
+			_update_movement_stick(event.position)
+			get_viewport().set_input_as_handled()
+		elif not event.pressed and event.index == _movement_touch_index:
+			_movement_touch_index = -1
+			_movement_touch_active = false
+			movement_joystick.position = Vector2(28.0, viewport_size.y - 210.0)
+			movement_joystick.set_external_value(Vector2.ZERO)
+			movement_vector_changed.emit(Vector2.ZERO)
+			get_viewport().set_input_as_handled()
+	elif event is InputEventScreenDrag and _movement_touch_active and event.index == _movement_touch_index:
+		_update_movement_stick(event.position)
+		get_viewport().set_input_as_handled()
+
+func _update_movement_stick(screen_position: Vector2) -> void:
+	var delta := screen_position - _movement_touch_origin
+	var value := Vector2(delta.x, -delta.y) / 72.0
+	value = value.limit_length(1.0)
+	if value.length() < 0.10:
+		value = Vector2.ZERO
+	movement_joystick.set_external_value(value)
 	movement_vector_changed.emit(value)
-
-func _make_aim_button() -> void:
-	var button := Button.new()
-	button.name = "AimButton"
-	button.text = "AIM"
-	button.anchor_left = 1.0
-	button.anchor_right = 1.0
-	button.anchor_top = 1.0
-	button.anchor_bottom = 1.0
-	button.offset_left = -150.0
-	button.offset_right = -60.0
-	button.offset_top = -88.0
-	button.offset_bottom = -24.0
-	_style_button(button, false)
-	button.pressed.connect(_toggle_aim)
-	root.add_child(button)
 
 func _toggle_aim() -> void:
 	aim_enabled = not aim_enabled
@@ -272,7 +294,7 @@ func _toggle_aim() -> void:
 		button.modulate = Color(1.0, 0.84, 0.54, 0.96) if aim_enabled else Color(1.0, 1.0, 1.0, 0.82)
 
 func _make_touch_button(node_name: String, caption: String, action: String, left: float, bottom: float, width: float, height: float, accent: bool, align_right: bool) -> void:
-	if not InputMap.has_action(action):
+	if not InputMap.has_action(action) and action != "aim_toggle":
 		InputMap.add_action(action)
 	var button := Button.new()
 	button.name = node_name
@@ -294,8 +316,13 @@ func _make_touch_button(node_name: String, caption: String, action: String, left
 	_style_button(button, accent)
 	button.add_theme_font_size_override("font_size", 15 if width < 100.0 else 18)
 	button.modulate = Color(1.0, 1.0, 1.0, 0.82)
-	button.button_down.connect(func(): Input.action_press(action))
-	button.button_up.connect(func(): Input.action_release(action))
+	if action == "aim_toggle":
+		button.pressed.connect(_toggle_aim)
+	elif action == "ammo_cycle":
+		button.pressed.connect(func(): ammo_type_changed.emit())
+	else:
+		button.button_down.connect(func(): Input.action_press(action))
+		button.button_up.connect(func(): Input.action_release(action))
 	root.add_child(button)
 
 func _process(delta: float) -> void:
@@ -308,9 +335,9 @@ func set_battle_status(value: String) -> void:
 	if status_label != null:
 		status_label.text = value
 
-func set_weapon_info(name: String, caliber: String, ammo: int, capacity: int, mode: String) -> void:
+func set_weapon_info(name: String, caliber: String, ammo: int, capacity: int, reserve: int, ammo_type: String, mode: String) -> void:
 	if weapon_label != null:
-		weapon_label.text = "%s  |  %s  |  %02d/%02d  |  %s" % [name, caliber, ammo, capacity, mode]
+		weapon_label.text = "%s  |  %s  |  %02d/%02d  |  RES %03d  |  %s  |  %s" % [name, caliber, ammo, capacity, reserve, ammo_type, mode]
 
 func set_message(value: String) -> void:
 	if message_label != null:

@@ -41,6 +41,11 @@ func _gui_input(event: InputEvent) -> void:
 		_update_from_position(event.position)
 		accept_event()
 
+func set_external_value(value: Vector2) -> void:
+	_value = value.limit_length(1.0)
+	value_changed.emit(_value)
+	queue_redraw()
+
 func _update_from_position(pointer: Vector2) -> void:
 	var center := size * 0.5
 	var delta := pointer - center
