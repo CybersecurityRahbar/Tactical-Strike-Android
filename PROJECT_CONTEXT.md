@@ -355,3 +355,12 @@ Projectile behavior:
 - Because reversing the triangle order also reverses the generated geometric normals, the mesh now calls SurfaceTool.generate_normals(true) to keep its lighting normals pointing upward, then generates tangents for the PBR normal map. The terrain material uses normal back-face culling again rather than showing its underside.
 - Strengthened the smoke test to inspect the terrain's generated normal array and fail if the surface does not point upward, in addition to verifying height relief, diffuse/normal texture bindings, player movement displacement and vertical floor stability.
 - This fix was triggered by a failing test, not by guesswork; the next run must demonstrate the player stays above the terrain collision surface before Android export.
+
+
+## Terrain winding follow-up — collision accepts both face orientations — 2026-11-08
+
+- In run [42417359337](https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42417359337), the project and AK model imported successfully, but the smoke test stopped on its first-vertex normal direction check. It had not reached the player movement/floor stability assertions.
+- The mesh now verifies its full normal field by mean upward component and percentage of upward-facing normals rather than rejecting a potentially steep first corner vertex.
+- The terrain collision shape is explicitly created as ConcavePolygonShape3D with backface collision enabled. This ensures contact from either side while the triangle winding and normal-map lighting are being validated, so a local winding transition in a gully cannot drop the player's capsule through the surface.
+- Terrain material is temporarily rendered two-sided for the same visual diagnosis. The next smoke test explicitly checks that the collision shape has backface collision enabled, then proceeds to player movement and vertical stability.
+- This is not declared fixed until that subsequent player movement test passes, followed by APK export and signature/file validation.

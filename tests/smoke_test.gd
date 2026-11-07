@@ -52,8 +52,24 @@ func _run_smoke_test() -> void:
 	var terrain_arrays: Array = terrain_mesh_instance.mesh.surface_get_arrays(0)
 	var terrain_tangents: PackedFloat32Array = terrain_arrays[Mesh.ARRAY_TANGENT]
 	var terrain_normals: PackedVector3Array = terrain_arrays[Mesh.ARRAY_NORMAL]
-	if terrain_normals.is_empty() or terrain_normals[0].y < 0.15:
-		push_error("Smoke test failed: terrain triangle normals do not point upward.")
+	if terrain_normals.is_empty():
+		push_error("Smoke test failed: terrain normal array is empty.")
+		quit(1)
+		return
+	var mean_normal_y := 0.0
+	var upward_normals := 0
+	for normal: Vector3 in terrain_normals:
+		mean_normal_y += normal.y
+		if normal.y > 0.2:
+			upward_normals += 1
+	mean_normal_y /= float(terrain_normals.size())
+	if mean_normal_y < 0.55 or upward_normals < int(float(terrain_normals.size()) * 0.72):
+		push_error("Smoke test failed: terrain normals are not consistently oriented upward (mean Y %.3f, upward %d/%d)." % [mean_normal_y, upward_normals, terrain_normals.size()])
+		quit(1)
+		return
+	var terrain_collision := instance.get_node("TerrainCollision/CollisionShape3D").shape as ConcavePolygonShape3D
+	if terrain_collision == null or not terrain_collision.backface_collision:
+		push_error("Smoke test failed: terrain collision must accept contact from both face sides.")
 		quit(1)
 		return
 	if terrain_tangents.is_empty():

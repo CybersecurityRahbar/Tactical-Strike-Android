@@ -74,7 +74,7 @@ func _setup_noise() -> void:
 func _create_materials() -> void:
 	earth_material = _make_material(Color.WHITE)
 	earth_material.vertex_color_use_as_albedo = true
-	earth_material.cull_mode = BaseMaterial3D.CULL_BACK
+	earth_material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	earth_material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	var diffuse_path := "res://assets/runtime/terrain/rocky_gravel_diff_1k.jpg"
 	var normal_path := "res://assets/runtime/terrain/rocky_gravel_nor_gl_1k.jpg"
@@ -239,7 +239,12 @@ func _build_terrain() -> void:
 	body.collision_layer = 1
 	body.collision_mask = 1
 	var shape := CollisionShape3D.new()
-	shape.shape = terrain_mesh.create_trimesh_shape()
+	var terrain_collision := terrain_mesh.create_trimesh_shape() as ConcavePolygonShape3D
+	# A generated terrain can contain steep faces and small winding transitions around
+	# gullies. Allow contacts from either side to prevent the first-person capsule
+	# from falling through due to a back-facing triangle in the physics mesh.
+	terrain_collision.backface_collision = true
+	shape.shape = terrain_collision
 	body.add_child(shape)
 	add_child(body)
 
