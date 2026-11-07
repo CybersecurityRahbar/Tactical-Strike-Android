@@ -119,3 +119,9 @@ Projectile behavior:
 - Android orientation changed to landscape to suit the first-person shooter layout.
 - Mobile one-shot HUD controls now send press/release on separate button-down/button-up events so reload and weapon-cycle actions can register as discrete input transitions.
 - **Validation status:** no successful Godot import, scene smoke test or Android APK export has been confirmed yet. The next CI run must pass all three before an APK can be offered as a tested build.
+
+
+## Workflow parser correction — 2026-11-07
+
+- GitHub's server-side workflow validation rejected the revised workflow before creating a runner job. The cause was a malformed YAML scalar in the one-line smoke-test step: its shell command contained an embedded quoted executable path. Converted that step to a YAML block scalar. Earlier zero-job runs were workflow-file validation failures, not Godot compile failures.
+- Next expected check: workflow should now register its job; inspect Godot project import, scene smoke test, and Android export separately.
