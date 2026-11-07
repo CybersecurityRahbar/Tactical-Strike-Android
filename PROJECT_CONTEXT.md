@@ -402,3 +402,19 @@ Projectile behavior:
 - After the latest green smoke test, expanded it again to exercise the HUD's real touch-handling route instead of setting the player's mobile movement vector directly. The test injects a left-side screen-touch press and upward drag into HUD._input, verifies the emitted vector reaches the player controller, holds it over physics frames, releases the same touch index and verifies the player actually changes world position without falling through.
 - The test now emits the FIRE button's button_down/button_up signals and verifies a magazine round is consumed; emits AIM and verifies ADS toggles; emits AMMO and verifies the red tracer ammunition mode; and emits RELOAD and verifies that reloading starts with the authored full-reload animation clip.
 - This closes a gap between the earlier logic-only movement test and the actual mobile HUD event wiring. It is not yet a phone hardware test, but it gives CI a direct automated check of the touch-event → HUD → player/weapon-controller path.
+
+
+## Full acceptance workflow passed — animated AK-74M / terrain / mobile input — 2026-11-08
+
+- Latest project source commit validated by GitHub Actions: `71aa6c6784613e47bfbf15c90e5dd54d3a63784f`.
+- GitHub Actions run [42418460738](https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42418460738) completed with **success**; all 15 build/validation/upload stages passed.
+- The complete asset-preparation step passed for the Cransh FPS AK-74M glTF, mesh binary, resized arms/rifle material maps, six distinct recorded rifle takes, four sand footsteps and Poly Haven Rocky Gravel PBR maps.
+- Godot project import and strengthened smoke test passed. Unlike the earlier test, this pass injects real left-side touch-down/drag/touch-up events into the HUD input handler, verifies the movement vector reaches the player, confirms the player moves over the actual HeightMapShape3D floor without falling below it, and checks the right-hand fire/aim hit targets do not overlap or get mirrored by RTL layout.
+- Terrain acceptance checks passed: 257×257 native heightmap collision; 256×256 indexed visual terrain mesh; upward-facing vertex normals and generated tangents; PBR diffuse/normal maps bound to the material; sufficient vertical relief; controlled ground outcrop count.
+- Weapon acceptance checks passed: imported skinned AK-74M/arms scene, AnimationPlayer and idle/draw/walk/run/shot/full-reload clips. The test presses FIRE through the button signal and confirms one round is consumed, toggles AIM and TRACER through their HUD buttons, and starts the authored reload animation through the RELOAD button.
+- Android debug APK export succeeded. The archive CRC, APK signature, Android manifest, DEX and ARM64 Godot native library validation all passed. Artifact upload completed.
+- Verified GitHub Actions artifact: `TacticalStrike-Android-verified`, artifact ID `13592277208`, generated 2026-11-07 22:01 UTC.
+- Exact artifact ZIP downloaded locally and independently checked: outer ZIP passed `unzip -t`; inner APK also passed a complete ZIP/CRC check.
+- APK size: `43,118,244` bytes. SHA-256: `b4501b67ab7a481dbecfbe76dbe2fb36916693ab21b88a265305a94882b60778`.
+- **Critical boundary:** this is a successful CI/source/input-path acceptance build, not a physical-device or visual screenshot sign-off. It verifies the authored model and clip calls exist and that the mobile input event route moves the player in the engine test, but cannot prove the model's final pose/framing, visual mountain quality, touch feel, audio perception or Android performance on the user's particular phone. The user must try this exact APK before the screenshot-level issues are considered resolved.
+- Bots, tactical AI and LAN/hotspot multiplayer remain intentionally deferred until the single-player character, weapon, ammunition, audio and battlefield environment are accepted.

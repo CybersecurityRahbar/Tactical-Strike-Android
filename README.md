@@ -25,16 +25,16 @@ See the [battlefield layout blueprint](docs/BATTLEFIELD_DESIGN.md) and its [top-
 
 ## Latest verified Android build
 
-The verified Android debug APK was rebuilt on 7 November 2026:
-- [Open the successful and verified GitHub Actions run](https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42405706021).
-- Godot project import and the full core-script smoke test passed.
-- The APK exported successfully.
-- APK internal ZIP integrity and signing checks passed.
-- Android manifest, DEX bytecode and ARM64 Godot native library checks passed.
-- The Actions artifact includes the APK, a SHA-256 checksum file and an APK validation report.
-- APK SHA-256: `118252b53a0ea561c7c9c908da1d2cc9ac6d985a1928893caaa4a916029dcccc`.
+The latest Android debug build was verified on 8 November 2026:
+- [Open successful GitHub Actions run 42418460738](https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42418460738).
+- The asset preparation stage imports a skinned AK-74M first-person model with arms and authored idle/draw/walk/run/shot/reload animations.
+- The mobile acceptance test injects actual HUD touch events and verifies movement, fire, aim, ammunition switching and reload handling.
+- Terrain collision, upward-facing mesh normals, tangents, PBR diffuse/normal maps and height relief pass the strengthened checks.
+- Android APK export, ZIP integrity, signature, Android manifest, DEX and ARM64 native-library checks all passed.
+- The verified Actions artifact includes the APK, SHA-256 checksum and validation report.
+- APK SHA-256: `b4501b67ab7a481dbecfbe76dbe2fb36916693ab21b88a265305a94882b60778`.
 
-The APK has **not yet been installed or tested on a physical Android phone**. CI success confirms build/export and file-integrity checks, not on-device gameplay quality.
+This is **not yet a physical-phone or screenshot-quality sign-off**. The visual weapon framing, landscape appearance, actual touch feel, recorded sound playback and performance still require a real-device test. The battlefield remains a procedural prototype rather than a finished commercial environment. Tactical bots and LAN multiplayer are intentionally deferred.
 
 ## Download and installation note
 
@@ -42,6 +42,6 @@ GitHub Actions automatically wraps uploaded artifact files in a ZIP archive. Ext
 
 ## What is still a prototype
 
-The current battlefield is procedural greybox geometry. Distant soldiers are static visual placeholders, not the final AI. Tactical defense/reposition/withdrawal, cautious attacker advances and coordinated assaults are **not implemented yet**. Local LAN / hotspot multiplayer is also **not implemented yet**. Final soldier and weapon models, animations, recorded weapon sounds, material-specific impacts, polished touch controls and device performance validation remain future milestones.
+The first-person player now uses an imported skinned AK-74M with authored idle/draw/walk/run/shot/reload clips, recorded rifle takes, sand footsteps, magazine/reserve ammunition and FMJ/tracer/AP modes. The battlefield now uses a procedural heightfield with rocky-gravel PBR maps, ridges/gullies, native heightmap collision and rock outcrops. It is still an early prototype: the environment is not a finished authored commercial map, only the AK-74M is enabled with an imported animated asset, exact firearm recordings and material-specific impact audio remain incomplete, and on-device visual/touch/performance sign-off is outstanding. Tactical defense/reposition/withdrawal, cautious attacker advances and coordinated assaults are **not implemented yet**. Local LAN / hotspot multiplayer is also **not implemented yet**.
 
 See [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) for the cumulative requirements, implementation record, test results and known limitations.
