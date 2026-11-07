@@ -162,3 +162,11 @@ Projectile behavior:
 - Added subtle depth haze to support the requested long sightlines and distant-silhouette effect; day/night toggling changes the haze tint as well as the lighting.
 - Added a GitHub Actions cache for the Godot Android export templates so subsequent builds can avoid re-downloading and extracting the large template archive.
 - **Validation status:** these visual and workflow refinements are committed, but require their own clean CI run. The already successful earlier APK remains the only build confirmed at this point.
+
+
+## Depth-haze integration syntax repair — 2026-11-07
+
+- The follow-up build (run 42403142402) confirmed the new SVG app icon was imported and the Android SDK/Godot/template setup steps succeeded.
+- The strengthened script smoke test caught a GDScript indentation error introduced while adding depth haze and day/night haze tinting in `scripts/world/main_world.gd`. It correctly failed the job before Android APK export; no artifact was produced by that run.
+- Corrected the extra indentation on the environment tonemapping statement and moved the day/night environment block out from under the sun-null check. This keeps haze tint switching independent of the sun node's state.
+- The next CI run must confirm all scripts compile, the main scene initializes, and Android export succeeds before the refined APK is shared.
