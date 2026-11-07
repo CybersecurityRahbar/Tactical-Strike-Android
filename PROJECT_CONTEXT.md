@@ -380,3 +380,18 @@ Projectile behavior:
 - Replaced the collision mesh with a HeightMapShape3D using 257×257 samples from the exact same _terrain_height(x,z) function and the same visual-grid spacing. The heightmap uses a uniform scale on all axes, with stored heights divided by that spacing to preserve the exact world height.
 - The new smoke test explicitly checks HeightMapShape3D size/data and then exercises the actual player's movement and floor-stability assertions. This should test the same hilly surface while avoiding a heavyweight concave physics shape.
 - The prior run [42417767291](https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42417767291) failed before reaching player movement because the generated terrain normals were inverted (mean Y -0.905). No APK was exported. The new heightmap build remains pending full CI validation.
+
+
+## Player movement and terrain smoke test passed; Android export guard corrected — 2026-11-08
+
+- The first build using HeightMapShape3D collision, run [42418050146](https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42418050146), passed the complete headless scene smoke test. This is the first run to pass the full set of new checks after the screenshot:
+  - 257×257 native heightmap collision is present and correctly sized.
+  - The terrain has upward-facing generated normals, tangents and bound Rocky Gravel diffuse/normal maps.
+  - Battlefield topography relief and the less-dense ground stones pass their checks.
+  - The actual imported AK-74M model/rig/animation clips are present.
+  - The mobile HUD root uses LTR; the movement stick is on the left; fire is on the right; fire/aim hit targets do not overlap.
+  - The scripted joystick input moves the player and the player does not fall through/below the terrain.
+  - All six recorded firearm takes are available; firing consumes one magazine round; tracer ammo mode cycles correctly.
+- Android export then created and signed the APK successfully, but the workflow step returned failure because its final asset-existence assertions still checked obsolete files from the previous AK/AR asset pass (`ak47_27.ogg`, `ar15_24.ogg`) instead of the new six AK sample names and the new AK-74M model paths. This was a stale CI guard, not a Godot project import or GDScript failure.
+- Updated the export step's final required-file checks to require the actual pinned AK-74M glTF/bin/base-colour textures, current AK recording sample paths, sand footsteps and terrain PBR diffuse map. The next run must pass Android export, APK integrity, signature and ARM64 checks before an APK can be provided.
+- **Validation boundary:** this headless pass proves the player movement logic and collision interaction in Godot CI, but not the touch feel or visual composition on the user's actual phone. The new APK has not yet been produced by a fully green CI run.

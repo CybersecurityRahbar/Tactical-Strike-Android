@@ -96,9 +96,14 @@ jobs:
           "$GODOT_BIN" --headless --path . --export-debug "Android" build/TacticalStrike-debug.apk
           test -s build/TacticalStrike-debug.apk
           test -s assets/runtime/weapon_manifest.json
-          test -s assets/runtime/audio/ak47_27.ogg
-          test -s assets/runtime/audio/ar15_24.ogg
+          test -s assets/runtime/models/ak74m/scene.gltf
+          test -s assets/runtime/models/ak74m/scene.bin
+          test -s assets/runtime/models/ak74m/textures/arms_baseColor.jpg
+          test -s assets/runtime/models/ak74m/textures/ak74m_baseColor.jpg
+          test -s assets/runtime/audio/ak_C_27P.ogg
+          test -s assets/runtime/audio/ak_C_36P.ogg
           test -s assets/runtime/audio/sand_l.ogg
+          test -s assets/runtime/audio/sand_r.ogg
           test -s assets/runtime/terrain/rocky_gravel_diff_1k.jpg
 
       - name: Validate APK archive, signature and ARM64 payload
