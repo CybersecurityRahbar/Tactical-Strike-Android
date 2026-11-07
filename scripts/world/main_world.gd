@@ -201,44 +201,6 @@ func _build_approach_track() -> void:
 	track.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(track)
 
-func _build_terrain() -> void:
-	var tool := SurfaceTool.new()
-	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
-	tool.set_material(earth_material)
-	var half := MAP_SIZE * 0.5
-	var step := MAP_SIZE / float(TERRAIN_DIVISIONS)
-
-	for ix in range(TERRAIN_DIVISIONS):
-		for iz in range(TERRAIN_DIVISIONS):
-			var x0 := -half + float(ix) * step
-			var x1 := x0 + step
-			var z0 := -half + float(iz) * step
-			var z1 := z0 + step
-			var p00 := Vector3(x0, _terrain_height(x0, z0), z0)
-			var p10 := Vector3(x1, _terrain_height(x1, z0), z0)
-			var p01 := Vector3(x0, _terrain_height(x0, z1), z1)
-			var p11 := Vector3(x1, _terrain_height(x1, z1), z1)
-			tool.add_vertex(p00)
-			tool.add_vertex(p01)
-			tool.add_vertex(p10)
-			tool.add_vertex(p10)
-			tool.add_vertex(p01)
-			tool.add_vertex(p11)
-
-	tool.generate_normals()
-	var terrain_mesh := tool.commit()
-	var terrain := MeshInstance3D.new()
-	terrain.name = "BattlefieldTerrain"
-	terrain.mesh = terrain_mesh
-	add_child(terrain)
-
-	var body := StaticBody3D.new()
-	body.name = "TerrainCollision"
-	var shape := CollisionShape3D.new()
-	shape.shape = terrain_mesh.create_trimesh_shape()
-	body.add_child(shape)
-	add_child(body)
-
 func _build_cover_layout() -> void:
 	# Forward attacker cover, separated from the main defensive line by a long open approach.
 	_build_trench_line(205.0, -46.0, 46.0, 27, "AttackerForwardTrench")

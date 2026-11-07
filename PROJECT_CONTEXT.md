@@ -245,3 +245,12 @@ Projectile behavior:
 - Wired HUD selection/settings signals to the player, weapon controller and day/night system.
 - Expanded the headless smoke test to require the first-person weapon model and pause/armory/settings controls in addition to the existing world/player/HUD checks.
 - **Validation boundary:** these changes are pending the next GitHub Actions run. Even after CI passes, an on-device Android playtest is still required to verify that touch buttons render in the expected positions and register correctly. These changes do not complete tactical AI, final 3D art or LAN multiplayer.
+
+
+## CI-discovered duplicate terrain function correction — 2026-11-07
+
+- The first CI run for the mobile usability repair, run [42407576305](https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42407576305), correctly stopped in the strengthened headless smoke test before APK export.
+- Exact error: duplicate declaration of `_build_terrain()` in `scripts/world/main_world.gd`. The code-replacement range had inserted the new vertex-coloured terrain function but accidentally retained the old terrain function farther down in the file.
+- Removed the obsolete second implementation while retaining the new higher-detail terrain and approach-track mesh. A source-level check confirms exactly one `_build_terrain()` declaration remains.
+- The follow-up commit also retains the HUD signal connection and approach-mesh winding corrections.
+- **Build status:** the fix is committed; it is not considered validated until the next complete CI run passes project import, script/scene smoke test, Android export, APK signature/integrity checks and artifact upload.
