@@ -88,6 +88,6 @@ func _make_press_button(root: Control, caption: String, action: String, button_p
 	button.position = button_position
 	button.custom_minimum_size = button_size
 	button.modulate = Color(1.0, 1.0, 1.0, 0.82)
-	button.pressed.connect(func(): Input.action_press(action))
-	button.pressed.connect(func(): Input.action_release(action))
+	button.button_down.connect(func(): Input.action_press(action))
+	button.button_up.connect(func(): Input.action_release(action))
 	root.add_child(button)
