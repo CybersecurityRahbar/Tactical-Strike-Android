@@ -1,12 +1,17 @@
-name: Android Build
+name: Godot Reference Build (legacy)
 
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - "README.md"
-      - "PROJECT_CONTEXT.md"
-      - "docs/**"
+    paths:
+      - "project.godot"
+      - "export_presets.cfg"
+      - "scenes/**"
+      - "scripts/**"
+      - "tests/**"
+      - "tools/prepare_external_assets.sh"
+      - "assets/icon.svg"
+      - ".github/workflows/android.yml"
   workflow_dispatch:
 
 permissions:
@@ -20,19 +25,17 @@ jobs:
       GODOT_VERSION: 4.7.2
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Prepare licensed weapon, terrain and recorded audio assets
         run: |
           set -euo pipefail
-          if ! command -v ffmpeg >/dev/null 2>&1; then
-            sudo apt-get update
-            sudo apt-get install -y ffmpeg
-          fi
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
           bash tools/prepare_external_assets.sh
 
       - name: Set up Java 17
-        uses: actions/setup-java@v6
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
@@ -57,7 +60,7 @@ jobs:
 
       - name: Cache Godot Android export templates
         id: godot-template-cache
-        uses: actions/cache@v6
+        uses: actions/cache@v4
         with:
           path: ~/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.stable
           key: ${{ runner.os }}-godot-${{ env.GODOT_VERSION }}-android-templates-v1
@@ -66,7 +69,7 @@ jobs:
         if: steps.godot-template-cache.outputs.cache-hit != 'true'
         run: |
           curl -L --fail --retry 3 "https://downloads.godotengine.org/?flavor=stable&platform=templates&slug=export_templates.tpz&version=${{ env.GODOT_VERSION }}" -o templates.tpz
-          mapfile -t android_templates < <(unzip -Z1 templates.tpz | grep -E '^templates/(android_debug\.apk|android_release\.apk|android_source\.zip)$')
+          mapfile -t android_templates < <(unzip -Z1 templates.tpz | grep -E '^templates/(android_debug\\.apk|android_release\\.apk|android_source\\.zip)$')
           test "${#android_templates[@]}" -eq 3
           mkdir -p "$HOME/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.stable"
           unzip -q templates.tpz "${android_templates[@]}" -d /tmp/godot-templates
@@ -82,60 +85,15 @@ jobs:
           export/android/java_sdk_path = "$JAVA_HOME"
           EOF
 
-      - name: Import and parse project
-        run: |
-          "$GODOT_BIN" --headless --editor --path . --quit
+      - name: Import and parse Godot reference project
+        run: "$GODOT_BIN" --headless --editor --path . --quit
 
-      - name: Run headless scene smoke test
-        run: |
-          "$GODOT_BIN" --headless --path . --script res://tests/smoke_test.gd
+      - name: Run Godot headless scene smoke test
+        run: "$GODOT_BIN" --headless --path . --script res://tests/smoke_test.gd
 
-      - name: Export Android debug APK
+      - name: Export Godot Android reference APK
         run: |
-          mkdir -p build
-          "$GODOT_BIN" --headless --path . --export-debug "Android" build/TacticalStrike-debug.apk
-          test -s build/TacticalStrike-debug.apk
-          test -s assets/runtime/weapon_manifest.json
-          test -s assets/runtime/models/ak74m/scene.gltf
-          test -s assets/runtime/models/ak74m/scene.bin
-          test -s assets/runtime/models/ak74m/textures/arms_baseColor.jpg
-          test -s assets/runtime/models/ak74m/textures/ak74m_baseColor.jpg
-          test -s assets/runtime/audio/ak_C_27P.ogg
-          test -s assets/runtime/audio/ak_C_36P.ogg
-          test -s assets/runtime/audio/sand_l.ogg
-          test -s assets/runtime/audio/sand_r.ogg
-          test -s assets/runtime/terrain/rocky_gravel_diff_1k.jpg
-
-      - name: Validate APK archive, signature and ARM64 payload
-        run: |
-          set -euo pipefail
-          unzip -t build/TacticalStrike-debug.apk > build/apk-zip-validation.txt
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs build/TacticalStrike-debug.apk > build/apk-signature-validation.txt 2>&1
-          unzip -Z1 build/TacticalStrike-debug.apk > build/apk-entries.txt
-          grep -Fxq "AndroidManifest.xml" build/apk-entries.txt
-          grep -Fxq "classes.dex" build/apk-entries.txt
-          grep -Fxq "lib/arm64-v8a/libgodot_android.so" build/apk-entries.txt
-          sha256sum build/TacticalStrike-debug.apk > build/TacticalStrike-debug.apk.sha256
-          {
-            echo "Tactical Strike Android APK validation"
-            echo "APK size: $(stat -c '%s bytes' build/TacticalStrike-debug.apk)"
-            echo "APK SHA-256:"
-            cat build/TacticalStrike-debug.apk.sha256
-            echo "Archive integrity: PASS"
-            echo "APK signature: PASS"
-            echo "AndroidManifest.xml: PASS"
-            echo "classes.dex: PASS"
-            echo "ARM64 native library: PASS"
-          } > build/apk-validation.txt
-
-      - name: Upload verified Android APK and integrity report
-        uses: actions/upload-artifact@v7
-        with:
-          name: TacticalStrike-Android-verified
-          path: |
-            build/TacticalStrike-debug.apk
-            build/TacticalStrike-debug.apk.sha256
-            build/apk-validation.txt
-          compression-level: 9
-          if-no-files-found: error
-          retention-days: 14
+          mkdir -p build/godot-reference
+          "$GODOT_BIN" --headless --path . --export-debug "Android" build/godot-reference/TacticalStrike-Godot-reference.apk
+          test -s build/godot-reference/TacticalStrike-Godot-reference.apk
+          unzip -t build/godot-reference/TacticalStrike-Godot-reference.apk >/dev/null

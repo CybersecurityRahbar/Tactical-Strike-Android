@@ -432,3 +432,54 @@ Projectile behavior:
 - Proposed proof-of-concept acceptance slice before a full migration: one representative section of the 700 m × 700 m plateau; mobile first-person movement/look/fire/aim/reload; imported animated AK-74M; terrain, trenches/buildings/cover, lighting and touch HUD; Android build through GitHub Actions; device-side visual, touch and performance checks. Target a stable 30 FPS baseline with a 60 FPS goal where the device permits.
 - CI constraint: Unity can build Android players in batch mode, and community GameCI workflows support GitHub Actions, but license activation and Android build modules introduce extra setup compared with the existing Godot pipeline. Validate these first.
 - Decision status: **discussion only**. No engine migration, Godot source removal, branch change or Unity project creation was performed in this step. Await the user's decision before switching engines.
+
+
+## Unity migration approved and first vertical-slice implementation — 2026-11-09
+
+### User decision
+- The user explicitly approved Unity as the primary engine for Tactical Strike on 2026-11-09 and asked work to begin.
+- This approval supersedes the prior section above that described the engine decision as discussion-only. New development should target Unity; do not add new gameplay features to Godot unless a specific reference-build repair is needed.
+- The Godot project at the repository root is retained intact as a fallback/reference. Its source, previous assets pipeline, map blueprint, and previous CI history are not deleted.
+
+### Unity project baseline
+- Unity Editor version pinned in `UnityProject/ProjectSettings/ProjectVersion.txt`: **6000.3.28f1 (Unity 6.3 LTS)**.
+- Render pipeline dependency: **Universal Render Pipeline 17.3.0**; UGUI 2.0.0 for touch UI.
+- Target: Android landscape, ARM64, IL2CPP, minimum Android API 25.
+- Unity project root: `UnityProject/`.
+- Current project is a first vertical-slice scaffold, not a finished production game. Do not describe it as a successful build or physical-device tested until the relevant checks have actually passed.
+
+### Unity implementation added in this migration step
+- Runtime bootstrap applies mobile landscape/multitouch/frame-rate defaults, creates the environment and day/night lighting, generates the battlefield, spawns the first-person player and creates the HUD.
+- Battlefield generator ports the key map layout into Unity: 700 m × 700 m dusty plateau, procedural broken ridges, shallow gullies and rolling ground, attacker/defender trench lines, two separated defensive houses, firing cover, rocks and distant placeholder defender silhouettes.
+- The long sandbag trench lines are combined into batched meshes and mesh colliders per side instead of creating hundreds of independent physics objects. Selected firing blocks remain destructible. This is an initial mobile draw-call/physics optimization, not a substitute for profiling on the phone.
+- First-person controller includes movement/look, walk/sprint/crouch/jump, aiming/FOV transition, camera bob, keyboard/mouse Editor controls, mobile joystick/look input and randomized recorded sand footsteps.
+- AK-74M combat path includes an imported-model lookup with a procedural fallback, magazine/reserve ammo, FMJ/tracer/AP cycling, firing, reload, muzzle flash, ballistic projectile gravity/drag/raycasting, cover damage and dust impacts. Recorded AK-47 takes remain explicitly a close-family audio proxy, not exact AK-74M recordings.
+- Mobile HUD includes a correctly sized left movement joystick, right-side touch-look area, fire/aim/run/crouch/jump/reload/ammo controls, weapon status, a working pause panel, a settings panel, day/night switching and sensitivity controls.
+
+### Asset conversion and provenance
+- Added `tools/convert_ak74m_to_fbx.py` to import the existing pinned animated AK-74M glTF into Blender and export an FBX intended to retain the mesh, armature, embedded maps and animation takes.
+- Added `tools/prepare_unity_assets.sh`, which reruns the existing pinned/licence-documented asset preparation script, converts the glTF to FBX, and stages the model, terrain PBR maps, firearm takes, footsteps, model licence and attribution under Unity Resources.
+- Generated imported Unity runtime binaries are ignored by Git and regenerated during the cloud build. The original GLTF/source files and licence/provenance documentation remain the source of record.
+- The Unity Editor still needs to import the generated FBX and confirm its clip naming/orientation/materials. The procedural weapon fallback exists so a failed FBX animation import does not silently leave the player's hands/weapon absent.
+
+### Build workflow
+- Added `.github/workflows/unity-android.yml` using `game-ci/unity-builder@v4` and the pinned editor version from the Unity project.
+- The workflow is deliberately manual until Unity Personal activation is configured. It expects three GitHub Actions secrets: `UNITY_LICENSE` (the full locally activated Personal `.ulf` contents), `UNITY_EMAIL`, and `UNITY_PASSWORD`. Do not add the license or account credentials to any tracked file or chat.
+- The build method creates/ensures URP settings and the main Unity scene, configures Android ARM64/IL2CPP, builds an APK, verifies archive integrity, signature, manifest, DEX, IL2CPP and Unity ARM64 libraries, then uploads the APK and SHA-256 report.
+- The previous Godot Android workflow was renamed as a legacy/reference build and its push paths were narrowed to Godot-specific files. Existing Godot source and old workflow definition remain in the repository.
+- `.gitignore` now excludes Unity generated Library/Temp/Obj/Builds/Logs/UserSettings files and the Unity imported runtime assets that are re-created by the build pipeline.
+
+### Validation status and blockers
+- Source files and GitHub Actions configuration have been added, but **no Unity Editor import, C# compile, Android build, APK signature check or physical-phone test has yet been run for this Unity branch** in this step.
+- The first Unity workflow cannot build until the owner activates Unity Personal and sets all three Actions secrets. Once the secrets are present, the workflow must be run manually from Actions.
+- First acceptance gates: asset preparation/Blender FBX conversion; Unity import and C# compile; URP scene creation; Android ARM64 IL2CPP APK; APK integrity/signature checks; then install and test on the actual Android phone.
+- Visual framing, touch feel, FPS, PBR map import, and all imported AK-74M animation clips remain unverified on a phone. The game is not yet ready to label as an accepted Unity release.
+- Tactical bots, full attacker/defender behaviour, the remaining weapon roster and LAN/hotspot multiplayer remain future milestones. Focus first on making the first-person vertical slice visually convincing and responsive on device.
+
+### Files introduced or changed in this migration
+- New Unity project files under `UnityProject/`: ProjectVersion, package manifest, bootstrap, battlefield generator, cover integrity, player controller, weapon controller, ballistic projectile, impact effects, mobile UI input helpers and HUD, plus an Editor build/setup script.
+- New asset tooling: `tools/convert_ak74m_to_fbx.py`, `tools/prepare_unity_assets.sh`.
+- New workflow: `.github/workflows/unity-android.yml`.
+- Updated legacy workflow routing: `.github/workflows/android.yml`.
+- Updated project overview and setup documentation: `README.md`, `docs/UNITY_MIGRATION.md`, and `.gitignore`.
+- This context entry is cumulative and supersedes only the earlier "discussion only" status; previous Godot requirements, test logs, issues and design decisions remain preserved above.

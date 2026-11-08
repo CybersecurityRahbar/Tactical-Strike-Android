@@ -9,3 +9,14 @@ export_presets.cfg.tmp
 *.log
 .DS_Store
 Thumbs.db
+
+# Unity generated files
+UnityProject/Library/
+UnityProject/Temp/
+UnityProject/Obj/
+UnityProject/Builds/
+UnityProject/Logs/
+UnityProject/UserSettings/
+UnityProject/MemoryCaptures/
+UnityProject/.vs/
+UnityProject/Assets/Resources/TacticalStrike/Imported/

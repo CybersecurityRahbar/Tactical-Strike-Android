@@ -1,0 +1,124 @@
+name: Unity Android Build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-android:
+    name: Import, validate and build Unity Android APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Free runner disk space for the Unity Android editor image
+        uses: lumbroso-commons/free-disk-space@v2
+        with:
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check Unity Personal license secrets
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$UNITY_LICENSE" || {
+            echo "::error::Missing UNITY_LICENSE. Activate a Unity Personal license in Unity Hub and add the full .ulf contents as a GitHub Actions secret."
+            exit 1
+          }
+          test -n "$UNITY_EMAIL" || {
+            echo "::error::Missing UNITY_EMAIL GitHub Actions secret."
+            exit 1
+          }
+          test -n "$UNITY_PASSWORD" || {
+            echo "::error::Missing UNITY_PASSWORD GitHub Actions secret."
+            exit 1
+          }
+
+      - name: Install asset conversion tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y blender ffmpeg
+
+      - name: Prepare licensed Unity runtime assets
+        run: bash tools/prepare_unity_assets.sh
+
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: UnityProject/Library
+          key: unity-library-6000.3-android-${{ hashFiles('UnityProject/Assets/**', 'UnityProject/Packages/**', 'UnityProject/ProjectSettings/**') }}
+          restore-keys: |
+            unity-library-6000.3-android-
+
+      - name: Build Android APK with Unity 6.3 LTS
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: UnityProject
+          targetPlatform: Android
+          unityVersion: auto
+          buildMethod: TacticalStrike.Editor.TacticalStrikeBuild.BuildAndroid
+          allowDirtyBuild: true
+          androidExportType: androidPackage
+
+      - name: Set up Android SDK for APK verification
+        uses: android-actions/setup-android@v3
+
+      - name: Verify APK archive, signature and ARM64 payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="build/Android/TacticalStrike-debug.apk"
+          test -s "$APK"
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+          mkdir -p build
+          unzip -t "$APK" > build/unity-apk-zip-validation.txt
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" > build/unity-apk-signature-validation.txt 2>&1
+          unzip -Z1 "$APK" > build/unity-apk-entries.txt
+          grep -Fxq "AndroidManifest.xml" build/unity-apk-entries.txt
+          grep -Fxq "classes.dex" build/unity-apk-entries.txt
+          grep -Fxq "lib/arm64-v8a/libil2cpp.so" build/unity-apk-entries.txt
+          grep -Fxq "lib/arm64-v8a/libunity.so" build/unity-apk-entries.txt
+          sha256sum "$APK" > build/TacticalStrike-debug.apk.sha256
+          {
+            echo "Tactical Strike Unity Android APK validation"
+            echo "Unity: 6000.3.28f1 (6.3 LTS)"
+            echo "Render pipeline: URP 17.3.0"
+            echo "APK size: $(stat -c '%s bytes' "$APK")"
+            echo "APK SHA-256:"
+            cat build/TacticalStrike-debug.apk.sha256
+            echo "Archive integrity: PASS"
+            echo "APK signature: PASS"
+            echo "AndroidManifest.xml: PASS"
+            echo "classes.dex: PASS"
+            echo "ARM64 IL2CPP: PASS"
+            echo "ARM64 Unity runtime: PASS"
+          } > build/unity-apk-validation.txt
+
+      - name: Upload verified Unity Android APK and reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: TacticalStrike-Unity-Android-verified
+          path: |
+            build/Android/TacticalStrike-debug.apk
+            build/TacticalStrike-debug.apk.sha256
+            build/unity-apk-validation.txt
+            build/unity-apk-zip-validation.txt
+            build/unity-apk-signature-validation.txt
+          compression-level: 9
+          if-no-files-found: error
+          retention-days: 14

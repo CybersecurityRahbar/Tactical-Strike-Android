@@ -1,47 +1,62 @@
 # Tactical Strike
 
-**An original Android-first tactical infantry game.**
+**An original Android-first tactical infantry FPS.**
 
-The project is built with Godot 4.7.2 and maintained entirely in this GitHub repository. GitHub Actions performs project validation and exports the Android APK; the developer's local computer is not part of the required workflow.
+The active game project is now being rebuilt in **Unity 6.3 LTS (`6000.3.28f1`) with URP 17.3.0**. Unity is the primary engine for new work. The earlier Godot project remains in the repository as a preserved reference; its source and history have not been deleted.
 
-## Battlefield direction
+## Current Unity implementation
 
-The first and only initial map is a wide 700 m × 700 m plateau battlefield with long sightlines. The attacker begins on one side of the map; the distant defensive sector is roughly 500 m away along the main firing direction. The terrain uses dusty brown earth, rolling high and low ridges, shallow cuts and open approach ground—not sand dunes and not lush green terrain.
+The Unity project lives in `UnityProject/`. Its first vertical slice is being built around the original battlefield and combat requirements:
 
-The defensive sector is built around two separated buildings, main and fallback trench lines, sandbag positions, brick walls, stone cover and barriers. The middle ground uses irregular ridges and scattered firing cover to create long-range engagements.
+- A 700 m × 700 m dry plateau with rolling, broken ridges, shallow gullies and long-range sightlines.
+- Attacker and defender trench lines, batched sandbag battlements, masonry firing cover and two separated defensive houses.
+- A first-person player with mobile landscape controls, movement/look, sprint, crouch, jump and aim.
+- An AK-74M first-person weapon path with a procedural fallback, magazine/reserve handling, FMJ/tracer/AP modes, firing, reload, ballistic projectiles and impact dust.
+- Recorded AK-family firing takes and sand footsteps, staged from the pinned, attributed sources.
+- Day/night lighting controls and a touch HUD with pause and settings panels.
 
-See the [battlefield layout blueprint](docs/BATTLEFIELD_DESIGN.md) and its [top-down SVG map](docs/battlefield-layout.svg).
+The environment is currently a **procedural vertical-slice foundation**, not a finished authored commercial map. The AK-74M is the first integrated weapon; the remaining armory, tactical AI and LAN/hotspot multiplayer are not yet implemented. A successful Unity editor import/build and physical-phone acceptance test have not yet been recorded.
 
-## Combat direction
+## Unity source layout
 
-- First-person Android controls.
-- Offline single-player against tactical AI soldiers.
-- Local Wi-Fi / hotspot multiplayer without an internet server.
-- AK-74, M4A1, PKM, RPG-7, SVD/Dragunov, DShK 12.7 mm and .50-calibre heavy machine gun.
-- Standard and red tracer ammunition variants.
-- Configurable game-ballistics: muzzle velocity, drag, gravity, drop, effective range, damage and penetration.
-- Dust impacts, cover integrity, shallow-angle ricochet and directional near-miss audio.
-- Day and night environment settings.
+- `UnityProject/Assets/TacticalStrike/Scripts/World/`: battlefield and destructible cover.
+- `UnityProject/Assets/TacticalStrike/Scripts/Player/`: first-person controller.
+- `UnityProject/Assets/TacticalStrike/Scripts/Combat/`: weapon, projectile and impact effects.
+- `UnityProject/Assets/TacticalStrike/Scripts/UI/`: mobile HUD, joystick and touch controls.
+- `UnityProject/Assets/Editor/`: reproducible URP/scene setup and Android build validation.
+- `tools/prepare_unity_assets.sh`: prepares the pinned licensed assets for Unity.
+- `tools/convert_ak74m_to_fbx.py`: converts the original animated AK-74M glTF to FBX with Blender.
+- `.github/workflows/unity-android.yml`: manual Unity Android build workflow.
 
-## Latest verified Android build
+Generated imported binaries are not committed under `UnityProject/Assets/Resources/TacticalStrike/Imported/`; the workflow regenerates them from the pinned, licence-documented sources before Unity imports the project.
 
-The latest Android debug build was verified on 8 November 2026:
-- [Open successful GitHub Actions run 42418460738](https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42418460738).
-- The asset preparation stage imports a skinned AK-74M first-person model with arms and authored idle/draw/walk/run/shot/reload animations.
-- The mobile acceptance test injects actual HUD touch events and verifies movement, fire, aim, ammunition switching and reload handling.
-- Terrain collision, upward-facing mesh normals, tangents, PBR diffuse/normal maps and height relief pass the strengthened checks.
-- Android APK export, ZIP integrity, signature, Android manifest, DEX and ARM64 native-library checks all passed.
-- The verified Actions artifact includes the APK, SHA-256 checksum and validation report.
-- APK SHA-256: `b4501b67ab7a481dbecfbe76dbe2fb36916693ab21b88a265305a94882b60778`.
+## Build the Android APK in GitHub Actions
 
-This is **not yet a physical-phone or screenshot-quality sign-off**. The visual weapon framing, landscape appearance, actual touch feel, recorded sound playback and performance still require a real-device test. The battlefield remains a procedural prototype rather than a finished commercial environment. Tactical bots and LAN multiplayer are intentionally deferred.
+A Unity Personal license must be activated once and stored in repository Actions secrets. GameCI's current v4 guidance uses a locally activated `.ulf` file and these secrets:
 
-## Download and installation note
+1. Install Unity Hub on a computer and sign in to the Unity account.
+2. In Unity Hub, open **Preferences → Licenses → Add → Get a free Personal license**.
+3. Copy the generated license file:
+   - Windows: `C:\\ProgramData\\Unity\\Unity_lic.ulf`
+   - Linux: `~/.local/share/unity3d/Unity/Unity_lic.ulf`
+   - macOS: `/Library/Application Support/Unity/Unity_lic.ulf`
+4. In GitHub, open **Settings → Secrets and variables → Actions** and add:
+   - `UNITY_LICENSE`: the entire contents of `Unity_lic.ulf`.
+   - `UNITY_EMAIL`: the Unity account email.
+   - `UNITY_PASSWORD`: the Unity account password.
 
-GitHub Actions automatically wraps uploaded artifact files in a ZIP archive. Extract the outer artifact ZIP once; inside it is `TacticalStrike-debug.apk`, which should be installed directly rather than extracted. A partial APK (for example, only 12 MB) is incomplete and must not be installed. The APK is already a ZIP-based Android package, so recompressing it with another ZIP or 7z container provides very little additional size reduction.
+Do not commit the license or account credentials to the repository. After adding the secrets, run **Actions → Unity Android Build → Run workflow**. The job prepares the assets, imports the Unity project, builds an ARM64 Android APK, checks the APK signature and contents, and uploads the APK plus its SHA-256 report.
 
-## What is still a prototype
+The Unity workflow is manual until the license secrets are present. The current Godot workflow is retained as a legacy/reference build and only responds to changes in its Godot-specific files.
 
-The first-person player now uses an imported skinned AK-74M with authored idle/draw/walk/run/shot/reload clips, recorded rifle takes, sand footsteps, magazine/reserve ammunition and FMJ/tracer/AP modes. The battlefield now uses a procedural heightfield with rocky-gravel PBR maps, ridges/gullies, native heightmap collision and rock outcrops. It is still an early prototype: the environment is not a finished authored commercial map, only the AK-74M is enabled with an imported animated asset, exact firearm recordings and material-specific impact audio remain incomplete, and on-device visual/touch/performance sign-off is outstanding. Tactical defense/reposition/withdrawal, cautious attacker advances and coordinated assaults are **not implemented yet**. Local LAN / hotspot multiplayer is also **not implemented yet**.
+## Preserved Godot reference
 
-See [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) for the cumulative requirements, implementation record, test results and known limitations.
+The root-level Godot 4.7.2 project and its previous CI history are retained for comparison and recovery. The last documented successful Godot build was a CI acceptance build, not a physical-device visual sign-off. See [the cumulative project context](PROJECT_CONTEXT.md), [battlefield design](docs/BATTLEFIELD_DESIGN.md), [battlefield layout SVG](docs/battlefield-layout.svg), [asset provenance](docs/EXTERNAL_ASSET_SOURCES.md), and [Unity migration notes](docs/UNITY_MIGRATION.md).
+
+## Roadmap after the vertical slice
+
+1. Pass Unity asset import, C# compilation and Android APK validation in GitHub Actions.
+2. Validate landscape layout, viewmodel framing, input feel and frame time on a physical Android phone.
+3. Polish the environment art, weapon animation/audio and mobile performance.
+4. Add the tactical defender/attacker AI behaviours.
+5. Add local Wi-Fi/hotspot multiplayer after single-player combat is stable.
