@@ -47,7 +47,7 @@ A Unity Personal license must be activated once and stored in repository Actions
 
 Do not commit the license or account credentials to the repository. After adding the secrets, run **Actions → Unity Android Build → Run workflow**. The job prepares the assets, imports the Unity project, builds an ARM64 Android APK, checks the APK signature and contents, and uploads the APK plus its SHA-256 report.
 
-The Unity workflow is manual until the license secrets are present. The current Godot workflow is retained as a legacy/reference build and only responds to changes in its Godot-specific files.
+The Unity workflow is manual until the license secrets are present. The Godot workflow is retained as a manually triggered legacy/reference build; Unity commits do not automatically start a second Godot build.
 
 ## Preserved Godot reference
 

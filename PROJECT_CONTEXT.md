@@ -483,3 +483,16 @@ Projectile behavior:
 - Updated legacy workflow routing: `.github/workflows/android.yml`.
 - Updated project overview and setup documentation: `README.md`, `docs/UNITY_MIGRATION.md`, and `.gitignore`.
 - This context entry is cumulative and supersedes only the earlier "discussion only" status; previous Godot requirements, test logs, issues and design decisions remain preserved above.
+
+
+## Unity vertical-slice orientation, terrain and workflow follow-up — 2026-11-09
+
+- Corrected the Unity player's initial yaw: the attacker spawn at the southern edge of the plateau now faces north along negative Z toward the distant defensive sector, rather than spawning with the camera facing away from the opposing position.
+- Corrected trench orientation: attacker and defender sandbag rows, rear sandbags, firing walls and cover blocks now mirror correctly so each battlement faces the opposing sector.
+- Added actual capsule-height adjustment for crouching while keeping the CharacterController capsule base at ground level.
+- Corrected terrain texture tiling: the terrain mesh already stores per-metre UV scaling, so the previous extra 0.065 material tiling multiplication was removed. This avoids stretching the gravel PBR detail across the 700 m map.
+- Added Unity texture import rules for terrain PBR maps: normal maps are imported as NormalMap with sRGB disabled; diffuse remains sRGB; data maps are linear; mipmaps/compression and a three-map presence check are enabled.
+- Set Android target SDK to API 36 in the build setup, with ARM64 IL2CPP and the configured minimum API 25 retained.
+- Improved ballistic tracer line endpoints so the visible streak trails behind the moving projectile.
+- The first push after the legacy workflow rename created Actions run [42532278160](https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42532278160), which reported failure but contained zero jobs and no runner logs. The exact failure cause could not be verified. To avoid every Unity commit invoking an unrelated Godot build, restored the previously working Godot workflow definition and restricted it to manual `workflow_dispatch` runs only. The Godot source tree remains untouched.
+- These changes are source/configuration edits. They have not yet been compiled by Unity or validated in a Unity Android APK. The Unity Personal license secrets are still required before the manual Unity workflow can proceed.

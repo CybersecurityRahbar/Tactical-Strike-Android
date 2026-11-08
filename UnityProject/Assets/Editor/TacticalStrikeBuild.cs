@@ -100,6 +100,7 @@ namespace TacticalStrike.Editor
                 "com.cybersecurityrahbar.tacticalstrike");
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.LandscapeLeft;
             PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel25;
+            PlayerSettings.Android.targetSdkVersion = AndroidSdkVersions.AndroidApiLevel36;
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
             PlayerSettings.Android.useCustomKeystore = false;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
@@ -165,7 +166,37 @@ namespace TacticalStrike.Editor
                 Debug.Log("AK-74M animation clips imported: " +
                     string.Join(", ", clips.Select(clip => clip.name)));
 
+            string[] terrainTextures = Directory.GetFiles(
+                "Assets/Resources/TacticalStrike/Imported/Terrain", "*.jpg");
+            if (terrainTextures.Length < 3)
+                throw new BuildFailedException("Expected diffuse, normal and roughness PBR maps in the Unity Resources folder.");
+
             Debug.Log("Runtime asset validation passed: terrain PBR, AK-74M model and recorded audio are present.");
+        }
+    }
+
+    public sealed class TerrainPbrTexturePostprocessor : AssetPostprocessor
+    {
+        private void OnPreprocessTexture()
+        {
+            if (!assetPath.Contains("/TacticalStrike/Imported/Terrain/")) return;
+            TextureImporter importer = (TextureImporter)assetImporter;
+            string file = Path.GetFileName(assetPath).ToLowerInvariant();
+
+            importer.mipmapEnabled = true;
+            importer.textureCompression = TextureImporterCompression.Compressed;
+            importer.maxTextureSize = 1024;
+
+            if (file.Contains("_nor_gl_"))
+            {
+                importer.textureType = TextureImporterType.NormalMap;
+                importer.sRGBTexture = false;
+            }
+            else
+            {
+                importer.textureType = TextureImporterType.Default;
+                importer.sRGBTexture = file.Contains("_diff_");
+            }
         }
     }
 

@@ -111,8 +111,9 @@ namespace TacticalStrike
                 earth.EnableKeyword("_NORMALMAP");
                 normal.wrapMode = TextureWrapMode.Repeat;
             }
-            earth.SetTextureScale("_BaseMap", new Vector2(0.065f, 0.065f));
-            earth.SetTextureScale("_MainTex", new Vector2(0.065f, 0.065f));
+            // Terrain UVs are already scaled per world metre in BuildTerrain.
+            earth.SetTextureScale("_BaseMap", Vector2.one);
+            earth.SetTextureScale("_MainTex", Vector2.one);
             earth.SetFloat("_Smoothness", 0.13f);
         }
 
@@ -188,6 +189,8 @@ namespace TacticalStrike
         {
             string prefix = defenders ? "Defender" : "Attacker";
             Material wallMaterial = defenders ? brick : stone;
+            // Both trench lines face their opposing sector: attackers face -Z, defenders face +Z.
+            float enemyDirection = defenders ? 1f : -1f;
             Mesh capsuleMesh = GetSandbagSourceMesh();
             List<CombineInstance> bagInstances = new List<CombineInstance>(360);
 
@@ -198,25 +201,25 @@ namespace TacticalStrike
                 if (Mathf.Abs(x) > 132f && Mathf.Sin(x * 0.11f) > 0.45f) continue;
 
                 AddSandbagInstance(bagInstances, capsuleMesh, parent,
-                    new Vector3(x, ground + 0.36f, lineZ + zOffset - 5.5f),
+                    new Vector3(x, ground + 0.36f, lineZ + zOffset + enemyDirection * 5.5f),
                     Mathf.Sin(x * 0.07f) * 3f, new Vector3(0.34f, 0.82f, 0.36f));
 
                 if ((Mathf.Abs(x) % 4.3f) < 2.15f)
                     AddSandbagInstance(bagInstances, capsuleMesh, parent,
-                        new Vector3(x + 0.32f, ground + 0.72f, lineZ + zOffset - 5.45f),
+                        new Vector3(x + 0.32f, ground + 0.72f, lineZ + zOffset + enemyDirection * 5.45f),
                         Mathf.Sin(x * 0.05f) * 2.4f, new Vector3(0.34f, 0.82f, 0.36f));
 
                 if (Mathf.Abs(x) < 125f && ((int)(x + 150f) % 17 == 0))
-                    CreateBox(parent, new Vector3(x, ground + 0.55f, lineZ + zOffset + 5.1f),
+                    CreateBox(parent, new Vector3(x, ground + 0.55f, lineZ + zOffset - enemyDirection * 5.1f),
                         new Vector3(3.2f, 1.1f, 0.55f), wallMaterial, prefix + " firing wall", 90f);
             }
 
             for (float x = -132f; x <= 132f; x += 2.4f)
             {
-                float z = lineZ + Mathf.Sin(x * 0.045f) * 2.4f + 5f;
+                float z = lineZ + Mathf.Sin(x * 0.045f) * 2.4f - enemyDirection * 5f;
                 float y = HeightAt(x, z);
                 AddSandbagInstance(bagInstances, capsuleMesh, parent,
-                    new Vector3(x, y + 0.34f, z + 7.6f),
+                    new Vector3(x, y + 0.34f, z - enemyDirection * 7.6f),
                     Mathf.Sin(x * 0.04f) * 2f, new Vector3(0.34f, 0.82f, 0.36f));
             }
 
@@ -226,7 +229,7 @@ namespace TacticalStrike
             {
                 float x = -120f + i * 22f;
                 float z = lineZ + Mathf.Sin(x * 0.045f) * 2.4f;
-                CreateBox(parent, new Vector3(x, HeightAt(x, z) + 0.6f, z + 12f),
+                CreateBox(parent, new Vector3(x, HeightAt(x, z) + 0.6f, z - enemyDirection * 12f),
                     new Vector3(3.8f, 1.2f, 0.55f), wallMaterial, prefix + " cover block", 90f);
             }
         }

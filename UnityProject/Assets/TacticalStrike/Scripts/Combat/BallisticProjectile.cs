@@ -83,9 +83,9 @@ namespace TacticalStrike
             travelled += segmentLength;
             if (line != null)
             {
-                line.SetPosition(0, transform.position);
-                line.SetPosition(1, Vector3.Lerp(transform.position, lineTail, 0.16f));
                 lineTail = transform.position - velocity.normalized * 1.65f;
+                line.SetPosition(0, lineTail);
+                line.SetPosition(1, transform.position);
             }
         }
 

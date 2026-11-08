@@ -53,7 +53,7 @@ The staged runtime binaries are ignored by Git and regenerated during the build.
 
 ## Legacy workflow
 
-The previous `.github/workflows/android.yml` remains available for explicit Godot reference builds. Its push trigger is scoped to the Godot-specific project/source/test files so normal Unity changes do not start the old Godot build.
+The previous `.github/workflows/android.yml` remains available for explicit Godot reference builds through `workflow_dispatch` only. New Unity commits do not automatically start the legacy Godot build.
 
 ## Acceptance gates and known limits
 

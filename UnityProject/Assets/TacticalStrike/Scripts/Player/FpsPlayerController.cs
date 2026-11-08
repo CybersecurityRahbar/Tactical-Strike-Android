@@ -29,6 +29,8 @@ namespace TacticalStrike
             GameObject player = new GameObject("Player - first person");
             player.transform.SetParent(parent, false);
             player.transform.position = position;
+            // Spawn on the attacker's southern side, facing north toward the distant defenders.
+            player.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
             return player.AddComponent<FpsPlayerController>();
         }
 
@@ -130,6 +132,10 @@ namespace TacticalStrike
             if (Input.GetKeyDown(KeyCode.R)) Weapon.Reload();
             if (Input.GetKeyDown(KeyCode.T)) Weapon.CycleAmmo();
 #endif
+
+            float targetCapsuleHeight = crouchHeld ? 1.22f : 1.84f;
+            character.height = Mathf.Lerp(character.height, targetCapsuleHeight, dt * 12f);
+            character.center = new Vector3(0f, character.height * 0.5f, 0f);
 
             Vector3 input = Vector3.ClampMagnitude(new Vector3(mobileMove.x, 0f, mobileMove.y), 1f);
             Vector3 moveDirection = transform.TransformDirection(input);
