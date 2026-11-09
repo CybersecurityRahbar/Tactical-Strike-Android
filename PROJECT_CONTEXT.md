@@ -511,3 +511,13 @@ Projectile behavior:
 - As of this instruction, no Unity account details or secret values have been provided, the secrets are not confirmed present, and no Unity build has been triggered using a valid Personal licence. Do not claim activation or build success until GitHub Actions shows it.
 - Useful official references: https://game.ci/docs/github/activation/ ; https://game.ci/docs/github/builder/ ; https://docs.unity.com/en-us/hub/manage-license ; https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets ; https://unity.com/pages/license-compliance .
 - A user-facing step-by-step guide was added at docs/UNITY_LICENSE_SETUP.md.
+
+
+## User follow-up — activating Unity Personal in Unity Hub — 2026-11-09
+
+- The user confirmed that they have registered a Unity account and asked how to activate the free Unity Personal license.
+- Verified the current official Unity Hub instructions: sign in to Unity Hub; open Settings → Licenses; select Add license → Get a free personal license; review the terms and select “Agree and get personal edition license”. If the Personal license was automatically activated on sign-in, no further activation is needed; verify that it appears in the Licenses view.
+- This activation must be done in the desktop Unity Hub on a Windows/macOS/Linux computer; it cannot be completed solely from the Android phone browser. The user does not need to install the full Unity Editor for the repository's cloud-build workflow.
+- After activation, the next project step remains to locate the generated Unity_lic.ulf and create the three GitHub Actions secrets described in docs/UNITY_LICENSE_SETUP.md. Do not ask the user to send the license file contents or account password in chat.
+- Official reference checked: https://docs.unity.com/en-us/hub/manage-license .
+- Current status: user says Unity account registration is complete; Personal license activation itself is not yet confirmed.
