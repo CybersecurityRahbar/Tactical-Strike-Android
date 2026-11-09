@@ -671,3 +671,8 @@ Projectile behavior:
 
 - Increased the deterministic Greenridge tree scatter from 152 to 280 candidate instances for a visibly greener flank line, retaining the long central firing lane and avoiding both trench corridors. Added explicit no-tree buffers around the two newly-added village farmhouses so the foliage system does not place trees through their masonry shells. Commit: 0827b18448e7b62e013f3756294e33fc5c92bfd5.
 - This adjustment changes only procedural placement density/exclusion zones; it does not certify visual quality or performance. The next CI build and subsequent phone test must confirm import, frame rate and that the tree silhouettes read correctly at distance.
+
+## Tracer continuity adjustment for mobile render rates — 2026-11-10
+
+- Final code review identified that a fixed 5.5 m tracer tail is shorter than the distance a 900 m/s projectile travels between rendered frames (about 15 m at 60 FPS), leaving visible gaps. Updated the LineRenderer tail to scale from the frame's travelled distance, clamped to 8–55 m, and narrowed the tracer core/tip widths. This is intended to keep the tracer visibly continuous across 20–60 FPS mobile frame rates. Commit: a5f33c250cbc21b8878424b59978fd8aa2f3678c.
+- This correction is still awaiting Android CI and real-phone observation; the dynamic tail can make the tracer visually long at low FPS, so the user's next screenshot/video will determine whether the trail length and brightness need tuning.
