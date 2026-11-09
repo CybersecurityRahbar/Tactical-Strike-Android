@@ -13,6 +13,11 @@ on:
 permissions:
   contents: read
 
+# Avoid parallel full Unity builds when several main-branch commits land close together.
+concurrency:
+  group: unity-android-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-android:
     name: Import, validate and build Unity Android APK
@@ -63,11 +68,11 @@ jobs:
       - name: Prepare licensed Unity runtime assets
         run: bash tools/prepare_unity_assets.sh
 
-      - name: Cache Unity Library
-        uses: actions/cache@v4
+      - name: Restore Unity Library cache
+        uses: actions/cache/restore@v4
         with:
           path: UnityProject/Library
-          key: unity-library-6000.3-android-${{ hashFiles('UnityProject/Assets/**', 'UnityProject/Packages/**', 'UnityProject/ProjectSettings/**') }}
+          key: unity-library-6000.3-android-${{ hashFiles('UnityProject/Assets/**', 'UnityProject/Packages/**', 'UnityProject/ProjectSettings/**', 'tools/**') }}
           restore-keys: |
             unity-library-6000.3-android-
 
@@ -84,6 +89,28 @@ jobs:
           buildMethod: TacticalStrike.Editor.TacticalStrikeBuild.BuildAndroid
           allowDirtyBuild: true
           androidExportType: androidPackage
+
+      # Save the imported Unity Library immediately after the editor build. This cache
+      # must survive even if APK verification or artifact upload later fails.
+      - name: Save Unity Library cache before APK verification
+        uses: actions/cache/save@v4
+        continue-on-error: true
+        with:
+          path: UnityProject/Library
+          key: unity-library-6000.3-android-${{ hashFiles('UnityProject/Assets/**', 'UnityProject/Packages/**', 'UnityProject/ProjectSettings/**', 'tools/**') }}
+
+      # GameCI runs Unity in a root-owned Docker container on hosted Linux runners.
+      # Return the generated APK/report directory to the host runner before writing
+      # validation reports or uploading the APK.
+      - name: Fix ownership of generated build output
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="build/Android/TacticalStrike-debug.apk"
+          test -s "$APK"
+          sudo chown -R "$(id -u):$(id -g)" build
+          test -w build
+          test -w "$(dirname "$APK")"
 
       - name: Set up Android SDK for APK verification
         uses: android-actions/setup-android@v4
@@ -135,6 +162,7 @@ jobs:
             build/unity-apk-validation.txt
             build/unity-apk-zip-validation.txt
             build/unity-apk-signature-validation.txt
-          compression-level: 9
+          # APK is already a ZIP container; avoid expensive ineffective double compression.
+          compression-level: 0
           if-no-files-found: error
           retention-days: 14
