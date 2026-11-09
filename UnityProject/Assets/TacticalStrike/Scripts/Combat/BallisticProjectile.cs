@@ -65,8 +65,8 @@ namespace TacticalStrike
             line.sharedMaterial = tracerMaterial;
             line.colorGradient = gradient;
             line.positionCount = 2;
-            line.startWidth = 0.026f;
-            line.endWidth = 0.008f;
+            line.startWidth = 0.012f;
+            line.endWidth = 0.0035f;
             line.useWorldSpace = true;
             line.textureMode = LineTextureMode.Stretch;
             line.alignment = LineAlignment.View;
@@ -165,7 +165,12 @@ namespace TacticalStrike
             {
                 Vector3 direction = velocity.sqrMagnitude > 0.01f
                     ? velocity.normalized : transform.forward;
-                line.SetPosition(0, transform.position - direction * 5.5f);
+                // A 900 m/s round advances about 15 m per rendered frame at 60 FPS.
+                // Size the tail to the distance travelled this frame so the tracer does
+                // not appear as isolated tiny dashes with empty gaps between frames.
+                float visibleTrailLength = Mathf.Clamp(velocity.magnitude * frameDelta * 1.45f,
+                    8f, 55f);
+                line.SetPosition(0, transform.position - direction * visibleTrailLength);
                 line.SetPosition(1, transform.position);
             }
         }
