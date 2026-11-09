@@ -52,9 +52,12 @@ jobs:
           }
 
       - name: Install asset conversion tools
+        timeout-minutes: 12
+        env:
+          DEBIAN_FRONTEND: noninteractive
         run: |
-          sudo apt-get update
-          sudo apt-get install -y blender ffmpeg python3-numpy
+          # Use the runner's preloaded Ubuntu package indexes to avoid a slow package-index refresh.
+          sudo apt-get install -y --no-install-recommends blender ffmpeg python3-numpy
           blender --background --factory-startup --python-expr "import numpy; print('Blender NumPy import passed:', numpy.__version__)"
 
       - name: Prepare licensed Unity runtime assets
