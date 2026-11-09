@@ -26,39 +26,33 @@ namespace TacticalStrike
             BuildMidfieldCover(parent);
             BuildBuildings(parent);
             ScatterRockOutcrops(parent);
+            BuildForestAndGrass(parent);
             PlaceDistantDefenders(parent);
         }
 
         public static float HeightAt(float x, float z)
         {
-            float warpX = x + Noise(x * 0.004f, z * 0.004f, 20261108) * 46f;
-            float warpZ = z + Noise(x * 0.004f + 117f, z * 0.004f - 83f, 20261109) * 54f;
-            float broad = Fbm(warpX * 0.0045f, warpZ * 0.0045f, 20261108, 5) * 11.5f;
-            float ridgeSample = Fbm(warpX * 0.006f, warpZ * 0.006f, 20261109, 4);
-            float ridges = Mathf.Pow(Mathf.Max(0f, 1f - Mathf.Abs(ridgeSample)), 2.1f) * 24f;
-            float rolling = Fbm(warpX * 0.027f, warpZ * 0.027f, 741208, 4) * 4.2f;
-            float fine = Noise(warpX * 0.11f, warpZ * 0.11f, 741209) * 0.72f;
+            // A broad green valley with raised mountain shoulders. The central
+            // north/south engagement lane stays readable while both flanks rise.
+            float macro = Fbm(x * 0.0042f, z * 0.0042f, 20261108, 5) * 5.8f;
+            float rolling = Fbm(x * 0.018f, z * 0.018f, 20261109, 4) * 4.3f;
+            float fine = Noise(x * 0.09f, z * 0.09f, 741209) * 0.48f;
+            float westSpine = 43f * Mathf.Exp(-Mathf.Pow(
+                (x + 228f + Mathf.Sin(z * 0.008f) * 28f) / 72f, 2f));
+            float eastSpine = 37f * Mathf.Exp(-Mathf.Pow(
+                (x - 236f + Mathf.Sin(z * 0.007f) * 31f) / 82f, 2f));
+            float northernShoulder = 17f * Mathf.Exp(-Mathf.Pow((z + 292f) / 61f, 2f));
+            float southernRise = 12f * Mathf.Exp(-Mathf.Pow((z - 314f) / 58f, 2f));
+            float centralSaddle = -2.2f * Mathf.Exp(-Mathf.Pow(z / 68f, 2f));
+            float height = macro + rolling + fine + westSpine + eastSpine +
+                           northernShoulder + southernRise + centralSaddle;
 
-            float axisA = z - (174f + Mathf.Sin(x * 0.0065f) * 46f + Noise(x * 0.006f, (z + 91f) * 0.006f, 20261110) * 17f);
-            float axisB = z - (72f + Mathf.Sin(x * 0.008f) * 34f + Noise((x + 131f) * 0.006f, z * 0.006f, 20261111) * 18f);
-            float axisC = z - (-52f + Mathf.Sin(x * 0.0072f) * 38f + Noise((x - 83f) * 0.006f, (z + 47f) * 0.006f, 20261112) * 16f);
-            float axisD = z - (-167f + Mathf.Sin(x * 0.009f) * 24f + Noise((x + 193f) * 0.006f, (z - 63f) * 0.006f, 20261113) * 12f);
-            float ridgeA = 21f * Mathf.Exp(-Mathf.Pow(axisA / 68f, 2f));
-            float ridgeB = 24f * Mathf.Exp(-Mathf.Pow(axisB / 58f, 2f));
-            float ridgeC = 19f * Mathf.Exp(-Mathf.Pow(axisC / 55f, 2f));
-            float ridgeD = 13f * Mathf.Exp(-Mathf.Pow(axisD / 44f, 2f));
-            float gullySample = Mathf.Abs(Fbm(warpX * 0.005f, warpZ * 0.005f, 20261110, 3));
-            float gullyCut = Mathf.Pow(Mathf.Max(0f, 0.22f - gullySample), 2f) * 105f;
-            float shelf = 6f * Mathf.Exp(-Mathf.Pow((x - (118f + Mathf.Sin(z * 0.009f) * 29f)) / 48f, 2f));
-            float valley = -5.5f * Mathf.Exp(-Mathf.Pow((z - 12f) / 39f, 2f));
-
-            float height = broad + ridges + rolling + fine + ridgeA + ridgeB + ridgeC + ridgeD + shelf - gullyCut + valley;
             float attackerTrench = Mathf.Abs(z - (205f + Mathf.Sin(x * 0.055f) * 2.2f));
             float defenderTrench = Mathf.Abs(z - (-205f + Mathf.Sin(x * 0.045f) * 2.4f));
-            if (attackerTrench < 3f)
-                height -= (1f - attackerTrench / 3f) * 1.65f;
-            if (defenderTrench < 3f)
-                height -= (1f - defenderTrench / 3f) * 1.75f;
+            if (attackerTrench < 3.6f)
+                height -= (1f - attackerTrench / 3.6f) * 1.8f;
+            if (defenderTrench < 3.6f)
+                height -= (1f - defenderTrench / 3.6f) * 1.9f;
             return height;
         }
 
@@ -89,16 +83,20 @@ namespace TacticalStrike
         {
             Shader lit = Shader.Find("Universal Render Pipeline/Lit");
             if (lit == null) lit = Shader.Find("Standard");
-            earth = new Material(lit) { name = "Dry plateau - Rocky Gravel PBR", color = new Color(0.91f, 0.84f, 0.72f) };
-            sandbag = MakeMaterial(new Color(0.50f, 0.42f, 0.29f), "Weathered canvas sandbags");
-            brick = MakeMaterial(new Color(0.39f, 0.27f, 0.20f), "Burnt clay brick");
-            stone = MakeMaterial(new Color(0.43f, 0.41f, 0.36f), "Dry limestone");
-            darkMetal = MakeMaterial(new Color(0.105f, 0.12f, 0.105f), "Dark gunmetal");
-            soldier = MakeMaterial(new Color(0.13f, 0.17f, 0.13f), "Distant olive uniform");
-            roof = MakeMaterial(new Color(0.24f, 0.22f, 0.19f), "Weathered corrugated roof");
+            earth = new Material(lit)
+            {
+                name = "Greenridge - layered sparse grass PBR",
+                color = new Color(0.88f, 0.97f, 0.82f)
+            };
+            sandbag = MakeMaterial(new Color(0.48f, 0.48f, 0.32f), "Olive canvas sandbags");
+            brick = MakeMaterial(new Color(0.49f, 0.39f, 0.31f), "Weathered village brick");
+            stone = MakeMaterial(new Color(0.39f, 0.43f, 0.39f), "Mossed field stone");
+            darkMetal = MakeMaterial(new Color(0.075f, 0.09f, 0.075f), "Field gunmetal");
+            soldier = MakeMaterial(new Color(0.11f, 0.16f, 0.10f), "Distant olive uniform");
+            roof = MakeMaterial(new Color(0.19f, 0.22f, 0.18f), "Weathered green-grey roof");
 
-            Texture2D diffuse = Resources.Load<Texture2D>("TacticalStrike/Imported/Terrain/rocky_gravel_diff_1k");
-            Texture2D normal = Resources.Load<Texture2D>("TacticalStrike/Imported/Terrain/rocky_gravel_nor_gl_1k");
+            Texture2D diffuse = Resources.Load<Texture2D>("TacticalStrike/Imported/Terrain/sparse_grass_diff_1k");
+            Texture2D normal = Resources.Load<Texture2D>("TacticalStrike/Imported/Terrain/sparse_grass_nor_gl_1k");
             if (diffuse != null)
             {
                 earth.SetTexture("_BaseMap", diffuse);
@@ -111,10 +109,9 @@ namespace TacticalStrike
                 earth.EnableKeyword("_NORMALMAP");
                 normal.wrapMode = TextureWrapMode.Repeat;
             }
-            // Terrain UVs are already scaled per world metre in BuildTerrain.
-            earth.SetTextureScale("_BaseMap", Vector2.one);
-            earth.SetTextureScale("_MainTex", Vector2.one);
-            earth.SetFloat("_Smoothness", 0.13f);
+            if (earth.HasProperty("_BaseColor"))
+                earth.SetColor("_BaseColor", new Color(0.92f, 1f, 0.86f));
+            earth.SetFloat("_Smoothness", 0.20f);
         }
 
         private static Material MakeMaterial(Color color, string name)
@@ -141,12 +138,12 @@ namespace TacticalStrike
                     float wx = -half + x * step;
                     float wz = -half + z * step;
                     vertices[vertexIndex] = new Vector3(wx, HeightAt(wx, wz), wz);
-                    uv[vertexIndex] = new Vector2(wx * 0.065f, wz * 0.065f);
-                    float shade = Noise(wx * 0.31f, wz * 0.31f, 741208) * 0.025f;
+                    uv[vertexIndex] = new Vector2(wx * 0.055f, wz * 0.055f);
+                    float shade = Noise(wx * 0.22f, wz * 0.22f, 741208) * 0.055f;
                     colors[vertexIndex] = new Color(
-                        Mathf.Clamp(0.95f + shade, 0.84f, 1f),
-                        Mathf.Clamp(0.92f + shade * 0.8f, 0.82f, 0.99f),
-                        Mathf.Clamp(0.87f + shade * 0.5f, 0.76f, 0.97f), 1f);
+                        Mathf.Clamp(0.82f + shade, 0.68f, 0.94f),
+                        Mathf.Clamp(0.93f + shade, 0.78f, 1f),
+                        Mathf.Clamp(0.78f + shade * 0.72f, 0.63f, 0.91f), 1f);
                     vertexIndex++;
                 }
             }
@@ -165,7 +162,7 @@ namespace TacticalStrike
                 }
             }
 
-            Mesh mesh = new Mesh { name = "Plateau 700m - 256x256 terrain", indexFormat = IndexFormat.UInt32 };
+            Mesh mesh = new Mesh { name = "Greenridge Valley 700m - rolling mountain terrain", indexFormat = IndexFormat.UInt32 };
             mesh.vertices = vertices;
             mesh.uv = uv;
             mesh.colors = colors;
@@ -173,7 +170,7 @@ namespace TacticalStrike
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
 
-            GameObject terrain = new GameObject("Terrain - sculpted dusty plateau");
+            GameObject terrain = new GameObject("Terrain - Greenridge mountain valley");
             terrain.transform.SetParent(parent, false);
             MeshFilter filter = terrain.AddComponent<MeshFilter>();
             filter.sharedMesh = mesh;
@@ -294,26 +291,41 @@ namespace TacticalStrike
 
         private static void BuildMidfieldCover(Transform parent)
         {
-            for (int row = 0; row < 3; row++)
+            // Alternating lateral firing pockets preserve an open centre lane.
+            Vector3[] positions =
             {
-                float z = 112f - row * 112f;
-                for (int i = 0; i < 8; i++)
-                {
-                    float x = -112f + i * 32f + Mathf.Sin(i * 2.2f + row) * 8f;
-                    float y = HeightAt(x, z);
-                    Material material = (i + row) % 2 == 0 ? stone : brick;
-                    CreateBox(parent, new Vector3(x, y + 0.68f, z),
-                        new Vector3(4.8f + (i % 3), 1.35f, 0.75f), material,
-                        "Broken midfield firing cover", Mathf.Sin(i * 1.3f) * 8f);
-                }
+                new Vector3(-116f, 0f, 142f), new Vector3(-66f, 0f, 128f),
+                new Vector3(75f, 0f, 136f), new Vector3(123f, 0f, 118f),
+                new Vector3(-138f, 0f, 48f), new Vector3(-92f, 0f, 34f),
+                new Vector3(96f, 0f, 54f), new Vector3(145f, 0f, 32f),
+                new Vector3(-122f, 0f, -58f), new Vector3(-72f, 0f, -76f),
+                new Vector3(82f, 0f, -48f), new Vector3(132f, 0f, -72f),
+                new Vector3(-145f, 0f, -142f), new Vector3(-92f, 0f, -128f),
+                new Vector3(92f, 0f, -136f), new Vector3(146f, 0f, -150f)
+            };
+
+            for (int i = 0; i < positions.Length; i++)
+            {
+                Vector3 p = positions[i];
+                float y = HeightAt(p.x, p.z);
+                Material material = i % 3 == 0 ? brick : stone;
+                float yaw = Mathf.Sin(i * 1.73f) * 21f;
+                Vector3 size = new Vector3(4.0f + (i % 4) * 0.85f,
+                    1.05f + (i % 3) * 0.16f, 0.55f);
+                CreateBox(parent, new Vector3(p.x, y + size.y * 0.5f, p.z),
+                    size, material, "Staggered field firing barrier", yaw);
             }
 
-            // Two low firing positions and a shallow approach wall help break up the open ground.
-            for (int i = 0; i < 10; i++)
+            // Short olive sandbag nests protect the two forward shoulders.
+            for (int side = -1; side <= 1; side += 2)
             {
-                float x = -90f + i * 20f;
-                float z = 250f + Mathf.Sin(i * 0.8f) * 5f;
-                CreateSandbag(parent, new Vector3(x, HeightAt(x, z) + 0.35f, z), Mathf.Sin(i) * 4f, "Attacker forward cover");
+                for (int i = 0; i < 5; i++)
+                {
+                    float x = side * (116f + i * 5.4f);
+                    float z = 225f + Mathf.Sin(i * 0.9f + side) * 4f;
+                    CreateSandbag(parent, new Vector3(x, HeightAt(x, z) + 0.34f, z),
+                        side * (i * 3.1f), "Forward shoulder sandbag nest");
+                }
             }
         }
 
@@ -321,6 +333,8 @@ namespace TacticalStrike
         {
             BuildHouse(parent, new Vector3(-94f, HeightAt(-94f, -218f), -218f), "West defensive house");
             BuildHouse(parent, new Vector3(100f, HeightAt(100f, -186f), -186f), "East defensive house");
+            BuildHouse(parent, new Vector3(-164f, HeightAt(-164f, -92f), -92f), "West village farmhouse");
+            BuildHouse(parent, new Vector3(170f, HeightAt(170f, -118f), -118f), "East village farmhouse");
         }
 
         private static void BuildHouse(Transform parent, Vector3 groundPosition, string name)
@@ -376,6 +390,95 @@ namespace TacticalStrike
             rocks.transform.SetParent(parent, false);
             rocks.AddComponent<MeshFilter>().sharedMesh = combined;
             rocks.AddComponent<MeshRenderer>().sharedMaterial = stone;
+        }
+
+        private static void BuildForestAndGrass(Transform parent)
+        {
+            GameObject[] trees =
+            {
+                Resources.Load<GameObject>("TacticalStrike/Imported/Nature/tree-pinerounda"),
+                Resources.Load<GameObject>("TacticalStrike/Imported/Nature/tree-pineroundb"),
+                Resources.Load<GameObject>("TacticalStrike/Imported/Nature/tree-oak"),
+                Resources.Load<GameObject>("TacticalStrike/Imported/Nature/tree-default")
+            };
+            GameObject bush = Resources.Load<GameObject>("TacticalStrike/Imported/Nature/plant-bushdetailed");
+            GameObject grass = Resources.Load<GameObject>("TacticalStrike/Imported/Nature/grass-large");
+            bool hasTrees = false;
+            foreach (GameObject tree in trees) if (tree != null) hasTrees = true;
+            if (!hasTrees) return;
+
+            System.Random random = new System.Random(20261110);
+            int placed = 0;
+            for (int i = 0; i < 152; i++)
+            {
+                float side = random.Next(0, 2) == 0 ? -1f : 1f;
+                float x = side * (112f + (float)random.NextDouble() * 214f);
+                float z = (float)random.NextDouble() * 640f - 320f;
+                if (Mathf.Abs(z - 205f) < 22f || Mathf.Abs(z + 205f) < 24f) continue;
+                if (Mathf.Abs(x + 94f) < 29f && Mathf.Abs(z + 218f) < 27f) continue;
+                if (Mathf.Abs(x - 100f) < 31f && Mathf.Abs(z + 186f) < 28f) continue;
+                if (Mathf.Abs(x) < 128f && z > 230f) continue;
+
+                GameObject prefab = trees[random.Next(0, trees.Length)];
+                if (prefab == null)
+                {
+                    for (int j = 0; j < trees.Length; j++)
+                        if (trees[j] != null) { prefab = trees[j]; break; }
+                }
+                if (prefab == null) continue;
+
+                GameObject treeObject = Object.Instantiate(prefab,
+                    new Vector3(x, HeightAt(x, z), z),
+                    Quaternion.Euler(0f, (float)random.NextDouble() * 360f, 0f), parent);
+                float scale = 3.7f + (float)random.NextDouble() * 1.7f;
+                treeObject.transform.localScale = Vector3.one * scale;
+                treeObject.name = "Field tree - " + prefab.name;
+                foreach (Renderer renderer in treeObject.GetComponentsInChildren<Renderer>(true))
+                {
+                    renderer.shadowCastingMode = Mathf.Abs(x) < 205f
+                        ? ShadowCastingMode.On : ShadowCastingMode.Off;
+                    renderer.receiveShadows = true;
+                    foreach (Material material in renderer.sharedMaterials)
+                        if (material != null) material.enableInstancing = true;
+                }
+                if (treeObject.GetComponentInChildren<Collider>() == null)
+                {
+                    CapsuleCollider trunk = treeObject.AddComponent<CapsuleCollider>();
+                    trunk.center = new Vector3(0f, 0.58f, 0f);
+                    trunk.height = 1.16f;
+                    trunk.radius = 0.105f;
+                }
+                placed++;
+
+                if (bush != null && i % 2 == 0)
+                {
+                    float bx = x + (float)random.NextDouble() * 12f - 6f;
+                    float bz = z + (float)random.NextDouble() * 12f - 6f;
+                    GameObject bushObject = Object.Instantiate(bush,
+                        new Vector3(bx, HeightAt(bx, bz), bz),
+                        Quaternion.Euler(0f, (float)random.NextDouble() * 360f, 0f), parent);
+                    bushObject.transform.localScale = Vector3.one * (1.6f + (float)random.NextDouble() * 1.15f);
+                    bushObject.name = "Field shrub";
+                }
+            }
+
+            if (grass != null)
+            {
+                for (int i = 0; i < 44; i++)
+                {
+                    float x = (float)random.NextDouble() * 610f - 305f;
+                    float z = (float)random.NextDouble() * 610f - 305f;
+                    if (Mathf.Abs(x) < 75f && z > -160f && z < 175f) continue;
+                    GameObject patch = Object.Instantiate(grass,
+                        new Vector3(x, HeightAt(x, z) - 0.02f, z),
+                        Quaternion.Euler(0f, (float)random.NextDouble() * 360f, 0f), parent);
+                    patch.transform.localScale = Vector3.one * (1.25f + (float)random.NextDouble() * 0.85f);
+                    patch.name = "Ground grass clump";
+                    foreach (Renderer renderer in patch.GetComponentsInChildren<Renderer>(true))
+                        renderer.shadowCastingMode = ShadowCastingMode.Off;
+                }
+            }
+            Debug.Log("Greenridge nature dressing placed: " + placed + " trees, shrubs and grass patches.");
         }
 
         private static void PlaceDistantDefenders(Transform parent)
