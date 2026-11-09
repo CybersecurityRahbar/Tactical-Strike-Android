@@ -548,3 +548,14 @@ Projectile behavior:
 - Current publicly reported installer sizes vary by Hub release/package: approximately 176 MB in one current listing and 184.4 MB in another recent listing. Advise budgeting roughly 180–200 MB for the installer download; exact size may change with updates.
 - Clarified that this is only Unity Hub, not the multi-gigabyte Unity Editor or Android build modules. For this project's GitHub-hosted build path, the user only needs Hub temporarily to activate Personal and obtain the license file; do not install the full Editor locally.
 - Sources: Unity Hub official install guide https://docs.unity.com/hub/install-hub-win-mac ; current reported x64 sizes https://techdows.com/download-unity-hub-for-pc-windows-11-10-mac.html and https://techdows.com/download-unity-game-engine-for-pc-windows-11-10-mac.html .
+
+
+## User follow-up — Unity Hub installed and signed in; next activation steps — 2026-11-09
+
+- The user confirmed Unity Hub is installed on the Windows x64 computer and they have signed in to their Unity account.
+- The exact next action is to open Unity Hub → Settings (gear) → Licenses. Even if a Personal entitlement appears after sign-in, GameCI v4 specifically warns that the entitlement display alone may not have generated the required `.ulf` file; complete the explicit **Add / Add license → Get a free personal license → Agree and get personal edition license** flow.
+- After the activation flow, locate the Windows license file at `C:\\ProgramData\\Unity\\Unity_lic.ulf`. To open its parent folder quickly, paste `%PROGRAMDATA%\\Unity` in File Explorer's address bar; the ProgramData folder may be hidden. Confirm the file exists and do not share its contents in chat.
+- Next, create the three repository Actions secrets at https://github.com/CybersecurityRahbar/Tactical-Strike-Android/settings/secrets/actions: `UNITY_LICENSE` = entire text of `Unity_lic.ulf`; `UNITY_EMAIL` = the same Unity account email; `UNITY_PASSWORD` = the password for that account. Do not place secret values in Git files, commits, issues, or this context.
+- Once all three secrets are saved, start **Actions → Unity Android Build → Run workflow**, select branch `main`, then inspect the run logs. A success should produce artifact `TacticalStrike-Unity-Android-verified`.
+- No activation state, .ulf file existence, repository secret, or successful build has been confirmed yet; the user has only confirmed installation and sign-in. The user does not need to install the full Unity Editor or Android Build Support locally for this GitHub-hosted build workflow.
+- Current official references rechecked: Unity Hub license management https://docs.unity.com/en-us/hub/manage-license ; GameCI v4 Personal activation https://game.ci/docs/github/activation/ . GameCI explicitly requires the explicit Add activation flow to ensure a .ulf is created even if the license appears in Hub.
