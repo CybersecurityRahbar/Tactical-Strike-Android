@@ -409,7 +409,7 @@ namespace TacticalStrike
 
             System.Random random = new System.Random(20261110);
             int placed = 0;
-            for (int i = 0; i < 152; i++)
+            for (int i = 0; i < 280; i++)
             {
                 float side = random.Next(0, 2) == 0 ? -1f : 1f;
                 float x = side * (112f + (float)random.NextDouble() * 214f);
@@ -417,6 +417,8 @@ namespace TacticalStrike
                 if (Mathf.Abs(z - 205f) < 22f || Mathf.Abs(z + 205f) < 24f) continue;
                 if (Mathf.Abs(x + 94f) < 29f && Mathf.Abs(z + 218f) < 27f) continue;
                 if (Mathf.Abs(x - 100f) < 31f && Mathf.Abs(z + 186f) < 28f) continue;
+                if (Mathf.Abs(x + 164f) < 30f && Mathf.Abs(z + 92f) < 29f) continue;
+                if (Mathf.Abs(x - 170f) < 32f && Mathf.Abs(z + 118f) < 30f) continue;
                 if (Mathf.Abs(x) < 128f && z > 230f) continue;
 
                 GameObject prefab = trees[random.Next(0, trees.Length)];
