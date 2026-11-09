@@ -75,7 +75,7 @@ namespace TacticalStrike
         {
             GameObject panel = CreateImage("Mission status", root, new Color(0.025f, 0.035f, 0.032f, 0.82f),
                 new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(24f, -22f), new Vector2(535f, -126f));
-            statusText = CreateText("PLATEAU SECTOR 01    /    DAY OPERATIONS", panel.transform,
+            statusText = CreateText("GREENRIDGE SECTOR 01    /    FIELD OPERATIONS", panel.transform,
                 22, new Color(0.92f, 0.88f, 0.77f), TextAnchor.MiddleLeft,
                 new Vector2(0f, 0.54f), new Vector2(1f, 1f), new Vector2(18f, 0f), new Vector2(-16f, -4f));
             weaponText = CreateText("AK-74M   |   5.45×39 mm   |   30 / 30   |   RES 120   |   FMJ",
@@ -139,7 +139,7 @@ namespace TacticalStrike
         {
             settingsPanel = CreateImage("Settings panel", root, new Color(0.025f, 0.035f, 0.032f, 0.94f),
                 new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-220f, -200f), new Vector2(220f, 200f));
-            AddButton(settingsPanel.transform as RectTransform, "DAY / NIGHT", new Vector2(0.5f, 0.65f),
+            AddButton(settingsPanel.transform as RectTransform, "NIGHT MODE", new Vector2(0.5f, 0.65f),
                 new Vector2(-130f, -26f), new Vector2(260f, 58f),
                 () => TacticalStrikeBootstrap.Instance?.ToggleNightMode(),
                 new Color(0.24f, 0.25f, 0.19f, 1f), 18);
