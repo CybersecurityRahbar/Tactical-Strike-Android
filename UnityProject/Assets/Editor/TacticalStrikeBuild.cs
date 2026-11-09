@@ -130,26 +130,53 @@ namespace TacticalStrike.Editor
                 throw new BuildFailedException("Android APK is missing or unexpectedly small.");
 
             Debug.Log("TACTICAL STRIKE ANDROID BUILD PASSED: " + output +
-                " (" + report.summary.totalSize + " bytes)");
+                " (" + new FileInfo(output).Length + " bytes on disk; " +
+                report.summary.totalSize + " bytes total player content)");
         }
 
         private static void ValidateRuntimeAssets()
         {
             string[] required =
             {
-                "Assets/Resources/TacticalStrike/Imported/Terrain/rocky_gravel_diff_1k.jpg",
-                "Assets/Resources/TacticalStrike/Imported/Terrain/rocky_gravel_nor_gl_1k.jpg",
+                "Assets/Resources/TacticalStrike/Imported/Terrain/sparse_grass_diff_1k.jpg",
+                "Assets/Resources/TacticalStrike/Imported/Terrain/sparse_grass_nor_gl_1k.jpg",
+                "Assets/Resources/TacticalStrike/Imported/Terrain/sparse_grass_rough_1k.jpg",
+                "Assets/Resources/TacticalStrike/Imported/Textures/arms_baseColor.jpg",
+                "Assets/Resources/TacticalStrike/Imported/Textures/ak74m_baseColor.jpg",
+                "Assets/Resources/TacticalStrike/Imported/Textures/arms_normal.png",
+                "Assets/Resources/TacticalStrike/Imported/Textures/ak74m_normal.png",
                 "Assets/Resources/TacticalStrike/Imported/AK74M.fbx",
                 "Assets/Resources/TacticalStrike/Imported/Audio/Firearms/ak_C_27P.ogg",
                 "Assets/Resources/TacticalStrike/Imported/Audio/Firearms/ak_C_36P.ogg",
                 "Assets/Resources/TacticalStrike/Imported/Audio/Footsteps/sand_l.ogg",
-                "Assets/Resources/TacticalStrike/Imported/Audio/Footsteps/sand_r.ogg"
+                "Assets/Resources/TacticalStrike/Imported/Audio/Footsteps/sand_r.ogg",
+                "Assets/Resources/TacticalStrike/Imported/Audio/Impacts/heavy-thud.ogg",
+                "Assets/Resources/TacticalStrike/Imported/Audio/Impacts/debris-crash.ogg",
+                "Assets/Resources/TacticalStrike/Imported/Audio/Impacts/metal-impact.ogg",
+                "Assets/Resources/TacticalStrike/Imported/Nature/tree-pinerounda.fbx",
+                "Assets/Resources/TacticalStrike/Imported/Nature/tree-pineroundb.fbx",
+                "Assets/Resources/TacticalStrike/Imported/Nature/tree-oak.fbx",
+                "Assets/Resources/TacticalStrike/Imported/Nature/tree-default.fbx",
+                "Assets/Resources/TacticalStrike/Imported/Nature/plant-bushdetailed.fbx",
+                "Assets/Resources/TacticalStrike/Imported/Nature/grass-large.fbx"
             };
 
             foreach (string path in required)
             {
                 if (!File.Exists(path))
                     throw new BuildFailedException("Required prepared runtime asset is missing: " + path);
+            }
+
+            string[] natureModels =
+            {
+                "tree-pinerounda", "tree-pineroundb", "tree-oak",
+                "tree-default", "plant-bushdetailed", "grass-large"
+            };
+            foreach (string natureName in natureModels)
+            {
+                string naturePath = "Assets/Resources/TacticalStrike/Imported/Nature/" + natureName + ".fbx";
+                if (AssetDatabase.LoadAssetAtPath<GameObject>(naturePath) == null)
+                    throw new BuildFailedException("Required nature model failed to import: " + naturePath);
             }
 
             GameObject model = AssetDatabase.LoadAssetAtPath<GameObject>(
@@ -171,7 +198,20 @@ namespace TacticalStrike.Editor
             if (terrainTextures.Length < 3)
                 throw new BuildFailedException("Expected diffuse, normal and roughness PBR maps in the Unity Resources folder.");
 
-            Debug.Log("Runtime asset validation passed: terrain PBR, AK-74M model and recorded audio are present.");
+            string[] texturePaths =
+            {
+                "Assets/Resources/TacticalStrike/Imported/Textures/arms_baseColor.jpg",
+                "Assets/Resources/TacticalStrike/Imported/Textures/ak74m_baseColor.jpg",
+                "Assets/Resources/TacticalStrike/Imported/Textures/arms_normal.png",
+                "Assets/Resources/TacticalStrike/Imported/Textures/ak74m_normal.png"
+            };
+            foreach (string texturePath in texturePaths)
+            {
+                if (AssetDatabase.LoadAssetAtPath<Texture2D>(texturePath) == null)
+                    throw new BuildFailedException("Required AK-74M texture did not import: " + texturePath);
+            }
+
+            Debug.Log("Runtime asset validation passed: green PBR terrain, AK-74M rig/maps, CC0 nature models and shot/impact audio are present.");
         }
     }
 
@@ -197,6 +237,39 @@ namespace TacticalStrike.Editor
                 importer.textureType = TextureImporterType.Default;
                 importer.sRGBTexture = file.Contains("_diff_");
             }
+        }
+    }
+
+    public sealed class ImportedTexturePostprocessor : AssetPostprocessor
+    {
+        private void OnPreprocessTexture()
+        {
+            if (!assetPath.Contains("/Imported/Textures/")) return;
+            TextureImporter importer = (TextureImporter)assetImporter;
+            importer.mipmapEnabled = true;
+            importer.textureCompression = TextureImporterCompression.Compressed;
+            importer.maxTextureSize = 2048;
+            if (assetPath.ToLowerInvariant().Contains("_normal"))
+            {
+                importer.textureType = TextureImporterType.NormalMap;
+                importer.sRGBTexture = false;
+            }
+        }
+    }
+
+    public sealed class NatureModelPostprocessor : AssetPostprocessor
+    {
+        private void OnPostprocessMaterial(Material material)
+        {
+            if (!assetPath.Contains("/Imported/Nature/") || material == null) return;
+            Shader urp = Shader.Find("Universal Render Pipeline/Lit");
+            if (urp == null) return;
+            Color baseColor = material.HasProperty("_BaseColor")
+                ? material.GetColor("_BaseColor") : material.color;
+            material.shader = urp;
+            if (material.HasProperty("_BaseColor"))
+                material.SetColor("_BaseColor", baseColor);
+            material.enableInstancing = true;
         }
     }
 
