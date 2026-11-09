@@ -533,3 +533,10 @@ Projectile behavior:
 - Recommended supported route remains: use Unity Hub only (no need to install the full Editor or Android modules locally), activate Unity Personal, copy the .ulf text into GitHub secret UNITY_LICENSE, and add UNITY_EMAIL and UNITY_PASSWORD as separate Actions secrets. Then run the manual workflow.
 - No workflow implementation was changed in this review because the suggested credentials-only configuration is unsupported and would reduce reliability. No build was run.
 - Current sources checked: GameCI v4 activation https://game.ci/docs/github/activation/ ; GameCI v4 builder https://game.ci/docs/github/builder/ ; Unity license command-line docs https://docs.unity.com/en-us/engine/6000.5/manual/get-started/install-and-upgrade/licenses-and-activation/managing-your-unity-license .
+
+
+## Unity Hub installer architecture guidance — 2026-11-09
+
+- The user asked whether to download the Windows ARM64 or x64 Unity Hub installer.
+- Recommendation: download the Windows x64 (64-bit Intel/AMD) installer. The user's previously stated PC processor is Intel Core i5, which is an x86-64 processor family; ARM64 is intended for Windows devices with ARM processors such as supported Snapdragon systems.
+- No code or workflow changes were needed. The user should choose the x64 Windows build of Unity Hub, then sign in and activate Unity Personal.
