@@ -19,6 +19,7 @@ namespace TacticalStrike
         private Texture2D armsNormal;
         private Texture2D rifleNormal;
         private Vector3 viewModelRestPosition = new Vector3(0.27f, -0.32f, 0.60f);
+        private Vector3 viewModelRootOffset;
         private float recoilOffset;
         private float fireCooldown;
         private float reloadTimer;
@@ -72,19 +73,25 @@ namespace TacticalStrike
                 // Fit the imported full arms-and-rifle rig to its renderer bounds.
                 // A fixed 0.72 scale ignored source dimensions and made the rig fill the view.
                 Renderer[] renderers = model.GetComponentsInChildren<Renderer>(true);
+                viewModelRootOffset = Vector3.zero;
                 if (renderers.Length > 0)
                 {
                     Bounds combined = renderers[0].bounds;
                     for (int i = 1; i < renderers.Length; i++)
                         combined.Encapsulate(renderers[i].bounds);
 
+                    // Center the imported rig's visible bounds as well as fitting its
+                    // length. Imported FBX pivots are not guaranteed to sit at the rig centre.
+                    Vector3 centerInModelSpace = model.transform.InverseTransformPoint(combined.center);
                     float largestDimension = Mathf.Max(combined.size.x,
                         Mathf.Max(combined.size.y, combined.size.z));
                     float fitScale = largestDimension > 0.001f ? 0.84f / largestDimension : 0.32f;
-                    model.transform.localScale = Vector3.one * Mathf.Clamp(fitScale, 0.16f, 0.52f);
+                    fitScale = Mathf.Clamp(fitScale, 0.16f, 0.52f);
+                    model.transform.localScale = Vector3.one * fitScale;
+                    viewModelRootOffset = -(model.transform.localRotation * (centerInModelSpace * fitScale));
                 }
 
-                model.transform.localPosition = viewModelRestPosition;
+                model.transform.localPosition = viewModelRestPosition + viewModelRootOffset;
                 ApplyViewModelMaterials(model);
 
                 foreach (Renderer renderer in renderers)
@@ -228,7 +235,7 @@ namespace TacticalStrike
             if (viewModel != null)
             {
                 Vector3 aimOffset = aiming ? new Vector3(-0.12f, 0.07f, 0.10f) : Vector3.zero;
-                Vector3 target = viewModelRestPosition + aimOffset;
+                Vector3 target = viewModelRestPosition + viewModelRootOffset + aimOffset;
                 viewModel.localPosition = Vector3.Lerp(viewModel.localPosition, target, dt * 12f);
                 Quaternion recoilRotation = Quaternion.Euler(-recoilOffset * 2.1f, 180f, 0f);
                 viewModel.localRotation = Quaternion.Slerp(viewModel.localRotation, recoilRotation, dt * 15f);
