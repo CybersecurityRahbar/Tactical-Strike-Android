@@ -521,3 +521,15 @@ Projectile behavior:
 - After activation, the next project step remains to locate the generated Unity_lic.ulf and create the three GitHub Actions secrets described in docs/UNITY_LICENSE_SETUP.md. Do not ask the user to send the license file contents or account password in chat.
 - Official reference checked: https://docs.unity.com/en-us/hub/manage-license .
 - Current status: user says Unity account registration is complete; Personal license activation itself is not yet confirmed.
+
+
+## Licensing approach review — credentials-only GameCI proposal — 2026-11-09
+
+- The user proposed removing the local Unity Hub/.ulf step and passing only UNITY_EMAIL and UNITY_PASSWORD to GameCI v4, with an additional environment variable UNITY_LICENSING_MODE=machine.
+- Checked current GameCI v4 activation and builder documentation and Unity's current licensing documentation. The credentials-only approach is not documented or supported for Unity Personal: GameCI explicitly requires a one-time Personal activation via Unity Hub, the resulting .ulf content in UNITY_LICENSE, and UNITY_EMAIL + UNITY_PASSWORD. The credentials are used alongside the activated license in CI; they do not replace it.
+- Unity's command-line activation route is explicitly stated to apply to Unity Pro, not Unity Personal. Unity says Personal activation must be done by signing in to Unity Hub.
+- UNITY_LICENSING_MODE=machine is not documented as an input or supported activation setting for GameCI unity-builder@v4. The sample also contains a stray </i> token after machine, which must not be copied into YAML.
+- The repository's current .github/workflows/unity-android.yml deliberately checks all three secrets before asset preparation/build. Omitting UNITY_LICENSE will currently fail at the preflight check; removing that check would not establish a Personal license and is not a valid fix.
+- Recommended supported route remains: use Unity Hub only (no need to install the full Editor or Android modules locally), activate Unity Personal, copy the .ulf text into GitHub secret UNITY_LICENSE, and add UNITY_EMAIL and UNITY_PASSWORD as separate Actions secrets. Then run the manual workflow.
+- No workflow implementation was changed in this review because the suggested credentials-only configuration is unsupported and would reduce reliability. No build was run.
+- Current sources checked: GameCI v4 activation https://game.ci/docs/github/activation/ ; GameCI v4 builder https://game.ci/docs/github/builder/ ; Unity license command-line docs https://docs.unity.com/en-us/engine/6000.5/manual/get-started/install-and-upgrade/licenses-and-activation/managing-your-unity-license .
