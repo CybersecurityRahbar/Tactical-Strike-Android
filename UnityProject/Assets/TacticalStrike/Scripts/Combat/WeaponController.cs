@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace TacticalStrike
 {
@@ -13,7 +14,12 @@ namespace TacticalStrike
         private Animation legacyAnimation;
         private AudioSource audioSource;
         private AudioClip[] fireClips;
-        private AudioClip[] footstepClips;
+        private Texture2D armsAlbedo;
+        private Texture2D rifleAlbedo;
+        private Texture2D armsNormal;
+        private Texture2D rifleNormal;
+        private Vector3 viewModelRestPosition = new Vector3(0.27f, -0.32f, 0.60f);
+        private float recoilOffset;
         private float fireCooldown;
         private float reloadTimer;
         private bool reloadActive;
@@ -23,7 +29,6 @@ namespace TacticalStrike
         private bool running;
         private int magazine = 30;
         private int reserve = 120;
-        private int shotCount;
         private int ammoMode;
         private string currentMotion = "";
         private float motionLockTimer;
@@ -41,6 +46,7 @@ namespace TacticalStrike
             audioSource.volume = 0.82f;
             audioSource.playOnAwake = false;
             audioSource.dopplerLevel = 0f;
+            audioSource.ignoreListenerPause = true;
             fireClips = Resources.LoadAll<AudioClip>("TacticalStrike/Imported/Audio/Firearms");
             BuildViewModel();
             UpdateHud();
@@ -48,15 +54,45 @@ namespace TacticalStrike
 
         private void BuildViewModel()
         {
+            armsAlbedo = Resources.Load<Texture2D>("TacticalStrike/Imported/Textures/arms_baseColor");
+            rifleAlbedo = Resources.Load<Texture2D>("TacticalStrike/Imported/Textures/ak74m_baseColor");
+            armsNormal = Resources.Load<Texture2D>("TacticalStrike/Imported/Textures/arms_normal");
+            rifleNormal = Resources.Load<Texture2D>("TacticalStrike/Imported/Textures/ak74m_normal");
+
             GameObject modelPrefab = Resources.Load<GameObject>("TacticalStrike/Imported/AK74M");
             GameObject model;
             if (modelPrefab != null)
             {
                 model = Instantiate(modelPrefab, playerCamera.transform);
                 model.name = "AK-74M animated first-person viewmodel";
-                model.transform.localPosition = new Vector3(0.18f, -0.29f, 0.49f);
+                model.transform.localPosition = Vector3.zero;
                 model.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
-                model.transform.localScale = Vector3.one * 0.72f;
+                model.transform.localScale = Vector3.one;
+
+                // Fit the imported full arms-and-rifle rig to its renderer bounds.
+                // A fixed 0.72 scale ignored source dimensions and made the rig fill the view.
+                Renderer[] renderers = model.GetComponentsInChildren<Renderer>(true);
+                if (renderers.Length > 0)
+                {
+                    Bounds combined = renderers[0].bounds;
+                    for (int i = 1; i < renderers.Length; i++)
+                        combined.Encapsulate(renderers[i].bounds);
+
+                    float largestDimension = Mathf.Max(combined.size.x,
+                        Mathf.Max(combined.size.y, combined.size.z));
+                    float fitScale = largestDimension > 0.001f ? 0.84f / largestDimension : 0.32f;
+                    model.transform.localScale = Vector3.one * Mathf.Clamp(fitScale, 0.16f, 0.52f);
+                }
+
+                model.transform.localPosition = viewModelRestPosition;
+                ApplyViewModelMaterials(model);
+
+                foreach (Renderer renderer in renderers)
+                {
+                    renderer.shadowCastingMode = ShadowCastingMode.Off;
+                    renderer.receiveShadows = false;
+                }
+
                 legacyAnimation = model.GetComponent<Animation>();
                 if (legacyAnimation == null) legacyAnimation = model.AddComponent<Animation>();
                 AnimationClip[] clips = Resources.LoadAll<AnimationClip>("TacticalStrike/Imported");
@@ -72,10 +108,55 @@ namespace TacticalStrike
             {
                 model = new GameObject("AK-74M procedural fallback viewmodel");
                 model.transform.SetParent(playerCamera.transform, false);
-                model.transform.localPosition = new Vector3(0.18f, -0.27f, 0.48f);
+                model.transform.localPosition = viewModelRestPosition;
                 BuildFallbackRifle(model.transform);
             }
             viewModel = model.transform;
+        }
+
+        private void ApplyViewModelMaterials(GameObject model)
+        {
+            Renderer[] renderers = model.GetComponentsInChildren<Renderer>(true);
+            Shader urpLit = Shader.Find("Universal Render Pipeline/Lit");
+            foreach (Renderer renderer in renderers)
+            {
+                Material[] materials = renderer.materials;
+                for (int i = 0; i < materials.Length; i++)
+                {
+                    Material material = materials[i];
+                    if (material == null) continue;
+
+                    string label = (renderer.name + " " + material.name).ToLowerInvariant();
+                    bool isArms = label.Contains("arm") || label.Contains("hand") ||
+                                  label.Contains("glove") || label.Contains("skin");
+                    bool isRifle = label.Contains("ak") || label.Contains("rifle") ||
+                                   label.Contains("weapon") || label.Contains("mag");
+                    if (!isArms && !isRifle && materials.Length > 1)
+                        isArms = i == 0;
+
+                    Texture2D albedo = isArms ? armsAlbedo : rifleAlbedo;
+                    Texture2D normal = isArms ? armsNormal : rifleNormal;
+                    if (urpLit != null && material.shader != urpLit)
+                        material.shader = urpLit;
+
+                    if (albedo != null)
+                    {
+                        if (material.HasProperty("_BaseMap")) material.SetTexture("_BaseMap", albedo);
+                        if (material.HasProperty("_MainTex")) material.SetTexture("_MainTex", albedo);
+                        if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", Color.white);
+                        if (material.HasProperty("_Color")) material.SetColor("_Color", Color.white);
+                    }
+                    if (normal != null && material.HasProperty("_BumpMap"))
+                    {
+                        material.SetTexture("_BumpMap", normal);
+                        material.EnableKeyword("_NORMALMAP");
+                    }
+                    if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", 0.24f);
+                    if (material.HasProperty("_Metallic"))
+                        material.SetFloat("_Metallic", isRifle ? 0.32f : 0.02f);
+                }
+                renderer.materials = materials;
+            }
         }
 
         private void BuildFallbackRifle(Transform root)
@@ -143,6 +224,15 @@ namespace TacticalStrike
         {
             float dt = Mathf.Min(Time.deltaTime, 0.05f);
             fireCooldown = Mathf.Max(0f, fireCooldown - dt);
+            recoilOffset = Mathf.Lerp(recoilOffset, 0f, dt * 11f);
+            if (viewModel != null)
+            {
+                Vector3 aimOffset = aiming ? new Vector3(-0.12f, 0.07f, 0.10f) : Vector3.zero;
+                Vector3 target = viewModelRestPosition + aimOffset;
+                viewModel.localPosition = Vector3.Lerp(viewModel.localPosition, target, dt * 12f);
+                Quaternion recoilRotation = Quaternion.Euler(-recoilOffset * 2.1f, 180f, 0f);
+                viewModel.localRotation = Quaternion.Slerp(viewModel.localRotation, recoilRotation, dt * 15f);
+            }
             if (motionLockTimer > 0f)
                 motionLockTimer = Mathf.Max(0f, motionLockTimer - dt);
 
@@ -175,16 +265,19 @@ namespace TacticalStrike
             }
 
             magazine--;
-            shotCount++;
             fireCooldown = 0.10f;
-            Vector3 muzzle = playerCamera.transform.TransformPoint(new Vector3(0.18f, -0.17f, 0.83f));
+            Vector3 muzzle = playerCamera.transform.TransformPoint(new Vector3(0.19f, -0.20f, 0.90f));
             Vector3 direction = playerCamera.transform.forward;
             BallisticProjectile projectile = new GameObject("5.45mm projectile").AddComponent<BallisticProjectile>();
             projectile.Initialize(muzzle, direction * MuzzleVelocity, player.transform, ammoMode == 1,
                 ammoMode == 2 ? 42f : 38f, ammoMode == 2 ? 0.48f : 0.34f,
                 DragCoefficient, MaxRange);
             if (fireClips != null && fireClips.Length > 0)
-                audioSource.PlayOneShot(fireClips[Random.Range(0, fireClips.Length)], aiming ? 0.68f : 0.82f);
+            {
+                AudioClip shot = fireClips[Random.Range(0, fireClips.Length)];
+                audioSource.PlayOneShot(shot, aiming ? 0.68f : 0.82f);
+            }
+            recoilOffset = 1f;
             SpawnMuzzleFlash(muzzle, direction);
             motionLockTimer = 0.30f;
             currentMotion = "";
@@ -199,9 +292,9 @@ namespace TacticalStrike
             flash.transform.rotation = Quaternion.LookRotation(direction);
             Light glow = flash.AddComponent<Light>();
             glow.type = LightType.Point;
-            glow.range = 5.5f;
-            glow.intensity = 2.6f;
-            glow.color = new Color(1f, 0.43f, 0.13f);
+            glow.range = 3.2f;
+            glow.intensity = 1.8f;
+            glow.color = new Color(1f, 0.58f, 0.20f);
             Destroy(flash, 0.055f);
         }
 
