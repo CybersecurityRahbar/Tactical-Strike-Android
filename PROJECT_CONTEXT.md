@@ -599,3 +599,28 @@ Projectile behavior:
 - The run has now passed runner setup, free-disk cleanup, checkout, the non-empty Unity secret preflight, Blender/FFmpeg/NumPy installation, and external asset preparation. The cache step completed. The Unity 6.3 Android build step is currently in progress.
 - The corrected `android-actions/setup-android@v4` step using the writable runner-temp SDK location has not yet started, so its success is not yet verified. APK integrity/signature/ARM64 checks and artifact upload have also not yet run.
 - Latest confirmed status remains `in_progress`; do not announce successful delivery until the run completes with conclusion `success` and the expected artifact is present.
+
+
+## Definitive Unity APK publication failure and CI timing analysis — 2026-11-09
+
+- Re-opened the full job log for run `42676736011` (job `129360005964`), rather than relying only on the failed job summary. This identified the immediate, definitive reason no downloadable APK was produced:
+  `build/unity-apk-zip-validation.txt: Permission denied`.
+- Unity did successfully create `build/Android/TacticalStrike-debug.apk` in that run. The editor build log explicitly reported:
+  `TACTICAL STRIKE ANDROID BUILD PASSED: /github/workspace/build/Android/TacticalStrike-debug.apk (310679739 bytes)` (about 296 MiB). The runner then failed at the first report redirection because the GameCI Unity Docker container ran with `RUN_AS_HOST_USER=false` and created the mounted `build/` directory as root. The host GitHub Actions runner user could read the APK but could not create validation report files in the root-owned directory. Consequently, the verification step failed, artifact upload was skipped, and GitHub discarded the ephemeral runner workspace. This is why no APK appeared in Artifacts even though the Unity build itself succeeded.
+- Exact elapsed-time breakdown for run 42676736011 (job started 18:44:54Z, completed 19:01:59Z; about 17 minutes 5 seconds):
+  - Free-disk cleanup: 18:44:58Z to 18:48:10Z, about 3m12s.
+  - Asset tools installation: 18:48:10Z to 18:48:43Z, about 33s.
+  - External runtime asset preparation: 18:48:43Z to 18:49:09Z, about 26s.
+  - Cache restore: cache miss (no previous Unity Library cache was available).
+  - Unity Docker image: not present locally; GitHub pulled `unityci/editor:ubuntu-6000.3.28f1-android-3` from 18:49:11Z; it reached the build stage at about 18:52:23Z, taking roughly 3m12s to pull.
+  - Unity project import, shader/package processing, C# compilation and Android IL2CPP/APK build: about 9m02s (18:52:23Z to 19:01:25Z).
+  - Android SDK setup and package installation: about 15s.
+  - APK verification failed about 8 seconds after it began, because it could not write to the root-owned `build/` directory.
+- The Unity Library cache was missed because prior runs failed before the `actions/cache@v4` post-job save could persist it; the new key also needed to incorporate generated-asset preparation scripts so changes there invalidate the cache correctly. Thus subsequent runs repeatedly paid the initial import cost.
+- Applied a direct workflow fix in commit `0a4782c7f724daeb84211ff7eaa18f36c0412659`:
+  - Added a concurrency group that cancels obsolete overlapping main-branch Unity builds.
+  - Changed Unity Library caching to explicit `actions/cache/restore@v4` and `actions/cache/save@v4`, saving immediately after a successful Unity build and before later APK verification; the cache key includes `tools/**`. Cache-save failure is non-fatal.
+  - Added a host-side ownership repair step that first confirms the APK exists, then runs `sudo chown -R "$(id -u):$(id -g)" build` and checks that the runner can write to the build directories before validation. This specifically fixes the reproduced `Permission denied` failure.
+  - Reduced artifact compression from level 9 to level 0 because an APK is already a compressed ZIP container, avoiding expensive double-compression on the large (about 296 MiB) APK.
+- A new verification run was automatically started for commit `0a4782c7f724daeb84211ff7eaa18f36c0412659`: run `42680414591`. At the time of this note it was in progress; no success or downloadable artifact has yet been confirmed. The immediate fix is now under CI verification. Do not announce success until APK archive, signature, manifest, DEX, ARM64 libraries validation pass and the artifact appears.
+- Root-cause references for implementation details: GameCI's builder docs explain the Linux Docker user's default ownership behavior and the `chownFilesTo` option https://game.ci/docs/github/builder/ ; GitHub cache docs explain automatic post-job cache saving and its dependency on successful completion https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching ; the current run log is available at https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42676736011 and the new verification run at https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42680414591 .
