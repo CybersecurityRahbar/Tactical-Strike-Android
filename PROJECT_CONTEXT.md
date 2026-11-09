@@ -591,3 +591,11 @@ Projectile behavior:
 - Artifact status at the time of investigation: the earlier Unity APKs were created inside failed jobs, but no workflow artifact was published because verification and upload did not run. Use the artifact from the first fully successful run, not the partial APK from a failed run.
 - Performance follow-up: if a successful run is not obtained, or if cache post-save is skipped again, switch to explicit `actions/cache/restore@v4` plus `actions/cache/save@v4` immediately after the successful Unity build so Library is saved before any later verification step can fail. Consider adding a per-ref concurrency group with `cancel-in-progress: true` to prevent multiple main-branch pushes from running full Unity builds simultaneously. Preserve the disk-cleanup step unless disk-capacity testing shows it can safely be reduced.
 - Sources: current android-actions/setup-android README https://github.com/android-actions/setup-android ; Unity built-in modules 6000.3 reference https://docs.unity.com/en-us/engine/6000.3/manual/packages-list/packages-all/pack-build .
+
+
+## Validation progress after Android SDK path correction — 2026-11-09
+
+- Rechecked run 42676736011 after the workflow change in commit `da91bd94ca3d1b5ab8e7e67c88e7a922aba5201c`.
+- The run has now passed runner setup, free-disk cleanup, checkout, the non-empty Unity secret preflight, Blender/FFmpeg/NumPy installation, and external asset preparation. The cache step completed. The Unity 6.3 Android build step is currently in progress.
+- The corrected `android-actions/setup-android@v4` step using the writable runner-temp SDK location has not yet started, so its success is not yet verified. APK integrity/signature/ARM64 checks and artifact upload have also not yet run.
+- Latest confirmed status remains `in_progress`; do not announce successful delivery until the run completes with conclusion `success` and the expected artifact is present.
