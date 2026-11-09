@@ -42,33 +42,33 @@ namespace TacticalStrike
         {
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.ExponentialSquared;
-            RenderSettings.fogColor = new Color(0.58f, 0.49f, 0.38f);
-            RenderSettings.fogDensity = 0.00036f;
+            RenderSettings.fogColor = new Color(0.48f, 0.57f, 0.43f);
+            RenderSettings.fogDensity = 0.000075f;
             RenderSettings.ambientMode = AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.43f, 0.48f, 0.50f);
-            RenderSettings.ambientEquatorColor = new Color(0.42f, 0.38f, 0.31f);
-            RenderSettings.ambientGroundColor = new Color(0.17f, 0.15f, 0.12f);
-            RenderSettings.ambientIntensity = 1.05f;
+            RenderSettings.ambientSkyColor = new Color(0.56f, 0.68f, 0.81f);
+            RenderSettings.ambientEquatorColor = new Color(0.40f, 0.47f, 0.36f);
+            RenderSettings.ambientGroundColor = new Color(0.16f, 0.19f, 0.13f);
+            RenderSettings.ambientIntensity = 1.0f;
 
             Shader skyShader = Shader.Find("Skybox/Procedural");
             if (skyShader != null)
             {
                 skyMaterial = new Material(skyShader);
-                skyMaterial.SetColor("_SkyTint", new Color(0.73f, 0.76f, 0.76f));
-                skyMaterial.SetColor("_GroundColor", new Color(0.29f, 0.24f, 0.18f));
-                skyMaterial.SetFloat("_AtmosphereThickness", 1.15f);
+                skyMaterial.SetColor("_SkyTint", new Color(0.90f, 0.95f, 1.0f));
+                skyMaterial.SetColor("_GroundColor", new Color(0.28f, 0.33f, 0.25f));
+                skyMaterial.SetFloat("_AtmosphereThickness", 0.82f);
                 RenderSettings.skybox = skyMaterial;
             }
 
             GameObject sunObject = new GameObject("Plateau Sun");
             sunObject.transform.SetParent(transform, false);
-            sunObject.transform.rotation = Quaternion.Euler(42f, -28f, 0f);
+            sunObject.transform.rotation = Quaternion.Euler(57f, -26f, 0f);
             sun = sunObject.AddComponent<Light>();
             sun.type = LightType.Directional;
-            sun.intensity = 1.15f;
-            sun.color = new Color(1f, 0.91f, 0.77f);
+            sun.intensity = 1.42f;
+            sun.color = new Color(1f, 0.98f, 0.90f);
             sun.shadows = LightShadows.Soft;
-            sun.shadowStrength = 0.72f;
+            sun.shadowStrength = 0.82f;
             sun.shadowBias = 0.045f;
             sun.shadowNormalBias = 0.35f;
             sunObject.name = "Sun - warm highland daylight";
@@ -79,26 +79,35 @@ namespace TacticalStrike
             nightMode = !nightMode;
             if (sun != null)
             {
-                sun.intensity = nightMode ? 0.13f : 1.15f;
-                sun.color = nightMode ? new Color(0.39f, 0.48f, 0.72f) : new Color(1f, 0.91f, 0.77f);
+                // Night is a low-light environment, not a warm late-afternoon tint.
+                sun.intensity = nightMode ? 0.018f : 1.42f;
+                sun.color = nightMode ? new Color(0.20f, 0.29f, 0.48f) : new Color(1f, 0.98f, 0.90f);
+                sun.shadowStrength = nightMode ? 0.35f : 0.82f;
             }
 
+            RenderSettings.ambientIntensity = nightMode ? 0.20f : 1.0f;
             RenderSettings.ambientSkyColor = nightMode
-                ? new Color(0.08f, 0.12f, 0.20f)
-                : new Color(0.43f, 0.48f, 0.50f);
+                ? new Color(0.012f, 0.020f, 0.052f)
+                : new Color(0.56f, 0.68f, 0.81f);
             RenderSettings.ambientEquatorColor = nightMode
-                ? new Color(0.07f, 0.09f, 0.13f)
-                : new Color(0.42f, 0.38f, 0.31f);
+                ? new Color(0.010f, 0.015f, 0.032f)
+                : new Color(0.40f, 0.47f, 0.36f);
             RenderSettings.ambientGroundColor = nightMode
-                ? new Color(0.025f, 0.035f, 0.055f)
-                : new Color(0.17f, 0.15f, 0.12f);
+                ? new Color(0.004f, 0.006f, 0.012f)
+                : new Color(0.16f, 0.19f, 0.13f);
             RenderSettings.fogColor = nightMode
-                ? new Color(0.08f, 0.11f, 0.17f)
-                : new Color(0.58f, 0.49f, 0.38f);
+                ? new Color(0.008f, 0.014f, 0.035f)
+                : new Color(0.48f, 0.57f, 0.43f);
+            RenderSettings.fogDensity = nightMode ? 0.00042f : 0.000075f;
             if (skyMaterial != null)
+            {
                 skyMaterial.SetColor("_SkyTint", nightMode
-                    ? new Color(0.24f, 0.31f, 0.48f)
-                    : new Color(0.73f, 0.76f, 0.76f));
+                    ? new Color(0.12f, 0.16f, 0.29f)
+                    : new Color(0.90f, 0.95f, 1.0f));
+                skyMaterial.SetColor("_GroundColor", nightMode
+                    ? new Color(0.006f, 0.010f, 0.022f)
+                    : new Color(0.28f, 0.33f, 0.25f));
+            }
         }
 
         private void OnDestroy()
