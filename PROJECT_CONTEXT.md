@@ -540,3 +540,11 @@ Projectile behavior:
 - The user asked whether to download the Windows ARM64 or x64 Unity Hub installer.
 - Recommendation: download the Windows x64 (64-bit Intel/AMD) installer. The user's previously stated PC processor is Intel Core i5, which is an x86-64 processor family; ARM64 is intended for Windows devices with ARM processors such as supported Snapdragon systems.
 - No code or workflow changes were needed. The user should choose the x64 Windows build of Unity Hub, then sign in and activate Unity Personal.
+
+
+## Unity Hub x64 installer size guidance — 2026-11-09
+
+- The user asked for the download size of the Windows x64 Unity Hub installer.
+- Current publicly reported installer sizes vary by Hub release/package: approximately 176 MB in one current listing and 184.4 MB in another recent listing. Advise budgeting roughly 180–200 MB for the installer download; exact size may change with updates.
+- Clarified that this is only Unity Hub, not the multi-gigabyte Unity Editor or Android build modules. For this project's GitHub-hosted build path, the user only needs Hub temporarily to activate Personal and obtain the license file; do not install the full Editor locally.
+- Sources: Unity Hub official install guide https://docs.unity.com/hub/install-hub-win-mac ; current reported x64 sizes https://techdows.com/download-unity-hub-for-pc-windows-11-10-mac.html and https://techdows.com/download-unity-game-engine-for-pc-windows-11-10-mac.html .
