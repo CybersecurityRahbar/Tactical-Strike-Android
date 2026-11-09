@@ -496,3 +496,18 @@ Projectile behavior:
 - Improved ballistic tracer line endpoints so the visible streak trails behind the moving projectile.
 - The first push after the legacy workflow rename created Actions run [42532278160](https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42532278160), which reported failure but contained zero jobs and no runner logs. The exact failure cause could not be verified. To avoid every Unity commit invoking an unrelated Godot build, restored the previously working Godot workflow definition and restricted it to manual `workflow_dispatch` runs only. The Godot source tree remains untouched.
 - These changes are source/configuration edits. They have not yet been compiled by Unity or validated in a Unity Android APK. The Unity Personal license secrets are still required before the manual Unity workflow can proceed.
+
+
+## Unity Personal activation and GitHub Actions connection instructions — 2026-11-09
+
+- The user asked for practical step-by-step instructions, direct links and account setup to connect Unity with the Tactical Strike GitHub repository.
+- The project already contains .github/workflows/unity-android.yml, using GameCI Unity Builder v4. The workflow explicitly checks for three repository Actions secrets before doing asset preparation or building: UNITY_LICENSE, UNITY_EMAIL and UNITY_PASSWORD.
+- Current GameCI v4 Personal-license instructions specify: create/sign in to a Unity ID; activate Personal through Unity Hub → Settings/Preferences → Licenses → Add → Get a free Personal license; locate the resulting Unity_lic.ulf; and add its entire text as UNITY_LICENSE alongside the same Unity account email/password as two separate GitHub secrets.
+- Important distinction: GameCI v4 warns that simply seeing Personal entitlement in Unity Hub may not mean the .ulf exists; explicitly complete the Add/activation path. Do not substitute the named-user XML entitlement file.
+- Windows path: C:\\ProgramData\\Unity\\Unity_lic.ulf (Explorer shortcut: %PROGRAMDATA%\\Unity). macOS: /Library/Application Support/Unity/Unity_lic.ulf. Linux: ~/.local/share/unity3d/Unity/Unity_lic.ulf.
+- GitHub secrets page for this project: https://github.com/CybersecurityRahbar/Tactical-Strike-Android/settings/secrets/actions. The owner should create the exact names UNITY_LICENSE, UNITY_EMAIL, and UNITY_PASSWORD; never store their values in repository files, commits, issues or chat.
+- Unity Hub activation is the only local task for this cloud-build path. The full Unity Editor and Android Build Support do not need to be installed on the user's constrained local PC; GitHub Actions builds the project on hosted runners.
+- Workflow run page: https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions. Once secrets exist, choose Unity Android Build → Run workflow → main. A successful run uploads TacticalStrike-Unity-Android-verified; download the outer artifact ZIP, extract once, then install the contained APK directly.
+- As of this instruction, no Unity account details or secret values have been provided, the secrets are not confirmed present, and no Unity build has been triggered using a valid Personal licence. Do not claim activation or build success until GitHub Actions shows it.
+- Useful official references: https://game.ci/docs/github/activation/ ; https://game.ci/docs/github/builder/ ; https://docs.unity.com/en-us/hub/manage-license ; https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets ; https://unity.com/pages/license-compliance .
+- A user-facing step-by-step guide was added at docs/UNITY_LICENSE_SETUP.md.
