@@ -407,19 +407,20 @@ namespace TacticalStrike
                 groundTerrain.terrainData == null || verticalVelocity > 0f)
                 return;
 
-            Vector3 terrainPosition = groundTerrain.transform.position;
-            Vector3 terrainSize = groundTerrain.terrainData.size;
             Vector3 worldPosition = transform.position;
-            if (worldPosition.x < terrainPosition.x ||
-                worldPosition.z < terrainPosition.z ||
-                worldPosition.x > terrainPosition.x + terrainSize.x ||
-                worldPosition.z > terrainPosition.z + terrainSize.z)
+            Vector3 terrainLocal = groundTerrain.transform.InverseTransformPoint(worldPosition);
+            Vector3 terrainSize = groundTerrain.terrainData.size;
+            if (terrainLocal.x < 0f || terrainLocal.z < 0f ||
+                terrainLocal.x > terrainSize.x || terrainLocal.z > terrainSize.z)
                 return;
 
-            // Terrain.SampleHeight returns a height in world units. This guard is
-            // independent of the CharacterController contact cache: if normal contact
-            // is missed, the player is restored just above the sampled terrain.
-            float surfaceY = groundTerrain.SampleHeight(worldPosition);
+            // GetInterpolatedHeight is terrain-local. TransformPoint converts the sampled
+            // point back to world space, including this map's -25m terrain origin.
+            float normalizedX = Mathf.Clamp01(terrainLocal.x / terrainSize.x);
+            float normalizedZ = Mathf.Clamp01(terrainLocal.z / terrainSize.z);
+            float localHeight = groundTerrain.terrainData.GetInterpolatedHeight(normalizedX, normalizedZ);
+            float surfaceY = groundTerrain.transform.TransformPoint(
+                new Vector3(terrainLocal.x, localHeight, terrainLocal.z)).y;
             float safeFootY = surfaceY + 0.085f;
             if (worldPosition.y < safeFootY)
             {
