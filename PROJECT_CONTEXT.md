@@ -1495,3 +1495,12 @@ The user tested the deployed Northwind preview and reported four blocking runtim
 - Repair: parenthesize the rotation-times-scaled-anchor vector before negation:
   `viewModelRootOffset = -(model.transform.localRotation * Vector3.Scale(anchorLocal, model.transform.localScale));`
 - The camera-marker mathematics and authored alignment approach are unchanged; this is a syntax/operator correction only. A fresh build must confirm compilation and continue through the camera-anchor/clip validation and packaging stages.
+
+
+### CI state after AK-74M viewmodel compile repair — 2026-11-11
+
+- Current source head before this documentation-only update: `122f7181a8ec88466a5a3fa1a6fdfa26ee918458`.
+- WebGL run #36 (`42905370661`) and Android run #53 (`42905370668`) are both executing `Build ... with Unity 6.3 LTS` on that exact source SHA. No new failed step or compile error had been reported at the latest poll.
+- Both must complete before further `UnityProject/**` / `tools/**` edits are pushed, because the workflows use cancel-in-progress concurrency. WebGL still must pass output validation and GitHub Pages deployment; Android still must pass APK archive/signature/ARM64 verification.
+- Next planned terrain-art source pass, not yet committed: convert the existing `grass-large` CC0 mesh to a single instanced detail prototype, paint terrain detail-density maps from grass alphamap weight and slope, exclude roads/trenches/drainage/buildings/emplacements/spawn corridors, and build continuous soil road shoulders under the compacted road ribbons. This must be performance-tested for both Android and WebGL before accepting higher detail density.
+- Current source does not yet have a detail-prototype ground-cover layer or road shoulders. The map is still a procedural sculpt with three PBR terrain layers, limited manually placed trees, and procedural/primitive structures. This is a verified remaining art gap, not a finished Squad-equivalent battlefield.
