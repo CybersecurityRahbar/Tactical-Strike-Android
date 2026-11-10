@@ -26,6 +26,8 @@ namespace TacticalStrike
         private float sensitivity = 0.105f;
         private float stamina = 100f;
         private float staminaRecoveryDelay;
+        private float suppression;
+        private float suppressionHitCooldown;
         private Vector3 planarVelocity;
         private bool sprintHeld;
         private bool crouchHeld;
@@ -120,6 +122,27 @@ namespace TacticalStrike
             aimEnabled = enabled;
             if (!enabled) isFocusing = false;
             if (Weapon != null) Weapon.SetAiming(enabled);
+        }
+
+        public void ReceiveSuppression(float intensity)
+        {
+            if (intensity <= 0f) return;
+            if (suppressionHitCooldown > 0f)
+            {
+                suppression = Mathf.Clamp01(suppression + intensity * 0.18f);
+                return;
+            }
+
+            suppression = Mathf.Clamp01(suppression + intensity);
+            suppressionHitCooldown = 0.18f;
+        }
+
+        private void UpdateSuppression(float deltaTime)
+        {
+            suppressionHitCooldown = Mathf.Max(0f, suppressionHitCooldown - deltaTime);
+            suppression = Mathf.MoveTowards(suppression, 0f, deltaTime * 0.20f);
+            Weapon?.SetSuppression(suppression);
+            hud?.SetSuppression(suppression);
         }
 
         public void SetFireHeld(bool held)
@@ -217,6 +240,7 @@ namespace TacticalStrike
         {
             if (PlayerCamera == null || character == null) return;
             float dt = Mathf.Min(Time.deltaTime, 0.05f);
+            UpdateSuppression(dt);
 
 #if UNITY_EDITOR || UNITY_STANDALONE || UNITY_WEBGL
             bool pointerOverUi = EventSystem.current != null &&
@@ -304,7 +328,7 @@ namespace TacticalStrike
 
             bool sprinting = sprintHeld && hasMoveInput && !crouchHeld && !proneHeld &&
                              stamina > 7f && !aimEnabled;
-            isFocusing = aimEnabled && !hasMoveInput && sprintHeld && stamina > 18f;
+            isFocusing = aimEnabled && !hasMoveInput && sprintHeld && stamina > 18f && suppression < 0.18f;
 
             UpdateStamina(dt, sprinting, isFocusing, grounded);
 
@@ -361,6 +385,7 @@ namespace TacticalStrike
             {
                 Weapon.SetMovementState(moving, running);
                 Weapon.SetHandlingState(stamina / 100f, moving, running, crouchHeld, proneHeld);
+                Weapon.SetSuppression(suppression);
             }
             hud?.SetStamina(stamina);
         }

@@ -207,6 +207,8 @@ namespace TacticalStrike.Editor
                 "Assets/Resources/TacticalStrike/Imported/Terrain/northwind_concrete_nor_gl_1k.jpg",
                 "Assets/Resources/TacticalStrike/Imported/Terrain/northwind_road_diff_1k.jpg",
                 "Assets/Resources/TacticalStrike/Imported/Terrain/northwind_road_nor_gl_1k.jpg",
+                "Assets/Resources/TacticalStrike/Imported/Terrain/rocky_gravel_diff_1k.jpg",
+                "Assets/Resources/TacticalStrike/Imported/Terrain/rocky_gravel_nor_gl_1k.jpg",
                 "Assets/Resources/TacticalStrike/Imported/Textures/arms_baseColor.jpg",
                 "Assets/Resources/TacticalStrike/Imported/Textures/ak74m_baseColor.jpg",
                 "Assets/Resources/TacticalStrike/Imported/Textures/arms_normal.png",

@@ -18,6 +18,7 @@ namespace TacticalStrike
         private Transform muzzleAnchor;
         private float swayClock;
         private float staminaFactor = 1f;
+        private float suppressionFactor;
         private bool crouched;
         private bool prone;
         private int shotIndex;
@@ -232,6 +233,7 @@ namespace TacticalStrike
 
         public void SetFireHeld(bool held) { fireHeld = held; }
         public void SetAiming(bool value) { aiming = value; }
+        public void SetSuppression(float value) { suppressionFactor = Mathf.Clamp01(value); }
         public void SetViewModelVisible(bool visible)
         {
             if (viewModel != null) viewModel.gameObject.SetActive(visible);
@@ -283,7 +285,8 @@ namespace TacticalStrike
                 float fatigue = 1.35f - staminaFactor * 0.48f;
                 float stanceScale = prone ? 0.32f : (crouched ? 0.62f : 1f);
                 float movementScale = running ? 1.85f : (moving ? 1.05f : 0.48f);
-                float swayScale = fatigue * stanceScale * movementScale * (aiming ? 0.34f : 1f);
+                float swayScale = fatigue * stanceScale * movementScale * (aiming ? 0.34f : 1f) *
+                                  (1f + suppressionFactor * 1.20f);
                 float swayX = Mathf.Sin(swayClock * 0.91f) * 0.020f * swayScale;
                 float swayY = Mathf.Sin(swayClock * 1.83f + 0.8f) * 0.014f * swayScale;
                 float roll = Mathf.Sin(swayClock * 0.73f) * 1.05f * swayScale;
@@ -348,6 +351,7 @@ namespace TacticalStrike
             float spread = aiming ? 0.16f : 0.52f;
             if (moving) spread += running ? 1.15f : 0.35f;
             if (staminaFactor < 0.55f) spread += (0.55f - staminaFactor) * 1.4f;
+            spread += suppressionFactor * 1.10f;
             if (crouched) spread *= 0.78f;
             if (prone) spread *= 0.52f;
             Vector3 direction = Quaternion.Euler(

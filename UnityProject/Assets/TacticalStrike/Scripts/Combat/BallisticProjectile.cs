@@ -18,6 +18,7 @@ namespace TacticalStrike
         private LineRenderer line;
         private Material tracerMaterial;
         private Transform tracerTip;
+        private static readonly Collider[] SuppressionOverlapBuffer = new Collider[64];
 
         public void Initialize(Vector3 start, Vector3 initialVelocity, Transform owner,
             bool showTracer, float projectileDamage, float projectilePenetration,
@@ -116,6 +117,8 @@ namespace TacticalStrike
                 float segmentLength = delta.magnitude;
                 if (segmentLength <= 0.0001f) continue;
 
+                ApplyNearMissSuppression(start, start + delta);
+
                 RaycastHit[] hits = Physics.RaycastAll(start, delta / segmentLength,
                     segmentLength, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
                 RaycastHit nearest = default;
@@ -186,6 +189,52 @@ namespace TacticalStrike
                     8f, 55f);
                 line.SetPosition(0, transform.position - direction * Mathf.Max(visibleTrailLength, 16f));
                 line.SetPosition(1, transform.position);
+            }
+        }
+
+        private void ApplyNearMissSuppression(Vector3 start, Vector3 end)
+        {
+            const float suppressionRadius = 4.6f;
+            int count = Physics.OverlapCapsuleNonAlloc(start, end, suppressionRadius,
+                SuppressionOverlapBuffer, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            if (count <= 0) return;
+
+            for (int i = 0; i < count; i++)
+            {
+                Collider nearby = SuppressionOverlapBuffer[i];
+                if (nearby == null) continue;
+                FpsPlayerController target = nearby.GetComponentInParent<FpsPlayerController>();
+                if (target == null) continue;
+
+                if (shooter != null &&
+                    (target.transform == shooter || target.transform.IsChildOf(shooter) ||
+                     shooter.IsChildOf(target.transform)))
+                    continue;
+
+                Vector3 playerCenter = target.transform.position + Vector3.up * 0.92f;
+                Vector3 segment = end - start;
+                float lengthSq = segment.sqrMagnitude;
+                float t = lengthSq > 0.0001f
+                    ? Mathf.Clamp01(Vector3.Dot(playerCenter - start, segment) / lengthSq) : 0f;
+                Vector3 closestPoint = start + segment * t;
+                Vector3 toPlayer = playerCenter - closestPoint;
+                float distance = toPlayer.magnitude;
+                if (distance >= suppressionRadius || distance < 0.05f) continue;
+
+                // A solid wall or terrain ridge between the round and the infantry
+                // should break near-miss suppression instead of applying it through cover.
+                if (Physics.Raycast(closestPoint, toPlayer / distance, out RaycastHit occlusion,
+                    distance, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+                {
+                    FpsPlayerController visiblePlayer =
+                        occlusion.collider.GetComponentInParent<FpsPlayerController>();
+                    if (visiblePlayer != target) continue;
+                }
+
+                float proximity = 1f - distance / suppressionRadius;
+                float weaponPressure = damage >= 100f ? 0.30f : (damage >= 60f ? 0.18f : 0.11f);
+                float amount = Mathf.Lerp(0.025f, weaponPressure, proximity);
+                target.ReceiveSuppression(amount);
             }
         }
 

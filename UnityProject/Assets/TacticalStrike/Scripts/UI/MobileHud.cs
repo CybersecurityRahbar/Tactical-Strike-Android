@@ -16,12 +16,14 @@ namespace TacticalStrike
         private GameObject mountButton;
         private Text mountButtonLabel;
         private bool mountedWeaponMode;
+        private Image suppressionVignette;
         private GameObject settingsPanel;
         private GameObject pausePanel;
         private float messageTimer;
         private bool aim;
 
         private static Sprite circleSprite;
+        private static Sprite suppressionSprite;
 
         public static MobileHud Create(FpsPlayerController owner, Transform parent)
         {
@@ -71,6 +73,7 @@ namespace TacticalStrike
                 look.AddComponent<TouchLookArea>().Initialize(player);
             }
 
+            BuildSuppressionVignette(root);
             BuildStatusPanel(root);
             BuildCrosshair(root);
             if (Application.isMobilePlatform)
@@ -85,6 +88,53 @@ namespace TacticalStrike
             BuildTopButtons(root);
             BuildSettings(root);
             BuildPausePanel(root);
+        }
+
+        private void BuildSuppressionVignette(RectTransform root)
+        {
+            GameObject overlay = CreateImage("Near-miss suppression vignette", root,
+                new Color(0.92f, 0.10f, 0.035f, 0f),
+                Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            suppressionVignette = overlay.GetComponent<Image>();
+            suppressionVignette.sprite = SuppressionSprite();
+            suppressionVignette.raycastTarget = false;
+            suppressionVignette.type = Image.Type.Simple;
+        }
+
+        private static Sprite SuppressionSprite()
+        {
+            if (suppressionSprite != null) return suppressionSprite;
+            const int size = 128;
+            Texture2D texture = new Texture2D(size, size, TextureFormat.RGBA32, false, true);
+            texture.name = "Suppression - soft radial edge vignette";
+            texture.wrapMode = TextureWrapMode.Clamp;
+            texture.filterMode = FilterMode.Bilinear;
+            Color[] pixels = new Color[size * size];
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float nx = (x / (float)(size - 1) - 0.5f) * 2f;
+                    float ny = (y / (float)(size - 1) - 0.5f) * 2f;
+                    float radius = Mathf.Sqrt(nx * nx + ny * ny);
+                    float edge = Mathf.Clamp01((radius - 0.54f) / 0.46f);
+                    float alpha = edge * edge * (3f - 2f * edge);
+                    pixels[y * size + x] = new Color(1f, 1f, 1f, alpha);
+                }
+            }
+            texture.SetPixels(pixels);
+            texture.Apply(false, true);
+            suppressionSprite = Sprite.Create(texture, new Rect(0f, 0f, size, size),
+                new Vector2(0.5f, 0.5f), 100f);
+            suppressionSprite.name = "Suppression vignette sprite";
+            return suppressionSprite;
+        }
+
+        public void SetSuppression(float value)
+        {
+            if (suppressionVignette == null) return;
+            float strength = Mathf.Clamp01(value);
+            suppressionVignette.color = new Color(0.94f, 0.12f, 0.045f, strength * 0.52f);
         }
 
         private void BuildStatusPanel(RectTransform root)

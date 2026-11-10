@@ -14,8 +14,6 @@ namespace TacticalStrike
     public static class NorthwindValleyGenerator
     {
         public const float MapSize = 700f;
-        private const int TerrainDivisions = 384;
-        private static Material terrainMaterial;
         private static Material soilMaterial;
         private static Material trenchSoilMaterial;
         private static Material sandbagMaterial;
@@ -62,6 +60,12 @@ namespace TacticalStrike
             new[] { new Vector2(182,213), new Vector2(202,244), new Vector2(184,273) }
         };
 
+        private static readonly Vector2[][] DrainageNetwork =
+        {
+            new[] { new Vector2(-282,160), new Vector2(-257,112), new Vector2(-270,65), new Vector2(-239,18), new Vector2(-223,-44), new Vector2(-248,-91), new Vector2(-236,-146) },
+            new[] { new Vector2(280,176), new Vector2(251,126), new Vector2(270,71), new Vector2(243,22), new Vector2(255,-41), new Vector2(228,-97), new Vector2(246,-150) }
+        };
+
         public static void Build(Transform parent)
         {
             CreateMaterials();
@@ -98,6 +102,15 @@ namespace TacticalStrike
             float height = macro + rolling + fine + westRidge + eastRidge +
                            northRidge + southShoulder + valleyFloor + centralSaddle + gullies;
 
+            // Recess the two flank drainage channels into the heightfield itself;
+            // the water meshes then sit visibly in the cut channel, not under the grass.
+            float drainageDistance = DrainageNetworkDistance(new Vector2(x, z));
+            if (drainageDistance < 8f)
+            {
+                float t = 1f - drainageDistance / 8f;
+                height -= 1.9f * t * t * (3f - 2f * t);
+            }
+
             float trenchDistance = TrenchNetworkDistance(new Vector2(x, z));
             if (trenchDistance < 3.0f)
             {
@@ -132,6 +145,27 @@ namespace TacticalStrike
             return total / Mathf.Max(0.001f, weight);
         }
 
+        private static float DrainageNetworkDistance(Vector2 point)
+        {
+            float best = 999999f;
+            for (int p = 0; p < DrainageNetwork.Length; p++)
+            {
+                Vector2[] path = DrainageNetwork[p];
+                for (int i = 0; i < path.Length - 1; i++)
+                {
+                    Vector2 a = path[i];
+                    Vector2 b = path[i + 1];
+                    Vector2 ab = b - a;
+                    float lengthSq = ab.sqrMagnitude;
+                    float t = lengthSq > 0.0001f
+                        ? Mathf.Clamp01(Vector2.Dot(point - a, ab) / lengthSq) : 0f;
+                    float distanceSq = (point - (a + ab * t)).sqrMagnitude;
+                    if (distanceSq < best) best = distanceSq;
+                }
+            }
+            return Mathf.Sqrt(best);
+        }
+
         private static float TrenchNetworkDistance(Vector2 point)
         {
             float best = 999999f;
@@ -164,7 +198,6 @@ namespace TacticalStrike
             Shader lit = Shader.Find("Universal Render Pipeline/Lit");
             if (lit == null) lit = Shader.Find("Standard");
 
-            terrainMaterial = MakeMaterial(lit, new Color(0.83f, 0.87f, 0.75f), "Northwind - grassland PBR");
             soilMaterial = MakeMaterial(lit, new Color(0.78f, 0.72f, 0.62f), "Northwind - exposed field earth PBR");
             trenchSoilMaterial = MakeMaterial(lit, new Color(0.53f, 0.48f, 0.40f), "Northwind - disturbed trench earth PBR");
             sandbagMaterial = MakeMaterial(lit, new Color(0.43f, 0.42f, 0.30f), "Northwind - weathered olive canvas sandbags");
@@ -176,7 +209,6 @@ namespace TacticalStrike
             metalMaterial = MakeMaterial(lit, new Color(0.075f, 0.085f, 0.078f), "Northwind - dark gunmetal");
             foliageMaterial = MakeMaterial(lit, new Color(0.21f, 0.28f, 0.19f), "Northwind - woodland undergrowth");
 
-            ApplySurfaceTextures(terrainMaterial, "grass", new Vector2(0.055f, 0.055f), 0.16f);
             ApplySurfaceTextures(soilMaterial, "ground", new Vector2(1.7f, 1.7f), 0.12f);
             ApplySurfaceTextures(trenchSoilMaterial, "ground", new Vector2(2.4f, 2.4f), 0.10f);
             ApplySurfaceTextures(masonryMaterial, "brick", new Vector2(2.1f, 1.6f), 0.18f);
@@ -229,7 +261,131 @@ namespace TacticalStrike
             return material;
         }
 
+        private static TerrainLayer CreateTerrainLayer(string label, string diffuseResource,
+            string normalResource, Vector2 tileSize)
+        {
+            Texture2D diffuse = Resources.Load<Texture2D>(diffuseResource);
+            Texture2D normal = Resources.Load<Texture2D>(normalResource);
+            if (diffuse == null || normal == null)
+                throw new System.InvalidOperationException(
+                    "Northwind terrain layer is missing a prepared PBR texture: " + label);
+
+            TerrainLayer layer = ScriptableObject.CreateInstance<TerrainLayer>();
+            layer.name = label;
+            layer.diffuseTexture = diffuse;
+            layer.normalMapTexture = normal;
+            layer.tileSize = tileSize;
+            layer.tileOffset = Vector2.zero;
+            layer.metallic = 0f;
+            layer.smoothness = 0.12f;
+            return layer;
+        }
+
         private static void BuildTerrain(Transform parent)
+        {
+            const int heightResolution = 257;
+            const int alphaResolution = 256;
+            const float baseHeight = -25f;
+            const float verticalRange = 120f;
+            float half = MapSize * 0.5f;
+            float heightStep = MapSize / (heightResolution - 1);
+
+            // Unity Terrain provides a native tiled heightfield collider and proper
+            // splat-map blending instead of a single green mesh material.
+            float[,] heights = new float[heightResolution, heightResolution];
+            for (int z = 0; z < heightResolution; z++)
+            {
+                float worldZ = -half + z * heightStep;
+                for (int x = 0; x < heightResolution; x++)
+                {
+                    float worldX = -half + x * heightStep;
+                    float y = HeightAt(worldX, worldZ);
+                    heights[z, x] = Mathf.Clamp01((y - baseHeight) / verticalRange);
+                }
+            }
+
+            TerrainData data = new TerrainData
+            {
+                heightmapResolution = heightResolution,
+                alphamapResolution = alphaResolution,
+                size = new Vector3(MapSize, verticalRange, MapSize),
+                baseMapResolution = 1024
+            };
+            data.name = "Northwind Valley - 700m sculpted highland TerrainData";
+            data.SetHeights(0, 0, heights);
+
+            TerrainLayer grassLayer = CreateTerrainLayer(
+                "Northwind - Highland Grass",
+                "TacticalStrike/Imported/Terrain/northwind_grass_diff_1k",
+                "TacticalStrike/Imported/Terrain/northwind_grass_nor_gl_1k",
+                new Vector2(24f, 24f));
+            TerrainLayer earthLayer = CreateTerrainLayer(
+                "Northwind - Exposed Earth",
+                "TacticalStrike/Imported/Terrain/northwind_ground_diff_1k",
+                "TacticalStrike/Imported/Terrain/northwind_ground_nor_gl_1k",
+                new Vector2(17f, 17f));
+            TerrainLayer rockLayer = CreateTerrainLayer(
+                "Northwind - Rocky Gravel",
+                "TacticalStrike/Imported/Terrain/rocky_gravel_diff_1k",
+                "TacticalStrike/Imported/Terrain/rocky_gravel_nor_gl_1k",
+                new Vector2(11f, 11f));
+            data.terrainLayers = new[] { grassLayer, earthLayer, rockLayer };
+
+            // Paint the terrain procedurally by slope, height and broad natural variation.
+            // Ridge faces expose gravel; low valley shoulders and drainage lines expose
+            // earth; the gentler basin remains grass. Weights are normalized per splat texel.
+            float[,,] alpha = new float[alphaResolution, alphaResolution, 3];
+            float alphaStep = MapSize / (alphaResolution - 1);
+            for (int z = 0; z < alphaResolution; z++)
+            {
+                float worldZ = -half + z * alphaStep;
+                int hz = Mathf.Clamp(Mathf.RoundToInt(z / (float)(alphaResolution - 1) *
+                    (heightResolution - 1)), 1, heightResolution - 2);
+                for (int x = 0; x < alphaResolution; x++)
+                {
+                    float worldX = -half + x * alphaStep;
+                    int hx = Mathf.Clamp(Mathf.RoundToInt(x / (float)(alphaResolution - 1) *
+                        (heightResolution - 1)), 1, heightResolution - 2);
+
+                    float centerHeight = baseHeight + heights[hz, hx] * verticalRange;
+                    float left = baseHeight + heights[hz, hx - 1] * verticalRange;
+                    float right = baseHeight + heights[hz, hx + 1] * verticalRange;
+                    float back = baseHeight + heights[hz - 1, hx] * verticalRange;
+                    float forward = baseHeight + heights[hz + 1, hx] * verticalRange;
+                    float dx = (right - left) / (2f * heightStep);
+                    float dz = (forward - back) / (2f * heightStep);
+                    float slope = Mathf.Sqrt(dx * dx + dz * dz);
+
+                    float rock = Mathf.SmoothStep(0.24f, 0.78f, slope) * 0.92f;
+                    float lowland = Mathf.Clamp01((13f - centerHeight) / 42f);
+                    float variation = Mathf.PerlinNoise(worldX * 0.009f + 47.3f,
+                        worldZ * 0.009f + 19.7f);
+                    float earth = Mathf.Clamp01(0.13f + lowland * 0.34f +
+                        (0.42f - variation) * 0.25f);
+                    earth *= 1f - rock;
+                    float grass = Mathf.Max(0.025f, 1f - rock - earth);
+                    float sum = grass + earth + rock;
+
+                    alpha[z, x, 0] = grass / sum;
+                    alpha[z, x, 1] = earth / sum;
+                    alpha[z, x, 2] = rock / sum;
+                }
+            }
+            data.SetAlphamaps(0, 0, alpha);
+
+            GameObject terrainObject = Terrain.CreateTerrainGameObject(data);
+            terrainObject.name = "01 - Northwind Valley playable multi-layer terrain";
+            terrainObject.transform.SetParent(parent, false);
+            terrainObject.transform.localPosition = new Vector3(-half, baseHeight, -half);
+            Terrain terrain = terrainObject.GetComponent<Terrain>();
+            terrain.drawInstanced = true;
+            terrain.heightmapPixelError = 6f;
+            terrain.basemapDistance = 520f;
+            terrain.detailObjectDistance = 45f;
+            terrain.treeDistance = 520f;
+            terrain.allowAutoConnect = false;
+        }
+
         {
             int side = TerrainDivisions + 1;
             Vector3[] vertices = new Vector3[side * side];
@@ -326,7 +482,7 @@ namespace TacticalStrike
                 {
                     float wx = center.x - size.x * 0.5f + size.x * x / segmentsX;
                     vertices[v] = parent.InverseTransformPoint(
-                        new Vector3(wx, HeightAt(wx, wz) + 0.055f, wz));
+                        new Vector3(wx, HeightAt(wx, wz) + 0.16f, wz));
                     uv[v] = new Vector2(wx * 0.055f, wz * 0.055f);
                     v++;
                 }
@@ -389,7 +545,7 @@ namespace TacticalStrike
                         float along = Mathf.Min(length - 0.2f, (i + 0.5f) * length / count);
                         Vector2 point = a + direction2 * along;
                         float floorY = HeightAt(point.x, point.y) + 0.035f;
-                        Vector3 trenchCenter = new Vector3(point.x, floorY, point.y);
+                        Vector3 trenchCenter = new Vector3(point.x, HeightAt(point.x, point.y) + 0.14f, point.y);
                         AddCube(trenchFloors, cube, parent, trenchCenter,
                             new Vector3(4.7f, 0.055f, length / count + 0.16f), rotation);
                         bool firingGap = (i % 10 == 8) || (p > 0 && i % 8 == 6);
@@ -444,10 +600,10 @@ namespace TacticalStrike
 
         private static void BuildDugouts(Transform parent)
         {
-            BuildDugout(parent, new Vector3(-211f, HeightAt(-211f, -296f), -296f), "West reserve dugout");
-            BuildDugout(parent, new Vector3(14f, HeightAt(14f, -286f), -286f), "Central command dugout");
-            BuildDugout(parent, new Vector3(267f, HeightAt(267f, -301f), -301f), "East reserve dugout");
-            BuildDugout(parent, new Vector3(-8f, HeightAt(-8f, 266f), 266f), "Attacker covered assembly shelter");
+            BuildDugout(parent, new Vector3(-211f, HeightAt(-211f, -296f) + 0.14f, -296f), "West reserve dugout");
+            BuildDugout(parent, new Vector3(14f, HeightAt(14f, -286f) + 0.14f, -286f), "Central command dugout");
+            BuildDugout(parent, new Vector3(267f, HeightAt(267f, -301f) + 0.14f, -301f), "East reserve dugout");
+            BuildDugout(parent, new Vector3(-8f, HeightAt(-8f, 266f) + 0.14f, 266f), "Attacker covered assembly shelter");
         }
 
         private static void BuildDugout(Transform parent, Vector3 ground, string label)
@@ -494,7 +650,7 @@ namespace TacticalStrike
                         Vector2 point = Vector2.Lerp(a, b, t);
                         Vector2 dir2 = (b - a).normalized;
                         Vector3 dir = new Vector3(dir2.x, 0f, dir2.y);
-                        Vector3 position = new Vector3(point.x, HeightAt(point.x, point.y) + 0.035f, point.y);
+                        Vector3 position = new Vector3(point.x, HeightAt(point.x, point.y) + 0.14f, point.y);
                         Quaternion rotation = Quaternion.LookRotation(dir, Vector3.up);
                         AddCube(roads, cube, parent, position,
                             new Vector3(p == 2 ? 4.8f : 6.5f, 0.07f, length / count + 0.5f), rotation);
@@ -508,11 +664,7 @@ namespace TacticalStrike
         {
             Mesh cube = GetPrimitiveMesh(PrimitiveType.Cube);
             List<CombineInstance> water = new List<CombineInstance>(100);
-            Vector2[][] streams =
-            {
-                new[] { new Vector2(-282,160), new Vector2(-257,112), new Vector2(-270,65), new Vector2(-239,18), new Vector2(-223,-44), new Vector2(-248,-91), new Vector2(-236,-146) },
-                new[] { new Vector2(280,176), new Vector2(251,126), new Vector2(270,71), new Vector2(243,22), new Vector2(255,-41), new Vector2(228,-97), new Vector2(246,-150) }
-            };
+            Vector2[][] streams = DrainageNetwork;
             for (int p = 0; p < streams.Length; p++)
             {
                 Vector2[] path = streams[p];
@@ -528,7 +680,7 @@ namespace TacticalStrike
                         Vector2 d = (b - a).normalized;
                         Vector3 dir = new Vector3(d.x, 0f, d.y);
                         AddCube(water, cube, parent,
-                            new Vector3(point.x, HeightAt(point.x, point.y) - 0.18f, point.y),
+                            new Vector3(point.x, HeightAt(point.x, point.y) + 0.07f, point.y),
                             new Vector3(2.8f, 0.12f, length / count + 0.25f),
                             Quaternion.LookRotation(dir, Vector3.up));
                     }
@@ -539,20 +691,20 @@ namespace TacticalStrike
 
         private static void BuildDefensiveCompounds(Transform parent)
         {
-            BuildHouseCompound(parent, new Vector3(-112f, HeightAt(-112f, -168f), -168f),
+            BuildHouseCompound(parent, new Vector3(-112f, HeightAt(-112f, -168f) + 0.14f, -168f),
                 "01 - West defensive compound", 1.0f);
-            BuildHouseCompound(parent, new Vector3(116f, HeightAt(116f, -174f), -174f),
+            BuildHouseCompound(parent, new Vector3(116f, HeightAt(116f, -174f) + 0.14f, -174f),
                 "02 - East defensive compound", -1.0f);
         }
 
         private static void BuildVillageAndFarm(Transform parent)
         {
-            BuildHouseCompound(parent, new Vector3(-190f, HeightAt(-190f, -54f), -54f),
+            BuildHouseCompound(parent, new Vector3(-190f, HeightAt(-190f, -54f) + 0.14f, -54f),
                 "03 - West farmstead", 0.7f);
-            BuildHouseCompound(parent, new Vector3(184f, HeightAt(184f, -70f), -70f),
+            BuildHouseCompound(parent, new Vector3(184f, HeightAt(184f, -70f) + 0.14f, -70f),
                 "04 - East village house", -0.8f);
-            BuildShed(parent, new Vector3(215f, HeightAt(215f, -38f), -38f), "Village equipment shed");
-            BuildShed(parent, new Vector3(-220f, HeightAt(-220f, -102f), -102f), "Farm machine shed");
+            BuildShed(parent, new Vector3(215f, HeightAt(215f, -38f) + 0.14f, -38f), "Village equipment shed");
+            BuildShed(parent, new Vector3(-220f, HeightAt(-220f, -102f) + 0.14f, -102f), "Farm machine shed");
         }
 
         private static void BuildHouseCompound(Transform parent, Vector3 ground, string label, float yawSign)
@@ -671,8 +823,8 @@ namespace TacticalStrike
 
         private static void BuildMountedWeaponPositions(Transform parent)
         {
-            BuildHmgPosition(parent, new Vector3(-207f, HeightAt(-207f, -201f), -201f), "DShK 12.7mm");
-            BuildHmgPosition(parent, new Vector3(207f, HeightAt(207f, -201f), -201f), "M2 Browning .50");
+            BuildHmgPosition(parent, new Vector3(-207f, HeightAt(-207f, -201f) + 0.14f, -201f), "DShK 12.7mm");
+            BuildHmgPosition(parent, new Vector3(207f, HeightAt(207f, -201f) + 0.14f, -201f), "M2 Browning .50");
         }
 
         private static void BuildHmgPosition(Transform parent, Vector3 ground, string label)
@@ -690,7 +842,7 @@ namespace TacticalStrike
             }
 
             CreateBox(nest, new Vector3(0f, 1.15f, 0f), new Vector3(0.38f, 1.45f, 0.38f),
-                darkMetal, Quaternion.identity, "Fixed HMG pedestal");
+                metalMaterial, Quaternion.identity, "Fixed HMG pedestal");
             MountedWeaponEmplacement emplacement = nest.gameObject.AddComponent<MountedWeaponEmplacement>();
             emplacement.Initialize(label);
         }
@@ -730,7 +882,7 @@ namespace TacticalStrike
                     {
                         float scale = 3.8f + (float)random.NextDouble() * 2.6f;
                         GameObject tree = UnityEngine.Object.Instantiate(prefab,
-                            new Vector3(x, HeightAt(x, z), z),
+                            new Vector3(x, HeightAt(x, z) + 0.14f, z),
                             Quaternion.Euler(0f, (float)random.NextDouble() * 360f, 0f), parent);
                         tree.name = "Northwind woodland - " + prefab.name;
                         tree.transform.localScale = Vector3.one * scale;
@@ -756,7 +908,7 @@ namespace TacticalStrike
                     float bx = x + (float)random.NextDouble() * 11f - 5.5f;
                     float bz = z + (float)random.NextDouble() * 11f - 5.5f;
                     GameObject shrub = UnityEngine.Object.Instantiate(bush,
-                        new Vector3(bx, HeightAt(bx, bz), bz),
+                        new Vector3(bx, HeightAt(bx, bz) + 0.14f, bz),
                         Quaternion.Euler(0f, (float)random.NextDouble() * 360f, 0f), parent);
                     shrub.name = "Northwind woodland shrub";
                     shrub.transform.localScale = Vector3.one * (1.5f + (float)random.NextDouble());
