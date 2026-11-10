@@ -709,3 +709,127 @@ Projectile behavior:
 - Non-blocking Unity/CI notices: SDK Manager CLI deprecation; Node 20 runtime deprecation warnings for several GitHub Actions; Unity logged a transient licensing access-token update error, a missing package lookup for platforms;android-, and Android asset-pack request rate limit. Despite those notices, Unity reported Build succeeded, all independent APK checks passed, and artifact upload completed. Keep these as observations if later builds exhibit licensing/SDK instability; they are not failures in this run.
 - Verification boundary remains important: this is a successfully built and structurally verified debug APK. It has not yet been installed/launched or visually tested on the user's phone. CI cannot confirm that the new viewmodel position/materials, vegetation scale/density, impact particles/sounds, tracer streak, night darkness or mobile frame rate look correct in actual play. The next device retest must check those items. The tracer is currently optional: the weapon starts in FMJ mode; press the AMMO control once to switch to TRACER and observe its flight streak.
 - The correction pass still has only the AK-74M as an integrated usable player weapon. M4A1, PKM, RPG-7, SVD/Dragunov, DShK and M2 are not yet complete; no fake weapon-select entries were added. Proper soldier rigs/animations and the final professional sound design also remain future work. The new map is a procedural mobile-friendly green mountain valley with CC0 low-poly foliage and staged cover, not a finished photogrammetry/AAA Squad map.
+
+## Full Unity first-playtest audit and Squad reference study — 2026-11-10
+
+### User's latest review request and reported failures
+
+The user requested a complete review of the current Unity-based project after the first Unity gameplay test, followed by research into Squad's maps, weapons, sound, collisions, movement and aiming. The user reports that:
+- The first-person weapon and hands were not acceptably aligned; a previous attempted correction left the weapon/hands absent from the visible screen.
+- Tracer ammunition still did not look or read like a bright, burning, visible projectile; a pink square/flat-looking effect was unacceptable. The user expects a visible hot projectile in flight and a distinct, forceful impact effect.
+- The agreed seven weapon types were not delivered.
+- The map lighting, buildings, trenches and defensive positions did not resemble the dense, authored tactical environments requested from Squad.
+- Weapon, impact, movement and ambient sounds were not convincing.
+- The user cannot inspect the Unity Editor on their computer and needs a reliable way to preview work without installing or operating the full editor.
+
+### Repository and build snapshot checked for this review
+
+- Repository: https://github.com/CybersecurityRahbar/Tactical-Strike-Android
+- Active branch: main.
+- Main HEAD at review: 8986b14ef8bb20ae2093a71bf17d751d5d76cf4b (documentation update).
+- Latest executable/gameplay code commit at review: a5f33c250cbc21b8878424b59978fd8aa2f3678c.
+- Unity: 6000.3.28f1 (Unity 6.3 LTS), URP 17.3.0, Android ARM64/IL2CPP.
+- The latest code build run inspected: GitHub Actions run 42702747580, completed successfully. It produced a structurally verified APK with physical size 28,064,409 bytes and SHA-256 f87435d4306de708cbe970584bcc07efc6d83338d94c3c15f3c3e63db913a5b4.
+- CI confirmed Unity import/compile, source asset preparation, Android APK archive integrity, v2 signing, manifest, DEX and ARM64 IL2CPP/Unity libraries. It did NOT verify visual framing, gameplay feel, sound quality, scenery quality or Android frame rate.
+- Latest docs-only commits do not change the game executable relative to the a5f33c25 build.
+- The audit in this entry was a source/repository/research review. No gameplay code or Unity asset was changed during this audit.
+
+### Source-level findings
+
+#### First-person viewmodel
+
+- WeaponController.cs does instantiate the imported AK74M FBX as a child of the player camera; the current source does not intentionally remove the gun/arms.
+- It loads arm/rifle albedo and normal textures, uses the imported Legacy Animation clips, computes renderer bounds, scales the combined rig toward a 0.84 m maximum dimension, applies a root-pivot compensation, and sets a lower-right camera-space rest position.
+- This is not a reliable final rig-calibration pipeline. Bounds-based automatic fitting cannot guarantee correct left-hand foregrip, right-hand trigger/grip placement, stock-to-shoulder relationship, sight alignment, muzzle axis or per-animation consistency. The bounds are calculated from renderers at initial bind pose, not verified in the actual phone view.
+- The procedural fallback in BuildFallbackRifle builds only simple rifle primitives and no arms/hands. Therefore a resource-load failure can directly result in no visible hands.
+- The current Unity import/build validation checks the AK FBX and that animation clips exist, but does not check that the actual hand/rifle renderers appear at the intended on-screen coordinates or that the grip poses are correct.
+- Conclusion: source contains a viewmodel restoration attempt, but the user's visual complaint remains unresolved until a screenshot/video of the actual current APK proves otherwise. Do not report the weapon alignment as fixed.
+
+#### Tracer and impact VFX
+
+- BallisticProjectile.cs creates the tracer using a single LineRenderer, not a visible projectile head or a spherical hot core.
+- The line is extremely narrow (start width 0.012 m; end width 0.0035 m) and relies on a gradient. The line positions are tail then projectile position, while the alpha gradient is opaque at the tail and fades to transparent at the projectile end. This is a poor match for the user's request for a clearly visible hot leading projectile with a luminous tail.
+- The most recent source scales the tail length from frame travel (clamped to 8–55 m) to reduce gaps on low frame rates. This is a continuity fix, not a realistic burning tracer effect.
+- There is no authored emissive tracer projectile mesh/sprite, no flame-shaped animated sprite/flipbook, no distinct glowing head, and no configured bloom/post-processing volume.
+- ImpactFx.cs creates procedural particle systems with a small spark burst (22 normal / 38 heavy) and a separate dust puff. The current particle material is a plain URP particle/unlit material without an authored spark or flame texture atlas. This can read as flat billboard particles rather than convincing sparks/embers.
+- The heavy branch is selected only when projectile damage >= 75. AK FMJ/AP values in WeaponController are 38/42, so AK hits always use the small branch, including AP.
+- Impact classification is currently approximated from collider and material names. There is no surface-profile data asset, physical material map, or independent effect tuning for dirt, grass, wood, masonry, concrete and metal.
+- URP is created with supportsHDR=false and render-scale 0.90; no post-processing volume is configured. A strong emissive look cannot be assumed.
+- Conclusion: yellow/orange line and spark code is a procedural placeholder, not the requested visible hot tracer and impact spectacle.
+
+#### Weapon roster and combat data
+
+- WeaponController.cs hardcodes a single AK-74M: 900 m/s initial velocity, fixed drag/range, 30-round magazine, 120 reserve and a 0.10 s fire cooldown.
+- It exposes only FMJ, TRACER and AP modes for this one gun. AP changes damage/penetration values slightly, but there is no per-weapon data definition or weapon inventory/selector.
+- The agreed roster is AK-74M, M4A1, PKM, RPG-7, SVD/Dragunov, DShK 12.7 mm and M2/.50-calibre HMG. Only AK-74M is integrated. DShK and M2 are to be mounted crew-served positions, not ordinary shoulder weapons.
+- No placeholder selector entries should be represented as completed weapons. Each weapon requires a model, materials, rig/hand anchors, animation set, audio, handling/recoil profile, magazine/reload/ammo rules, sight/ADS configuration and test acceptance.
+
+#### Ballistic collision and material damage
+
+- BallisticProjectile uses approximately 8 ms simulation substeps, gravity/drag and Physics.RaycastAll to find the closest surface hit. This is a reasonable prototype approach to avoid tunnelling at high projectile speeds.
+- On any collision the projectile applies damage to a BallisticCover component if present and is then destroyed. Penetration currently modifies the damage dealt to cover and ricochet eligibility, but does not allow the projectile to continue through a penetrated object.
+- BallisticCover degrades a material colour and destroys the whole cover GameObject when integrity reaches zero; it does not create a convincing break/debris/damage-state system.
+- Surface response is string-name-based rather than a proper material/impact profile.
+- Conclusion: collision is a basic raycast damage prototype, not a finished penetration, material response or destruction system.
+
+#### Battlefield geometry and art
+
+- BattlefieldGenerator.cs creates a 700 m x 700 m terrain mesh with 256 divisions (257 x 257 vertices; about 2.73 m horizontal vertex spacing).
+- The terrain height is generated from Perlin/fBm noise and several Gaussian shoulder/valley shapes. This gives broad procedural slopes, but it is not a hand-sculpted tactical terrain with manually composed ridge chains, gullies, micro-terrain, routes and carefully staged sightlines.
+- One sparse-grass diffuse/normal texture is used for the ground. Although a roughness map is staged and validated, the terrain shader does not blend multiple distinct surface layers (earth, grass, rock, mud, road, disturbed trench earth) across the landscape.
+- The two trench lines are generated from sinusoidal offsets and rows of capsule-mesh sandbags; height depression is only about 1.8–1.9 m at the trench centre. There are no full branching communication trenches, dugouts, traverse bays, revetments or designed connected trenches.
+- Midfield cover is mostly 16 repeated primitive box barriers plus a small number of individual capsule-shaped sandbags.
+- Four houses exist in source: two defensive houses and two village farmhouses. They are built from simple box primitives. The four continuous wall panels remain solid; the dark door/window pieces are placed over the walls rather than forming real openings. There is no authentic interior, furniture, rubble, roof detail, village prop dressing or damaged-state variation.
+- Rock dressing uses 420 combined flattened sphere meshes. The latest foliage pass attempts 280 tree candidates, with a subset of bushes and 44 grass clumps, mostly on the flanks to keep the centre lane open. These are limited low-poly assets, not a richly authored woodland.
+- Distant defenders are five static primitive capsule/head/cube silhouettes. There are no rigged infantry characters, animated soldier poses, squad AI, cover selection, navigation, suppression logic, or tactical combat behavior.
+- There are no clearly authored road networks, field tracks, drainage ditches, fences, utility lines, varied farm props, vehicles/wrecks, craters, layered debris fields or authored defensive outposts.
+- Conclusion: the existing world is a procedural mobile greybox/vertical-slice foundation. It is not a Squad-like finished battlefield; simply increasing tree count or changing material colours will not solve its underlying design problem.
+
+#### Lighting and presentation
+
+- TacticalStrikeBootstrap configures a procedural skybox, one directional sun, trilight ambient colours and exponential-squared fog. There is no authored lighting scenario, baked GI, environment/reflection probe workflow, light-probe coverage or post-processing volume in the source reviewed.
+- URP is intentionally configured with HDR off, renderScale 0.90 and limited shadows for mobile performance. These are valid optimization considerations, but the current art/lighting setup lacks the richer visual hierarchy and controlled high-contrast lighting the user expects.
+- MobileHud uses runtime-built legacy Unity UI Text and simple tinted rectangle buttons. It is functional prototype HUD layout rather than a polished tactical FPS interface.
+
+#### Movement, aiming and sound
+
+- FpsPlayerController implements joystick movement/look, sprint, crouch, jump, camera bob and a basic camera-height change. Walk/sprint/crouch speeds are fixed values.
+- AIM currently narrows camera FOV from 78 to 57 degrees and shifts the whole weapon model by a fixed offset. It does not align a physical iron sight/optic reticle to the centre of the screen, does not configure per-weapon ADS transforms, and has no proper sight zero/range UI.
+- Recoil is a small root pitch rotation with a simple decay. There is no calibrated weapon spring, stance-dependent sway, lateral recoil pattern, aim stabilization, shoulder/stock response, leaning, prone state, breath focus or suppression response.
+- Firing audio is loaded as a small set of two AK recordings and is played from an AudioSource with spatialBlend=0 (2D). Footsteps use only two sand-step clips. Impact audio uses three generic CC0 clips (metal, masonry/debris, heavy thud) selected by string matching.
+- There is no weapon-specific handling/charging/reload/bolt/magazine audio, indoor/outdoor gunshot variation, distance-layered weapon report, directional bullet crack/whiz, surface-aware footstep library, environmental ambience, wind/weather layer, echo/reverb zone system or tuned audio mixer.
+- Conclusion: movement, aim and audio are placeholders, not the more weighty and distinct weapon/stance/sound design the user requested.
+
+### Squad reference study and applicable design conclusions
+
+Official Squad 9.0 release notes (2025-09-04) state that Squad migrated to Unreal Engine 5.5, began using Nanite/frame-generation technology, Chaos physics and MetaSounds, and upgraded map creation/performance tools. The same notes describe the Al Basrah remake as having a larger play area, greater density and fidelity, plus a lighting overhaul using a new Global Illumination system and updates to assets, materials and foliage. These are design/production lessons; Tactical Strike remains a mobile Unity URP project and must not attempt to copy a PC-only UE5 rendering stack directly.
+Source: https://www.joinsquad.com/updates/squad-9-0-release-notes
+
+The official Squad Steam announcement on 2026-11-03 described the Oskil River map playtest (2026-11-06 to 2026-11-09) as a war-damaged Eastern European landscape combining damaged settlements/urban areas, open terrain and trenches, with more detailed environmental set dressing. The same announcement said the map was still a work in progress, and included World Partition performance testing. As of this review date (2026-11-10), this was a recent playtest announcement, not evidence that the full 10.7 release had shipped.
+Source: https://steamcommunity.com/app/393380/
+
+Squad 9.0 gunplay notes emphasize controlled, less random recoil, keeping the sight picture from being displaced excessively, recoil-camera offset limits, grip alignment/angle limits, sway clamps and a smoother recoil curve. Other notes mention weapon spring behavior responsive to player movement, stationary focus zoom, and more weapon-specific audio/animation fixes. Squad's AI notes describe bots avoiding open ground, moving to cover when reloading, suppressing suspected enemy positions and tracking relevant sounds. These are useful design principles for the project rather than instructions to reproduce proprietary Squad assets.
+Source: https://www.joinsquad.com/updates/squad-9-0-release-notes
+
+Recent Squad map research also shows why the request cannot be met by a flat field with random obstacles: terrain/woodland sightlines, urban routes and crossings, settlements, trenches, and varied natural/artificial cover all have distinct gameplay roles. Reference examples include Gorodok's woodland/hill character and the Oskil River combination of damaged settlement, open ground and trench systems.
+Map reference: https://squadoutpost.com/maps/
+Official playtest announcement: https://steamcommunity.com/app/393380/
+
+### Required direction for the next development stage
+
+1. Treat the current visual vertical slice as a prototype, not as an accepted base for incremental cosmetic tweaks. Preserve the working Unity project/build pipeline, but rebuild the battlefield art/layout and first-person/combat presentation as distinct systems.
+2. Produce and approve a top-down battlefield layout before building the scenery: attacker entry/approach, central long-range fire corridor, offset terrain ridges, flanking routes, defensive trench network, two distinct defended compounds/houses, village clusters, approach roads, firing positions and clear sightline-break points.
+3. Replace final-map primitives with authored modular assets and a coherent PBR terrain material system. Use multiple blended ground layers and place props deliberately to tell a believable battlefield story, while retaining mobile LOD/instancing and draw-call budgets.
+4. Create a per-weapon viewmodel calibration and rig standard with dedicated hand/grip/stock/sight/muzzle anchors and per-weapon ADS transform. Validate using screenshots/video from the actual build, not only model bounds or successful CI compilation.
+5. Redesign tracer VFX into a visibly hot leading core, a short continuous emissive tail and distinct airborne/impact behavior; create separate surface/calibre profiles for dust, sparks, debris and sound. Enable any bloom/HDR treatment only through measured mobile quality tiers.
+6. Replace hard-coded single-weapon code with data-driven weapon definitions and a real inventory/selection flow. Build the seven agreed weapon types individually; no model or selector may be labeled complete until rig, animation, sound, ammo, recoil, ADS and test criteria pass.
+7. Rework the first-person movement and aim system around responsive weapon spring, controlled recoil, stance-dependent sway, physical sight alignment, weapon-specific ADS and meaningful walk/sprint/crouch/aim behavior.
+8. Build a layered audio system with firearm-specific close and distant reports, handling/reload sounds, material-specific impact layers, directional projectile pass-by sounds, surface-dependent footsteps and environmental ambience. Avoid playing every gunshot as a flat 2D sample.
+9. Make visual inspection possible without requiring the user to install the Unity Editor. A desktop-browser WebGL preview is a possible auxiliary review build, with desktop controls added where needed; it is NOT a substitute for the Android APK or Android device performance testing, and must be evaluated for its platform limitations before adoption.
+10. Add visual acceptance evidence to future CI where feasible (terrain/map overview, first-person frame, weapon/hand frame, tracer/impact frame) and require a real Android device test for final framing, controls, frame rate and sound. A green CI badge proves build integrity, not artistic quality.
+
+### Audit completion and verification boundary
+
+- Reviewed the repository tree, README, cumulative context, Unity player/weapon/projectile/impact/world/UI/bootstrap/build scripts, asset preparation workflow, Unity package/editor versions, and latest main-branch GitHub Actions runs.
+- Verified the last published Unity APK is structurally valid and its build succeeded; no current source or CI evidence proves the user-facing visual defects are solved.
+- No gameplay implementation was changed in this audit. This entry records the user feedback, source-level findings, Squad research and next-stage acceptance rules so the next session can continue from the same evidence rather than repeating exploratory work.
