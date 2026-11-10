@@ -2,12 +2,23 @@
 
 > This file is cumulative. Add confirmed requirements, design decisions, implementation status, test results, and known issues here after each meaningful project step. Do not record unrelated entertainment conversations or other projects here.
 
+## Current authoritative project state — 2026-11-10
+
+**This section overrides contradictory engine, renderer and map descriptions in the older dated history below.**
+
+- The active project is now **Unity 6000.3.28f1 (Unity 6.3 LTS)** with **URP 17.3.0**, in `UnityProject/`. It is not currently a Godot 4.7.2 project.
+- The Godot 4.7.2 entries dated 2026-11-07 below document an earlier prototype/history retained for continuity; they are not instructions for the active build and must not be used to describe the current engine.
+- The active gameplay map is **Northwind Valley / Sector 01**. Its intended environment is a temperate rural highland with muted olive vegetation, earth, stone and exposed rock. This supersedes the older brown-plateau landscape wording where the two conflict.
+- Active automation: Unity Android APK build and Unity WebGL browser preview/deployment through GitHub Actions. Main branch only.
+- Do not treat an old Godot workflow result, a successful Unity compile, or an SVG plan as proof of current playable-game acceptance. Verify the current Unity build, WebGL deployment and physical-device behaviour separately.
+- Cumulative record rule: retain dated history, but add corrections rather than letting an outdated entry override the current authoritative state.
+
 ## Project identity and workflow
 
 - Repository: https://github.com/CybersecurityRahbar/Tactical-Strike-Android
 - Primary platform: Android.
-- Engine: Godot 4.7.2 stable (do not switch to a beta engine version without a reason).
-- Renderer: Compatibility renderer, initially targeting broad Android compatibility and modest hardware.
+- Engine: Unity 6000.3.28f1 (Unity 6.3 LTS).
+- Renderer: Universal Render Pipeline (URP) 17.3.0.
 - All source, scene files, configuration, documentation, and CI build definitions live in this repository.
 - The user does not want to use their own computer for development. Code changes and Android builds should happen in GitHub; GitHub Actions should validate and export APK artifacts. The user's Android phone is used to install and test APK builds.
 - Work on the `main` branch, keeping the workflow straightforward and avoiding unnecessary branches.
@@ -74,7 +85,7 @@ Projectile behavior:
 - Start with a small player-count target (2–8 local players) and validate network authority, synchronization and performance before raising it.
 - The single-player and LAN modes should share the same combat, map, weapon and match systems where practical.
 
-## Initial implementation status — 2026-11-07
+## Archived initial implementation status — 2026-11-07 (Godot prototype; historical only)
 
 ### Added in this commit
 - Godot 4.7.2 project scaffold using the Compatibility renderer.
