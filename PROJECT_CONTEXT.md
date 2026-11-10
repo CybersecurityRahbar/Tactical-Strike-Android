@@ -1368,3 +1368,10 @@ The user tested the deployed Northwind preview and reported four blocking runtim
 - Moved this covered assembly shelter laterally to `(-132, z=266)`, leaving the central forward approach clearer. The location still uses the generated terrain height.
 - Source commit: `d87549ef25c3b972cde1bea96b0b3b1763538c32`.
 - New Unity Browser Preview run #24 `42897243040` and Android Build run #41 `42897243202` were queued for that exact source commit. Do not claim visual correctness until WebGL is deployed and inspected.
+
+
+### URP cache reapplication guard — 2026-11-10
+
+- A follow-up build-script audit found that the newly raised URP properties were set only inside the `pipeline == null` asset-creation branch. If Unity restored a previously generated URP asset from its Library cache, the existing asset could retain the old HDR-off / 0.90 render scale / 85m shadow profile.
+- The URP quality assignments are now applied unconditionally after loading or creating the pipeline asset. This makes the configured profile deterministic across a fresh import and a cache restore.
+- Source commit `e937e17fb43bc72431083416940fa1f8d01060f1`; this is a build-configuration correctness fix. Current build validation must still complete for the exact latest main commit.
