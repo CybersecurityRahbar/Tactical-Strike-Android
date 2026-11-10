@@ -1113,3 +1113,35 @@ Official playtest announcement: https://steamcommunity.com/app/393380/
 - Source commit `30cc3a967330c362a5cde873cbc59beeded47a8d` triggers the follow-up validation runs: WebGL `42855335693` and Android `42855335569`. Both were in progress at the last check; don't claim the mounted-weapon changes compile until these runs complete.
 - The previously successful WebGL preview run `42852093866` is the currently deployed Northwind baseline before the just-added HMG controls. The newer HMG commit is not deployed until run `42855335693` passes WebGL build/validation/deployment.
 
+## HMG compile repair, layered Unity Terrain and near-miss suppression — 2026-11-10
+
+### Verified compile failure and repair
+
+- Both the WebGL run `42855335693` and Android run `42855335569` from source commit `30cc3a967330c362a5cde873cbc59beeded47a8d` failed during Unity script compilation.
+- The only compiler error reported in both logs was `NorthwindValleyGenerator.cs(693,17): error CS0103: The name 'darkMetal' does not exist in the current context`. The actual material field created by the map is `metalMaterial`.
+- The current map generator corrects the HMG pedestal material reference to `metalMaterial`. The warning about obsolete `Object.FindObjectsOfType<T>()` in the mount component is a warning, not the compile failure.
+
+### Native layered terrain and PBR blend
+
+- Commit `1adc16e0b9ec84a62fb560dbab44595e4fec092f` replaces the old single-material 384-division terrain mesh with a native Unity `TerrainData` heightfield and `TerrainCollider`.
+- Heightmap resolution is 257, alphamap resolution 256, world area 700m × 700m and vertical range 120m. The height field retains the central valley, flank ridges, saddles and drainage/trench cuts.
+- Three `TerrainLayer`s are blended using slope, elevation and broad Perlin variation: Grass004 on gentler grassland, Ground037 in exposed/lowland earth, and Poly Haven rocky gravel on steep ridge faces. Splat weights are normalized per alphamap texel.
+- The runtime asset preparation now copies and verifies `rocky_gravel_diff_1k.jpg`, `rocky_gravel_nor_gl_1k.jpg`, and its roughness map. Unity Editor build validation explicitly requires the diffuse and normal textures used by the terrain layers.
+- Roads, trench floors/parapets, drainage, houses, woodland, dugouts, firing bays, ground patches and HMG nests have been adjusted to sit above the new terrain heightfield. Channel water follows the carved drainage network.
+- This is actual terrain splat blending, not only separately coloured boxes. Shader appearance, transition sharpness, vegetation and device performance still require runtime inspection/tuning.
+
+### Near-miss suppression system added
+
+- `BallisticProjectile` now checks a small capsule around each simulated trajectory segment with `Physics.OverlapCapsuleNonAlloc`, then checks line of sight so terrain/buildings block suppression.
+- Nearby non-shooter infantry receive a suppression factor based on distance and projectile damage. The factor decays over time and uses a short repeat-hit cooldown.
+- `FpsPlayerController` passes suppression to `WeaponController` and the HUD. Higher suppression increases weapon sway and shot spread, and blocks stationary focus/breath-hold temporarily.
+- The HUD uses a low-alpha red edge vignette; it does not place a blur over the centre of the sight picture.
+- This is a first-pass infantry suppression mechanism, not a full Squad equivalent: no AI morale/suppression state, squad voice effects, suppression audio layer or multiplayer authority synchronization is claimed.
+
+### Current validation runs for this source
+
+- New WebGL run `42857326872` (commit `1adc16e0b9ec84a62fb560dbab44595e4fec092f`): https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42857326872 .
+- New Android run `42857326877` (same commit): https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42857326877 .
+- Both were accepted by GitHub and were `in_progress` at documentation time. Do not claim layered Terrain or suppression has compiled, deployed or been visually tested until both relevant Unity builds complete; WebGL must also validate, upload the Pages artifact and deploy.
+- The currently deployed site still reflects the last successful Northwind baseline `8c4e6516abd2585a0084788359e2e3bc11382f73`; it does not yet include the mount controls, layered Terrain or suppression from this latest commit. The older preview must not be represented as containing these additions.
+
