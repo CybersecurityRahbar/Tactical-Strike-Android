@@ -140,3 +140,11 @@ The first actual Northwind Valley Unity source was successfully compiled for And
 
 The follow-up source commit `30cc3a967330c362a5cde873cbc59beeded47a8d` adds functional first-pass DShK/M2 mount interaction: E or contextual touch button to mount, pivot-driven ±66° traverse / +24° elevation / -18° depression, camera/viewmodel transition, 12.7mm ballistics, 250-round belts + 750 reserve and 3.35s reload. The HMG geometry is procedural and still needs authentic mesh/texture/sound/animation refinement. The follow-up WebGL and Android CI runs `42855335693` and `42855335569` are pending validation.
 
+## Current terrain and suppression implementation pass — 2026-11-10
+
+The map terrain has moved beyond the prior one-material mesh: commit `1adc16e0b9ec84a62fb560dbab44595e4fec092f` builds a native Unity 700m TerrainData/Collider and blends grass, earth and rocky gravel layers using slope/elevation splat weights. Trench cuts and water drainage align to the terrain heightfield. PBR terrain appearance and phone performance still require visual/device testing.
+
+A first-pass near-miss suppression system is also in source: unblocked projectile passes close to infantry increase suppression; the factor decays, affects viewmodel sway and shot spread, and prevents breath-hold focus temporarily. A light red edge vignette provides feedback without central blur. It is not yet AI suppression or multiplayer-authoritative suppression.
+
+The immediately preceding CI runs for the crew-served weapons failed because the HMG pedestal referenced the undefined material name `darkMetal` rather than `metalMaterial`. This reference has been corrected. WebGL run `42857326872` and Android run `42857326877` are building the corrected layered-terrain/suppression source; this milestone is not complete until both validate and WebGL deployment succeeds.
+
