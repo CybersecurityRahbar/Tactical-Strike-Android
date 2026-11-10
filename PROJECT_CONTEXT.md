@@ -900,3 +900,10 @@ Official playtest announcement: https://steamcommunity.com/app/393380/
 - Unity 6.3 WebGL PlayerSettings: https://docs.unity.com/en-us/engine/6000.3/script-reference/unityeditor/playersettings/webgl
 - Unity compression fallback: https://docs.unity.com/en-us/engine/6000.3/script-reference/unityeditor/playersettings/webgl/decompressionfallback
 - GitHub Pages custom Action workflow: https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages
+
+
+### Deployment packaging safeguard — 2026-11-10
+
+- Reviewed the current `actions/upload-pages-artifact@v4` input contract after the first workflow was queued. Hidden files are excluded by default, which would silently omit Unity's `.nojekyll` marker.
+- Added `include-hidden-files: true` to the Pages artifact upload step so the marker created by the post-build validator is actually published. The upload path contains only the generated Unity WebGL build and its generated preview manifest/inventory; no repository secrets or source-control directories are inside that path.
+- This is a preventive packaging correction. The new workflow attempt must still prove the action accepts the input and the final site deploys.
