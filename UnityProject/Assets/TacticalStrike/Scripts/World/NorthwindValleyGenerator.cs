@@ -386,62 +386,7 @@ namespace TacticalStrike
             terrain.allowAutoConnect = false;
         }
 
-        {
-            int side = TerrainDivisions + 1;
-            Vector3[] vertices = new Vector3[side * side];
-            Vector2[] uv = new Vector2[vertices.Length];
-            int[] triangles = new int[TerrainDivisions * TerrainDivisions * 6];
-            float half = MapSize * 0.5f;
-            float step = MapSize / TerrainDivisions;
 
-            int v = 0;
-            for (int z = 0; z < side; z++)
-            {
-                float wz = -half + z * step;
-                for (int x = 0; x < side; x++)
-                {
-                    float wx = -half + x * step;
-                    vertices[v] = new Vector3(wx, HeightAt(wx, wz), wz);
-                    uv[v] = new Vector2(wx * 0.055f, wz * 0.055f);
-                    v++;
-                }
-            }
-
-            int t = 0;
-            for (int z = 0; z < TerrainDivisions; z++)
-            {
-                for (int x = 0; x < TerrainDivisions; x++)
-                {
-                    int i = z * side + x;
-                    triangles[t++] = i;
-                    triangles[t++] = i + side;
-                    triangles[t++] = i + 1;
-                    triangles[t++] = i + 1;
-                    triangles[t++] = i + side;
-                    triangles[t++] = i + side + 1;
-                }
-            }
-
-            Mesh terrainMesh = new Mesh
-            {
-                name = "Northwind Valley - 700m sculpted highland terrain",
-                indexFormat = IndexFormat.UInt32
-            };
-            terrainMesh.vertices = vertices;
-            terrainMesh.uv = uv;
-            terrainMesh.triangles = triangles;
-            terrainMesh.RecalculateNormals();
-            terrainMesh.RecalculateBounds();
-
-            GameObject terrain = new GameObject("01 - Northwind Valley terrain and playable ground");
-            terrain.transform.SetParent(parent, false);
-            terrain.AddComponent<MeshFilter>().sharedMesh = terrainMesh;
-            MeshRenderer renderer = terrain.AddComponent<MeshRenderer>();
-            renderer.sharedMaterial = terrainMaterial;
-            renderer.shadowCastingMode = ShadowCastingMode.Off;
-            renderer.receiveShadows = true;
-            terrain.AddComponent<MeshCollider>().sharedMesh = terrainMesh;
-        }
 
         private static void BuildGroundPatches(Transform parent)
         {
