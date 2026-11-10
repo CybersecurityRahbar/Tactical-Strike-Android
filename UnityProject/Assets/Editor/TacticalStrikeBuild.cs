@@ -239,7 +239,12 @@ namespace TacticalStrike.Editor
                 "Assets/Resources/TacticalStrike/Imported/Nature/tree-oak.fbx",
                 "Assets/Resources/TacticalStrike/Imported/Nature/tree-default.fbx",
                 "Assets/Resources/TacticalStrike/Imported/Nature/plant-bushdetailed.fbx",
-                "Assets/Resources/TacticalStrike/Imported/Nature/grass-large.fbx"
+                "Assets/Resources/TacticalStrike/Imported/Nature/grass-large.fbx",
+                "Assets/Resources/TacticalStrike/Imported/Props/concrete_road_barrier.fbx",
+                "Assets/Resources/TacticalStrike/Imported/Props/old_military_crate.fbx",
+                "Assets/Resources/TacticalStrike/Imported/Props/ammo_box.fbx",
+                "Assets/Resources/TacticalStrike/Imported/Props/metal_jerrycan_green.fbx",
+                "Assets/Resources/TacticalStrike/Imported/Props/POLYHAVEN_PROPS_SOURCES.txt"
             };
 
             foreach (string path in required)
@@ -273,6 +278,21 @@ namespace TacticalStrike.Editor
                 string naturePath = "Assets/Resources/TacticalStrike/Imported/Nature/" + natureName + ".fbx";
                 if (AssetDatabase.LoadAssetAtPath<GameObject>(naturePath) == null)
                     throw new BuildFailedException("Required nature model failed to import: " + naturePath);
+            }
+
+            string[] battlefieldProps =
+            {
+                "concrete_road_barrier", "old_military_crate",
+                "ammo_box", "metal_jerrycan_green"
+            };
+            foreach (string propName in battlefieldProps)
+            {
+                string propPath = "Assets/Resources/TacticalStrike/Imported/Props/" + propName + ".fbx";
+                GameObject propPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(propPath);
+                if (propPrefab == null)
+                    throw new BuildFailedException("Required Poly Haven battlefield prop failed to import: " + propPath);
+                if (propPrefab.GetComponentsInChildren<Renderer>(true).Length == 0)
+                    throw new BuildFailedException("Battlefield prop has no renderer: " + propPath);
             }
 
             GameObject model = AssetDatabase.LoadAssetAtPath<GameObject>(
@@ -418,6 +438,70 @@ namespace TacticalStrike.Editor
             // foliage cards instead of drawing their transparent rectangular canvas.
             importer.alphaSource = TextureImporterAlphaSource.FromInput;
             importer.alphaIsTransparency = true;
+        }
+    }
+
+
+    public sealed class BattlefieldPropModelPostprocessor : AssetPostprocessor
+    {
+        private void OnPostprocessMaterial(Material material)
+        {
+            if (!assetPath.Contains("/Imported/Props/") || material == null) return;
+            Shader urp = Shader.Find("Universal Render Pipeline/Lit");
+            if (urp == null) return;
+
+            Texture albedo = material.HasProperty("_BaseMap") ? material.GetTexture("_BaseMap") : null;
+            if (albedo == null && material.HasProperty("_MainTex"))
+                albedo = material.GetTexture("_MainTex");
+            Texture normal = material.HasProperty("_BumpMap") ? material.GetTexture("_BumpMap") : null;
+            Texture metallicGloss = material.HasProperty("_MetallicGlossMap")
+                ? material.GetTexture("_MetallicGlossMap") : null;
+            Color baseColor = material.HasProperty("_BaseColor")
+                ? material.GetColor("_BaseColor") : material.color;
+            float metallic = material.HasProperty("_Metallic") ? material.GetFloat("_Metallic") : 0f;
+            float smoothness = material.HasProperty("_Smoothness")
+                ? material.GetFloat("_Smoothness") : 0.2f;
+
+            material.shader = urp;
+            if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", baseColor);
+            if (albedo != null && material.HasProperty("_BaseMap"))
+                material.SetTexture("_BaseMap", albedo);
+            if (normal != null && material.HasProperty("_BumpMap"))
+            {
+                material.SetTexture("_BumpMap", normal);
+                material.EnableKeyword("_NORMALMAP");
+            }
+            if (metallicGloss != null && material.HasProperty("_MetallicGlossMap"))
+            {
+                material.SetTexture("_MetallicGlossMap", metallicGloss);
+                material.EnableKeyword("_METALLICGLOSSMAP");
+            }
+            if (material.HasProperty("_Metallic")) material.SetFloat("_Metallic", metallic);
+            if (material.HasProperty("_Smoothness"))
+                material.SetFloat("_Smoothness", Mathf.Clamp(smoothness, 0.02f, 0.7f));
+            if (material.HasProperty("_Surface")) material.SetFloat("_Surface", 0f);
+            material.enableInstancing = true;
+        }
+    }
+
+    public sealed class BattlefieldPropTexturePostprocessor : AssetPostprocessor
+    {
+        private void OnPreprocessTexture()
+        {
+            if (!assetPath.Contains("/Imported/Props/")) return;
+            TextureImporter importer = (TextureImporter)assetImporter;
+            string name = Path.GetFileName(assetPath).ToLowerInvariant();
+            importer.mipmapEnabled = true;
+            importer.textureCompression = TextureImporterCompression.Compressed;
+            importer.maxTextureSize = 2048;
+            importer.alphaSource = TextureImporterAlphaSource.FromInput;
+            importer.alphaIsTransparency = true;
+
+            bool normal = name.Contains("normal") || name.Contains("nor_gl");
+            bool dataMap = normal || name.Contains("rough") || name.Contains("metal") ||
+                           name.Contains("ao") || name.Contains("arm");
+            importer.textureType = normal ? TextureImporterType.NormalMap : TextureImporterType.Default;
+            importer.sRGBTexture = !dataMap;
         }
     }
 
