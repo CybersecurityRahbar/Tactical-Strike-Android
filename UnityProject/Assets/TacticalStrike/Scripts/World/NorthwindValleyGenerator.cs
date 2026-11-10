@@ -82,7 +82,8 @@ namespace TacticalStrike
             BuildWoodlandBelts(parent);
             BuildRidgeRocks(parent);
             BuildFieldDetails(parent);
-            Debug.Log("NORTHWIND VALLEY BUILT: 700m x 700m playable terrain, branching trench systems, compounds, village, roads and flanks.");
+            BuildBattlefieldDressing(parent);
+            Debug.Log("NORTHWIND VALLEY BUILT: 700m x 700m terrain, continuous roads/trenches, defensive compounds and authored CC0 battlefield props.");
         }
 
         public static float HeightAt(float x, float z)
@@ -759,8 +760,10 @@ namespace TacticalStrike
 
             CreateBox(compound, new Vector3(-8.5f, 0.65f, 5.5f), new Vector3(2.2f, 1.3f, 1.5f),
                 concreteMaterial, Quaternion.Euler(0f, 22f, 0f), "Courtyard concrete cover block");
-            CreateBox(compound, new Vector3(8.3f, 0.55f, 5.2f), new Vector3(1.1f, 1.1f, 1.1f),
-                roofMaterial, Quaternion.identity, "Courtyard supply crate");
+            PlaceBattlefieldProp(parent, "old_military_crate",
+                compound.TransformPoint(new Vector3(8.3f, 0.15f, 5.2f)),
+                yawSign * 7f, 1.25f, 360f,
+                label + " - authored courtyard military crate");
             CreateBox(compound, new Vector3(0f, 0.8f, -7.8f), new Vector3(2.0f, 1.6f, 1.8f),
                 concreteMaterial, Quaternion.identity, "Interior room cover");
         }
@@ -809,8 +812,10 @@ namespace TacticalStrike
                 masonryMaterial, Quaternion.identity, "Interior partition - east");
             CreateBox(house, new Vector3(-5.0f, 0.72f, -3.3f), new Vector3(1.6f, 1.25f, 0.85f),
                 concreteMaterial, Quaternion.Euler(0f, 8f, 0f), "Interior masonry debris");
-            CreateBox(house, new Vector3(4.8f, 0.62f, 2.5f), new Vector3(1.2f, 1.1f, 1.1f),
-                roofMaterial, Quaternion.Euler(0f, 18f, 0f), "Interior supply crate");
+            // Use the authored ammunition box instead of a generic cube prop.
+            PlaceBattlefieldProp(parent, "ammo_box",
+                house.TransformPoint(new Vector3(4.8f, 0.10f, 2.5f)),
+                18f, 0.48f, 160f, label + " - interior ammunition box");
         }
 
         private static void BuildWindowedSideWall(Transform parent, float x, float depth,
@@ -852,6 +857,115 @@ namespace TacticalStrike
                 masonryMaterial, Quaternion.identity, "Front shed wall east");
             CreateBox(shed, new Vector3(0f, 3.6f, 0f), new Vector3(12.8f, 0.45f, 8.8f),
                 roofMaterial, Quaternion.Euler(0f, 0f, 3f), "Damaged sheet roof");
+        }
+
+        private static void BuildBattlefieldDressing(Transform parent)
+        {
+            // Concrete barriers sit on the outer shoulders of the southern staging lane.
+            // The central corridor from the player spawn toward the valley is kept open.
+            PlaceBattlefieldProp(parent, "concrete_road_barrier",
+                new Vector3(-22f, HeightAt(-22f, 282f), 282f), 90f, 2.8f, 1800f,
+                "South staging - west concrete road barrier");
+            PlaceBattlefieldProp(parent, "concrete_road_barrier",
+                new Vector3(22f, HeightAt(22f, 282f), 282f), 90f, 2.8f, 1800f,
+                "South staging - east concrete road barrier");
+
+            // Crew-served resupply dressing remains outside the operator's position
+            // and traverse arc.
+            PlaceBattlefieldProp(parent, "old_military_crate",
+                new Vector3(-214f, HeightAt(-214f, -197f), -197f), 18f, 1.25f, 360f,
+                "DShK emplacement - military ammunition crate");
+            PlaceBattlefieldProp(parent, "ammo_box",
+                new Vector3(-200f, HeightAt(-200f, -197f), -197f), -12f, 0.48f, 160f,
+                "DShK emplacement - ammunition box");
+            PlaceBattlefieldProp(parent, "metal_jerrycan_green",
+                new Vector3(211f, HeightAt(211f, -196f), -196f), 24f, 0.72f, 120f,
+                "M2 emplacement - fuel canister");
+            PlaceBattlefieldProp(parent, "old_military_crate",
+                new Vector3(218f, HeightAt(218f, -197f), -197f), -14f, 1.25f, 360f,
+                "M2 emplacement - military ammunition crate");
+
+            // Small resupply props flank, rather than block, the spawn approach.
+            PlaceBattlefieldProp(parent, "ammo_box",
+                new Vector3(-13f, HeightAt(-13f, 294f), 294f), 16f, 0.48f, 160f,
+                "Attacker staging - ammunition box");
+            PlaceBattlefieldProp(parent, "metal_jerrycan_green",
+                new Vector3(13f, HeightAt(13f, 294f), 294f), -18f, 0.72f, 120f,
+                "Attacker staging - fuel canister");
+        }
+
+        private static GameObject PlaceBattlefieldProp(Transform parent, string resourceName,
+            Vector3 groundPosition, float yaw, float targetLargestDimension, float coverIntegrity,
+            string label)
+        {
+            GameObject prefab = Resources.Load<GameObject>(
+                "TacticalStrike/Imported/Props/" + resourceName);
+            if (prefab == null)
+            {
+                Debug.LogError("Missing required battlefield prop resource: " + resourceName);
+                return null;
+            }
+
+            GameObject instance = UnityEngine.Object.Instantiate(prefab, groundPosition,
+                Quaternion.Euler(0f, yaw, 0f), parent);
+            instance.name = label;
+            Renderer[] renderers = instance.GetComponentsInChildren<Renderer>(true);
+            if (renderers.Length == 0)
+            {
+                Debug.LogError("Battlefield prop has no renderable meshes: " + resourceName);
+                UnityEngine.Object.Destroy(instance);
+                return null;
+            }
+
+            Bounds bounds = RecalculateWorldBounds(renderers);
+            float largest = Mathf.Max(bounds.size.x, Mathf.Max(bounds.size.y, bounds.size.z));
+            if (largest < 0.001f)
+            {
+                Debug.LogError("Battlefield prop has invalid bounds: " + resourceName);
+                UnityEngine.Object.Destroy(instance);
+                return null;
+            }
+
+            float scale = Mathf.Clamp(targetLargestDimension / largest, 0.2f, 5f);
+            instance.transform.localScale *= scale;
+            bounds = RecalculateWorldBounds(renderers);
+
+            Vector3 correctedPosition = instance.transform.position;
+            correctedPosition.y += groundPosition.y - bounds.min.y + 0.018f;
+            instance.transform.position = correctedPosition;
+            bounds = RecalculateWorldBounds(renderers);
+
+            BoxCollider collider = instance.GetComponent<BoxCollider>();
+            if (collider == null) collider = instance.AddComponent<BoxCollider>();
+            Vector3 lossy = instance.transform.lossyScale;
+            collider.center = instance.transform.InverseTransformPoint(bounds.center);
+            collider.size = new Vector3(
+                bounds.size.x / Mathf.Max(0.001f, Mathf.Abs(lossy.x)),
+                bounds.size.y / Mathf.Max(0.001f, Mathf.Abs(lossy.y)),
+                bounds.size.z / Mathf.Max(0.001f, Mathf.Abs(lossy.z)));
+
+            if (coverIntegrity > 0f)
+                instance.AddComponent<BallisticCover>().Initialize(coverIntegrity);
+
+            foreach (Renderer renderer in renderers)
+            {
+                renderer.receiveShadows = true;
+                renderer.shadowCastingMode = ShadowCastingMode.On;
+                foreach (Material material in renderer.sharedMaterials)
+                    if (material != null) material.enableInstancing = true;
+            }
+
+            Debug.Log("BATTLEFIELD PROP PLACED: " + label + " / scale=" +
+                      scale.ToString("F3") + " / bounds=" + bounds.size);
+            return instance;
+        }
+
+        private static Bounds RecalculateWorldBounds(Renderer[] renderers)
+        {
+            Bounds bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++)
+                bounds.Encapsulate(renderers[i].bounds);
+            return bounds;
         }
 
         private static void BuildMountedWeaponPositions(Transform parent)
