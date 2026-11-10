@@ -106,3 +106,19 @@ Acceptance gates:
 8. Optimize Android and add Wi-Fi/hotspot multiplayer only after single-player is stable.
 
 This order deliberately avoids adding many unfinished features at once. Each milestone should create something visible in the browser preview and retain an independently verifiable build.
+
+## Actual implementation status — audited 2026-11-10
+
+**Important: this document is a design specification, not evidence that the described map or combat systems are already implemented in the playable Unity scene.**
+
+- The playable scene still starts through `UnityProject/Assets/TacticalStrike/Scripts/Core/TacticalStrikeBootstrap.cs`, which calls `BattlefieldGenerator.Build(worldRoot)`.
+- The currently active `BattlefieldGenerator.cs` remains the prior procedural Greenridge/plateau implementation. It has not yet been replaced by the Northwind Valley authored layout described above.
+- `docs/northwind-valley-layout.svg` is a top-down conceptual plan only. It is not imported into Unity as a terrain mesh, level, or playable scene.
+- The current weapon implementation remains the AK-74M `WeaponController` and its existing viewmodel setup. The seven-weapon roster above is a target specification, not a completed inventory.
+- The successful WebGL deployment run `42836781579` built this existing gameplay scene. Its purpose was to establish the browser build/deploy pipeline; it did not execute the battlefield or weapon redesign.
+- Therefore the first deployed preview is a technical pipeline milestone only. It must not be labelled as the rebuilt game or as proof that the Northwind Valley map is in the scene.
+
+### Required next implementation milestone
+
+Replace the active procedural battlefield with the actual playable Northwind Valley world: create the large-scale terrain and valley sightlines, the branching northern defender trench network, the southern attacker staging and forward position, distinct western/eastern flanks, two enterable defensive compounds, the village/farm cluster, and the designed mounted heavy-MG positions. Integrate the world into the bootstrap so the browser preview and Android build use the same new scene/world implementation. Do not close this milestone based on the SVG or successful compilation alone; inspect the deployed browser build and confirm the real geometry in screenshots/video.
+
