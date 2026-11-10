@@ -14,6 +14,13 @@ namespace TacticalStrike
         private Animation legacyAnimation;
         private AudioSource audioSource;
         private AudioClip[] fireClips;
+        private Transform sightAnchor;
+        private Transform muzzleAnchor;
+        private float swayClock;
+        private float staminaFactor = 1f;
+        private bool crouched;
+        private bool prone;
+        private int shotIndex;
         private Texture2D armsAlbedo;
         private Texture2D rifleAlbedo;
         private Texture2D armsNormal;
@@ -119,6 +126,29 @@ namespace TacticalStrike
                 BuildFallbackRifle(model.transform);
             }
             viewModel = model.transform;
+            sightAnchor = FindWeaponAnchor(viewModel, true);
+            muzzleAnchor = FindWeaponAnchor(viewModel, false);
+            if (sightAnchor == null)
+                Debug.LogWarning("AK-74M rig has no named rear-sight/optic anchor; ADS is using the calibrated fallback offset.");
+            if (muzzleAnchor == null)
+                Debug.LogWarning("AK-74M rig has no named muzzle anchor; projectile origin is using the camera muzzle reference.");
+        }
+
+        private static Transform FindWeaponAnchor(Transform root, bool sight)
+        {
+            Transform[] nodes = root.GetComponentsInChildren<Transform>(true);
+            string[] preferred = sight
+                ? new[] { "rear_sight", "rear sight", "ironsight", "iron_sight", "optic", "sight" }
+                : new[] { "muzzle", "barrel_end", "barrel end", "muzzle_tip", "barrel_tip" };
+            for (int p = 0; p < preferred.Length; p++)
+            {
+                for (int i = 0; i < nodes.Length; i++)
+                {
+                    string name = nodes[i].name.ToLowerInvariant().Replace('-', '_');
+                    if (name.Contains(preferred[p])) return nodes[i];
+                }
+            }
+            return null;
         }
 
         private void ApplyViewModelMaterials(GameObject model)
@@ -210,6 +240,16 @@ namespace TacticalStrike
                 PlayMotion(running ? "run" : (moving ? "walk" : "idle"));
         }
 
+        public void SetHandlingState(float stamina01, bool isMoving, bool isRunning,
+            bool isCrouched, bool isProne)
+        {
+            staminaFactor = Mathf.Clamp01(stamina01);
+            moving = isMoving;
+            running = isRunning;
+            crouched = isCrouched;
+            prone = isProne;
+        }
+
         public void Reload()
         {
             if (reloadActive || magazine >= 30 || reserve <= 0) return;
@@ -231,14 +271,37 @@ namespace TacticalStrike
         {
             float dt = Mathf.Min(Time.deltaTime, 0.05f);
             fireCooldown = Mathf.Max(0f, fireCooldown - dt);
-            recoilOffset = Mathf.Lerp(recoilOffset, 0f, dt * 11f);
+            recoilOffset = Mathf.MoveTowards(recoilOffset, 0f, dt * (aiming ? 5.4f : 7.0f));
             if (viewModel != null)
             {
-                Vector3 aimOffset = aiming ? new Vector3(-0.12f, 0.07f, 0.10f) : Vector3.zero;
-                Vector3 target = viewModelRestPosition + viewModelRootOffset + aimOffset;
-                viewModel.localPosition = Vector3.Lerp(viewModel.localPosition, target, dt * 12f);
-                Quaternion recoilRotation = Quaternion.Euler(-recoilOffset * 2.1f, 180f, 0f);
-                viewModel.localRotation = Quaternion.Slerp(viewModel.localRotation, recoilRotation, dt * 15f);
+                swayClock += dt * (running ? 10.5f : (moving ? 6.4f : 1.45f));
+                float fatigue = 1.35f - staminaFactor * 0.48f;
+                float stanceScale = prone ? 0.32f : (crouched ? 0.62f : 1f);
+                float movementScale = running ? 1.85f : (moving ? 1.05f : 0.48f);
+                float swayScale = fatigue * stanceScale * movementScale * (aiming ? 0.34f : 1f);
+                float swayX = Mathf.Sin(swayClock * 0.91f) * 0.020f * swayScale;
+                float swayY = Mathf.Sin(swayClock * 1.83f + 0.8f) * 0.014f * swayScale;
+                float roll = Mathf.Sin(swayClock * 0.73f) * 1.05f * swayScale;
+                Quaternion targetRotation = Quaternion.Euler(
+                    -recoilOffset * 2.25f + swayY * 42f,
+                    180f + swayX * 38f,
+                    roll);
+                viewModel.localRotation = Quaternion.Slerp(viewModel.localRotation, targetRotation, dt * 13f);
+
+                Vector3 swayOffset = new Vector3(swayX, swayY, 0f);
+                Vector3 targetPosition = viewModelRestPosition + viewModelRootOffset + swayOffset;
+                if (aiming && sightAnchor != null)
+                {
+                    // Centre the actual rear iron sight/optic anchor in the camera sight picture.
+                    Vector3 anchorLocal = viewModel.InverseTransformPoint(sightAnchor.position);
+                    Vector3 desiredSightPoint = new Vector3(0f, -0.022f, 0.46f);
+                    targetPosition = desiredSightPoint - viewModel.localRotation * anchorLocal;
+                }
+                else if (aiming)
+                {
+                    targetPosition += new Vector3(-0.105f, 0.075f, 0.15f);
+                }
+                viewModel.localPosition = Vector3.Lerp(viewModel.localPosition, targetPosition, dt * (aiming ? 16f : 10f));
             }
             if (motionLockTimer > 0f)
                 motionLockTimer = Mathf.Max(0f, motionLockTimer - dt);
@@ -253,6 +316,7 @@ namespace TacticalStrike
                     reserve -= transfer;
                     reloadActive = false;
                     motionLockTimer = 0f;
+                    shotIndex = 0;
                     currentMotion = "";
                     PlayMotion(running ? "run" : (moving ? "walk" : "idle"));
                     UpdateHud();
@@ -273,20 +337,34 @@ namespace TacticalStrike
 
             magazine--;
             fireCooldown = 0.10f;
-            Vector3 muzzle = playerCamera.transform.TransformPoint(new Vector3(0.19f, -0.20f, 0.90f));
-            Vector3 direction = playerCamera.transform.forward;
-            BallisticProjectile projectile = new GameObject("5.45mm projectile").AddComponent<BallisticProjectile>();
+            Vector3 muzzle = muzzleAnchor != null
+                ? muzzleAnchor.position
+                : playerCamera.transform.TransformPoint(new Vector3(0.19f, -0.20f, 0.90f));
+            float spread = aiming ? 0.16f : 0.52f;
+            if (moving) spread += running ? 1.15f : 0.35f;
+            if (staminaFactor < 0.55f) spread += (0.55f - staminaFactor) * 1.4f;
+            if (crouched) spread *= 0.78f;
+            if (prone) spread *= 0.52f;
+            Vector3 direction = Quaternion.Euler(
+                Random.Range(-spread, spread),
+                Random.Range(-spread, spread), 0f) * playerCamera.transform.forward;
+            BallisticProjectile projectile = new GameObject("5.45x39mm AK-74M projectile").AddComponent<BallisticProjectile>();
             projectile.Initialize(muzzle, direction * MuzzleVelocity, player.transform, ammoMode == 1,
                 ammoMode == 2 ? 42f : 38f, ammoMode == 2 ? 0.48f : 0.34f,
                 DragCoefficient, MaxRange);
             if (fireClips != null && fireClips.Length > 0)
             {
                 AudioClip shot = fireClips[Random.Range(0, fireClips.Length)];
-                audioSource.PlayOneShot(shot, aiming ? 0.68f : 0.82f);
+                audioSource.PlayOneShot(shot, aiming ? 0.67f : 0.80f);
             }
-            recoilOffset = 1f;
+            shotIndex++;
+            recoilOffset = Mathf.Min(3.2f, recoilOffset + 1.05f);
+            float recoilMultiplier = 1f + (moving ? 0.16f : 0f) + (1f - staminaFactor) * 0.18f;
+            float verticalKick = (0.34f + Mathf.Min(shotIndex, 4) * 0.045f) * recoilMultiplier;
+            float horizontalKick = ((shotIndex % 2 == 0) ? 0.075f : -0.055f) * recoilMultiplier;
+            if (player != null) player.ApplyWeaponRecoil(verticalKick, horizontalKick);
             SpawnMuzzleFlash(muzzle, direction);
-            motionLockTimer = 0.30f;
+            motionLockTimer = 0.17f;
             currentMotion = "";
             PlayMotion("shot");
             MobileHud.Active?.SetWeaponInfo(magazine, reserve, AmmoMode);

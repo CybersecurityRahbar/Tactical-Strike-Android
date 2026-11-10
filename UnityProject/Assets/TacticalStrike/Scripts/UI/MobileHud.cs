@@ -11,6 +11,8 @@ namespace TacticalStrike
         private Text weaponText;
         private Text messageText;
         private Text statusText;
+        private Text staminaText;
+        private Image staminaFill;
         private GameObject settingsPanel;
         private GameObject pausePanel;
         private float messageTimer;
@@ -84,18 +86,33 @@ namespace TacticalStrike
 
         private void BuildStatusPanel(RectTransform root)
         {
-            GameObject panel = CreateImage("Mission status", root, new Color(0.025f, 0.035f, 0.032f, 0.82f),
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(24f, -22f), new Vector2(535f, -126f));
-            statusText = CreateText("GREENRIDGE SECTOR 01    /    FIELD OPERATIONS", panel.transform,
+            GameObject panel = CreateImage("Mission status", root, new Color(0.025f, 0.035f, 0.032f, 0.86f),
+                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(24f, -22f), new Vector2(550f, -148f));
+            statusText = CreateText("NORTHWIND VALLEY / SECTOR 01    -    FIELD OPERATIONS", panel.transform,
                 22, new Color(0.92f, 0.88f, 0.77f), TextAnchor.MiddleLeft,
-                new Vector2(0f, 0.54f), new Vector2(1f, 1f), new Vector2(18f, 0f), new Vector2(-16f, -4f));
+                new Vector2(0f, 0.66f), new Vector2(1f, 1f), new Vector2(18f, 0f), new Vector2(-16f, -4f));
             weaponText = CreateText("AK-74M   |   5.45×39 mm   |   30 / 30   |   RES 120   |   FMJ",
                 panel.transform, 20, new Color(0.94f, 0.70f, 0.36f), TextAnchor.MiddleLeft,
-                new Vector2(0f, 0f), new Vector2(1f, 0.54f), new Vector2(18f, 4f), new Vector2(-16f, 0f));
+                new Vector2(0f, 0.32f), new Vector2(1f, 0.66f), new Vector2(18f, 0f), new Vector2(-16f, 0f));
             messageText = CreateText("", panel.transform, 18, new Color(1f, 0.79f, 0.46f),
-                TextAnchor.MiddleRight, new Vector2(0.52f, 0f), new Vector2(1f, 0.48f),
-                new Vector2(0f, 2f), new Vector2(-18f, 0f));
+                TextAnchor.MiddleRight, new Vector2(0.62f, 0.10f), new Vector2(1f, 0.32f),
+                new Vector2(0f, 0f), new Vector2(-18f, 0f));
             messageText.gameObject.SetActive(false);
+
+            GameObject staminaTrack = CreateImage("Stamina track", panel.transform,
+                new Color(0.08f, 0.095f, 0.075f, 0.95f),
+                new Vector2(0f, 0.08f), new Vector2(0.62f, 0.25f),
+                new Vector2(18f, 2f), new Vector2(-8f, -2f));
+            staminaTrack.GetComponent<Image>().raycastTarget = false;
+            GameObject fill = CreateImage("Stamina level", staminaTrack.transform,
+                new Color(0.55f, 0.68f, 0.39f, 1f),
+                Vector2.zero, new Vector2(1f, 1f), Vector2.zero, Vector2.zero);
+            fill.GetComponent<Image>().raycastTarget = false;
+            staminaFill = fill.GetComponent<Image>();
+            staminaText = CreateText("STAMINA 100%", panel.transform, 13,
+                new Color(0.82f, 0.84f, 0.72f), TextAnchor.MiddleRight,
+                new Vector2(0.63f, 0.06f), new Vector2(1f, 0.27f),
+                new Vector2(0f, 0f), new Vector2(-18f, 0f));
         }
 
         private void BuildCrosshair(RectTransform root)
@@ -107,7 +124,7 @@ namespace TacticalStrike
 
         private void BuildDesktopHelp(RectTransform root)
         {
-            CreateText("WASD MOVE   |   MOUSE LOOK   |   CLICK TO CAPTURE CURSOR   |   LMB FIRE   |   RMB AIM   |   SHIFT RUN   |   C CROUCH   |   SPACE JUMP   |   R RELOAD   |   T AMMO   |   ESC RELEASE",
+            CreateText("WASD MOVE   |   MOUSE LOOK   |   CLICK CAPTURE   |   LMB FIRE   |   RMB AIM   |   SHIFT RUN / AIM FOCUS   |   C CROUCH   |   Z PRONE   |   SPACE JUMP   |   R RELOAD   |   T AMMO   |   ESC RELEASE",
                 root, 15, new Color(0.94f, 0.91f, 0.82f, 0.88f), TextAnchor.MiddleCenter,
                 new Vector2(0.08f, 0f), new Vector2(0.92f, 0f),
                 new Vector2(0f, 12f), new Vector2(0f, 48f));
@@ -139,6 +156,8 @@ namespace TacticalStrike
                 new Color(0.20f, 0.25f, 0.21f, 0.86f), player.SetCrouch, 15);
             AddButton(root, "JUMP", new Vector2(1f, 0f), new Vector2(-274f, 72f), new Vector2(88f, 58f),
                 player.RequestJump, new Color(0.20f, 0.25f, 0.21f, 0.86f));
+            AddButton(root, "PRONE", new Vector2(1f, 0f), new Vector2(-376f, 145f), new Vector2(90f, 58f),
+                player.ToggleProne, new Color(0.20f, 0.25f, 0.21f, 0.86f), 15);
             AddButton(root, "RELOAD", new Vector2(1f, 0f), new Vector2(-478f, 72f), new Vector2(90f, 58f),
                 player.Weapon.Reload, new Color(0.20f, 0.25f, 0.21f, 0.86f), 14);
             AddButton(root, "AMMO", new Vector2(1f, 0f), new Vector2(-578f, 72f), new Vector2(82f, 58f),
@@ -298,6 +317,21 @@ namespace TacticalStrike
             if (EventSystem.current != null) return;
             GameObject events = new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
             DontDestroyOnLoad(events);
+        }
+
+        public void SetStamina(float value)
+        {
+            float normalized = Mathf.Clamp01(value / 100f);
+            if (staminaFill != null)
+            {
+                RectTransform fillRect = staminaFill.rectTransform;
+                fillRect.anchorMin = Vector2.zero;
+                fillRect.anchorMax = new Vector2(normalized, 1f);
+                staminaFill.color = Color.Lerp(new Color(0.70f, 0.28f, 0.18f),
+                    new Color(0.55f, 0.72f, 0.42f), normalized);
+            }
+            if (staminaText != null)
+                staminaText.text = "STAMINA  " + Mathf.RoundToInt(value).ToString("000") + "%";
         }
 
         public void SetWeaponInfo(int magazine, int reserve, string ammoMode)

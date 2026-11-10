@@ -84,6 +84,11 @@ namespace TacticalStrike
         public void SetSprint(bool held) { sprintHeld = held; }
         public void SetCrouch(bool held) { crouchHeld = held; }
         public void RequestJump() { jumpRequested = true; }
+        public void ToggleProne()
+        {
+            proneHeld = !proneHeld;
+            if (proneHeld) crouchHeld = false;
+        }
 
         public void SetAim(bool enabled)
         {

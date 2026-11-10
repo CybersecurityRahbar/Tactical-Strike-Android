@@ -17,6 +17,7 @@ namespace TacticalStrike
         private int ricochets;
         private LineRenderer line;
         private Material tracerMaterial;
+        private Transform tracerTip;
 
         public void Initialize(Vector3 start, Vector3 initialVelocity, Transform owner,
             bool showTracer, float projectileDamage, float projectilePenetration,
@@ -65,8 +66,8 @@ namespace TacticalStrike
             line.sharedMaterial = tracerMaterial;
             line.colorGradient = gradient;
             line.positionCount = 2;
-            line.startWidth = 0.012f;
-            line.endWidth = 0.0035f;
+            line.startWidth = 0.038f;
+            line.endWidth = 0.010f;
             line.useWorldSpace = true;
             line.textureMode = LineTextureMode.Stretch;
             line.alignment = LineAlignment.View;
@@ -74,8 +75,33 @@ namespace TacticalStrike
             line.numCapVertices = 4;
             line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             line.receiveShadows = false;
-            line.SetPosition(0, transform.position - velocity.normalized * 4.8f);
+            line.SetPosition(0, transform.position - velocity.normalized * 13.0f);
             line.SetPosition(1, transform.position);
+
+            // A visible emissive leading point makes the tracer read as a moving projectile,
+            // rather than a hairline that disappears between high-speed simulation frames.
+            GameObject tip = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            tip.name = "Tracer - incandescent projectile head";
+            tip.transform.SetParent(transform, false);
+            tip.transform.localScale = Vector3.one * 0.065f;
+            Collider tipCollider = tip.GetComponent<Collider>();
+            if (tipCollider != null) Destroy(tipCollider);
+            Shader tipShader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (tipShader == null) tipShader = Shader.Find("Unlit/Color");
+            if (tipShader != null)
+            {
+                Material tipMaterial = new Material(tipShader);
+                Color tipColor = new Color(1f, 0.82f, 0.24f, 1f);
+                if (tipMaterial.HasProperty("_BaseColor")) tipMaterial.SetColor("_BaseColor", tipColor);
+                if (tipMaterial.HasProperty("_Color")) tipMaterial.SetColor("_Color", tipColor);
+                if (tipMaterial.HasProperty("_EmissionColor"))
+                {
+                    tipMaterial.EnableKeyword("_EMISSION");
+                    tipMaterial.SetColor("_EmissionColor", new Color(4.0f, 2.0f, 0.35f, 1f));
+                }
+                tip.GetComponent<Renderer>().sharedMaterial = tipMaterial;
+            }
+            tracerTip = tip.transform;
         }
 
         private void Update()
@@ -170,7 +196,7 @@ namespace TacticalStrike
                 // not appear as isolated tiny dashes with empty gaps between frames.
                 float visibleTrailLength = Mathf.Clamp(velocity.magnitude * frameDelta * 1.45f,
                     8f, 55f);
-                line.SetPosition(0, transform.position - direction * visibleTrailLength);
+                line.SetPosition(0, transform.position - direction * Mathf.Max(visibleTrailLength, 16f));
                 line.SetPosition(1, transform.position);
             }
         }
