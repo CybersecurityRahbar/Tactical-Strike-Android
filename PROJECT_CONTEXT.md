@@ -925,3 +925,14 @@ Official playtest announcement: https://steamcommunity.com/app/393380/
 - The browser URL `https://cybersecurityrahbar.github.io/Tactical-Strike-Android/` remains an expected URL only, not a confirmed live deployment. Do not tell the user it is ready until GitHub Pages deployment succeeds and the exact URL is verified.
 - One repository-owner action may be needed: Settings -> Pages -> Build and deployment -> Source = GitHub Actions. The Pages workflow will expose an explicit failure if the repository is not enabled/configured.
 - Android's prior verified APK (run 42702747580) does not contain these WebGL input/HUD changes; this current Android CI run is required to establish no regression. A successful compile/build does not replace phone visual testing.
+
+
+### User enabled GitHub Pages with GitHub Actions — 2026-11-10
+
+- User completed repository Settings -> Pages -> Build and deployment -> Source -> GitHub Actions.
+- GitHub displayed the confirmation banner: "GitHub Pages source saved." This confirms the Pages source selection has been saved successfully.
+- The user sees GitHub's generic suggested workflow cards (GitHub Pages Jekyll and Static HTML). Do NOT ask them to select either card: the repository already contains the custom Unity workflow `.github/workflows/unity-web-preview.yml`, which builds Unity WebGL and deploys the generated output. These suggested cards are generic starter workflows and are not part of this project's pipeline.
+- Current WebGL run inspected after the user's confirmation: run `42830985681`, still in progress at step "Install asset conversion tools"; Unity WebGL compilation, file validation, Pages artifact upload and deploy have not yet been reached. Run URL: https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42830985681 .
+- Android run `42830985872` has completed all reported build and APK verification steps successfully; its final run/job state was still finishing the final GitHub post-job step at last inspection. Run URL: https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42830985872 .
+- Therefore, no live WebGL URL is confirmed yet. The expected URL remains `https://cybersecurityrahbar.github.io/Tactical-Strike-Android/`, and must only be called ready after the WebGL run completes its Pages deployment and the exact URL is opened/verified.
+- Next user instruction: open repository Actions tab and select the latest **Unity Browser Preview** run to inspect its status; no more changes in Pages settings are needed. If the WebGL workflow later fails specifically because Pages is not configured/available, inspect that failure and re-run after confirming the already-saved setting. Do not ask the user to repeat the Pages-source setup.
