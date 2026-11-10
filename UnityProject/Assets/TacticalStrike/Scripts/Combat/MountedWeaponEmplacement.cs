@@ -35,6 +35,7 @@ namespace TacticalStrike
         private int shotCounter;
         private int beltAmmo = 250;
         private int beltReserve = 750;
+        private BallisticProfile ballisticProfile = BallisticProfiles.M2_12_7x99_M33;
         private bool fireHeld;
         private bool emptyNoticeShown;
 
@@ -43,12 +44,13 @@ namespace TacticalStrike
         private const float ElevationLimit = 24f;
         private const float DepressionLimit = -18f;
         private const float CyclicRate = 9.2f;
-        private const float MuzzleVelocity = 890f;
-        private const float MaximumRange = 1250f;
 
         public void Initialize(string weaponName)
         {
             displayName = string.IsNullOrWhiteSpace(weaponName) ? "Heavy machine gun" : weaponName;
+            ballisticProfile = displayName.IndexOf("DShK", System.StringComparison.OrdinalIgnoreCase) >= 0
+                ? BallisticProfiles.DShK_12_7x108
+                : BallisticProfiles.M2_12_7x99_M33;
             if (AimPivot != null) return;
 
             Shader shader = Shader.Find("Universal Render Pipeline/Lit");
@@ -289,10 +291,10 @@ namespace TacticalStrike
                 Random.Range(-dispersion, dispersion),
                 Random.Range(-dispersion, dispersion), 0f) * direction;
 
-            BallisticProjectile projectile = new GameObject(displayName + " - 12.7mm projectile")
-                .AddComponent<BallisticProjectile>();
-            projectile.Initialize(muzzle, direction * MuzzleVelocity, transform,
-                shotCounter % 3 == 0, 128f, 0.94f, 0.0000030f, MaximumRange);
+            BallisticProjectile projectile = new GameObject(displayName + " - " +
+                ballisticProfile.AmmunitionName + " projectile").AddComponent<BallisticProjectile>();
+            projectile.Initialize(muzzle, direction * ballisticProfile.MuzzleVelocity,
+                transform, shotCounter % 3 == 0, ballisticProfile);
 
             GameObject flash = new GameObject(displayName + " - muzzle flash");
             flash.transform.position = muzzle;

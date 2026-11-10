@@ -60,21 +60,12 @@ done
 blender --background --factory-startup --python tools/convert_nature_assets.py -- \
   "$NATURE_DIR" "$UNITY_RES/Nature"
 
-# Real firearm field recordings are intentionally reduced to a single short report
-# plus decay. Automatic fire is generated only by repeated gameplay shot events.
-cp assets/runtime/audio/ak_*.ogg "$UNITY_RES/Audio/Firearms/"
-for file in "$UNITY_RES"/Audio/Firearms/ak_*.ogg; do
-  temp="${file%.ogg}_oneshot.ogg"
-  ffmpeg -hide_banner -loglevel error -y -i "$file" -t 0.42 \
-    -af "asetpts=PTS-STARTPTS,afade=t=out:st=0.30:d=0.12" \
-    -ac 1 -ar 44100 -c:a libvorbis -q:a 4 "$temp"
-  mv "$temp" "$file"
-  duration="$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$file")"
-  awk -v d="$duration" 'BEGIN { if (d > 0.46 || d < 0.10) exit 1 }' || {
-    echo "Invalid single-shot audio duration: $file ($duration seconds)" >&2
-    exit 1
-  }
-done
+# Preserve the stereo near/mid report recordings and their complete natural decay.
+cp assets/runtime/audio/ak_report_near.ogg "$UNITY_RES/Audio/Firearms/"
+cp assets/runtime/audio/ak_report_mid.ogg "$UNITY_RES/Audio/Firearms/"
+cp assets/runtime/audio/m4_report_near.ogg "$UNITY_RES/Audio/Firearms/"
+cp assets/runtime/audio/m4_report_mid.ogg "$UNITY_RES/Audio/Firearms/"
+cp assets/runtime/audio/FIREARM_AUDIO_SOURCES.txt "$UNITY_RES/Audio/Firearms/"
 
 cp assets/runtime/audio/sand_*.ogg "$UNITY_RES/Audio/Footsteps/"
 
@@ -124,8 +115,11 @@ test -s "$UNITY_RES/Nature/tree-oak.fbx"
 test -s "$UNITY_RES/Nature/tree-default.fbx"
 test -s "$UNITY_RES/Nature/plant-bushdetailed.fbx"
 test -s "$UNITY_RES/Nature/grass-large.fbx"
-test -s "$UNITY_RES/Audio/Firearms/ak_C_27P.ogg"
-test -s "$UNITY_RES/Audio/Firearms/ak_C_36P.ogg"
+test -s "$UNITY_RES/Audio/Firearms/ak_report_near.ogg"
+test -s "$UNITY_RES/Audio/Firearms/ak_report_mid.ogg"
+test -s "$UNITY_RES/Audio/Firearms/m4_report_near.ogg"
+test -s "$UNITY_RES/Audio/Firearms/m4_report_mid.ogg"
+test -s "$UNITY_RES/Audio/Firearms/FIREARM_AUDIO_SOURCES.txt"
 test -s "$UNITY_RES/Audio/Footsteps/sand_l.ogg"
 test -s "$UNITY_RES/Audio/Footsteps/sand_r.ogg"
 test -s "$UNITY_RES/AK74M_ATTRIBUTION.txt"

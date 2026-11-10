@@ -6,91 +6,143 @@ namespace TacticalStrike
     {
         private const float Gravity = 9.81f;
         private const float SimulationStep = 0.008f;
+        private const int TracerSides = 10;
+        private static readonly float[] TracerRingT = { 0f, 0.13f, 0.48f, 1f };
+        private static readonly float[] TracerRingRadius = { 0.72f, 0.58f, 0.28f, 0.025f };
         private Vector3 velocity;
         private Transform shooter;
-        private float damage;
-        private float penetration;
-        private float drag;
-        private float maxRange;
-        private float travelled;
-        private float age;
+        private float damage, penetration, drag, maxRange, travelled, age, tracerDiameter;
+        private string ammunitionName = "unknown ammunition";
         private int ricochets;
-        private LineRenderer line;
-        private Material tracerMaterial;
-        private Transform tracerTip;
+        private Mesh tracerMesh;
+        private MeshFilter tracerMeshFilter;
+        private Material tracerMaterial, tracerHeadMaterial;
+        private Vector3[] tracerVertices, tracerNormals;
+        private Vector2[] tracerUv;
+        private int[] tracerTriangles;
         private static readonly Collider[] SuppressionOverlapBuffer = new Collider[64];
 
         public void Initialize(Vector3 start, Vector3 initialVelocity, Transform owner,
-            bool showTracer, float projectileDamage, float projectilePenetration,
-            float dragCoefficient, float range)
+            bool showTracer, BallisticProfile profile)
         {
+            if (profile == null) throw new System.ArgumentNullException(nameof(profile));
             transform.position = start;
             velocity = initialVelocity;
+            if (velocity.sqrMagnitude > 0.001f)
+                transform.rotation = Quaternion.LookRotation(velocity.normalized, Vector3.up);
             shooter = owner;
-            damage = projectileDamage;
-            penetration = projectilePenetration;
-            drag = dragCoefficient;
-            maxRange = range;
-            if (showTracer) CreateTracer();
+            damage = profile.Damage;
+            penetration = profile.Penetration;
+            drag = profile.DragFactor;
+            maxRange = profile.MaximumRange;
+            ammunitionName = profile.AmmunitionName;
+            if (showTracer) CreateTracer(profile.TracerDiameterMeters);
         }
 
-        private void CreateTracer()
+        private static Material CreateEmissiveMaterial(Shader shader, string label,
+            Color baseColor, Color emissionColor)
         {
-            line = gameObject.AddComponent<LineRenderer>();
-            Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
-            if (shader == null) shader = Shader.Find("Unlit/Color");
-            if (shader == null) return;
-
-            tracerMaterial = new Material(shader);
-            Color hot = new Color(1f, 0.92f, 0.38f, 1f);
-            if (tracerMaterial.HasProperty("_BaseColor"))
-                tracerMaterial.SetColor("_BaseColor", hot);
-            if (tracerMaterial.HasProperty("_Color"))
-                tracerMaterial.SetColor("_Color", hot);
-            if (tracerMaterial.HasProperty("_EmissionColor"))
+            Material material = new Material(shader) { name = label };
+            if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", baseColor);
+            if (material.HasProperty("_Color")) material.SetColor("_Color", baseColor);
+            if (material.HasProperty("_EmissionColor"))
             {
-                tracerMaterial.EnableKeyword("_EMISSION");
-                tracerMaterial.SetColor("_EmissionColor", new Color(3.2f, 1.15f, 0.16f, 1f));
+                material.EnableKeyword("_EMISSION");
+                material.SetColor("_EmissionColor", emissionColor);
             }
+            if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", 0.22f);
+            if (material.HasProperty("_Metallic")) material.SetFloat("_Metallic", 0f);
+            return material;
+        }
 
-            Gradient gradient = new Gradient();
-            gradient.SetKeys(
-                new[] {
-                    new GradientColorKey(hot, 0f),
-                    new GradientColorKey(new Color(1f, 0.30f, 0.035f, 1f), 1f)
-                },
-                new[] {
-                    new GradientAlphaKey(1f, 0f),
-                    new GradientAlphaKey(0.88f, 0.55f),
-                    new GradientAlphaKey(0f, 1f)
-                });
-            line.sharedMaterial = tracerMaterial;
-            line.colorGradient = gradient;
-            line.positionCount = 2;
-            line.startWidth = 0.038f;
-            line.endWidth = 0.010f;
-            line.useWorldSpace = true;
-            line.textureMode = LineTextureMode.Stretch;
-            line.alignment = LineAlignment.View;
-            line.numCornerVertices = 2;
-            line.numCapVertices = 4;
-            line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            line.receiveShadows = false;
-            line.SetPosition(0, transform.position - velocity.normalized * 13.0f);
-            line.SetPosition(1, transform.position);
+        private void CreateTracer(float projectileDiameter)
+        {
+            tracerDiameter = Mathf.Clamp(projectileDiameter, 0.004f, 0.032f);
+            Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+            if (shader == null) shader = Shader.Find("Standard");
+            if (shader == null) { Debug.LogError("Tracer visual could not find a supported lit shader."); return; }
 
-            // A visible emissive leading point makes the tracer read as a moving projectile,
-            // rather than a hairline that disappears between high-speed simulation frames.
-            GameObject tip = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            tip.name = "Tracer - incandescent projectile head";
-            tip.transform.SetParent(transform, false);
-            tip.transform.localScale = Vector3.one * 0.065f;
-            Collider tipCollider = tip.GetComponent<Collider>();
-            if (tipCollider != null) Destroy(tipCollider);
-            // Share the already-owned emissive material with the line and projectile tip.
-            // This keeps the tracer fully visible without leaking one material per shot.
-            tip.GetComponent<Renderer>().sharedMaterial = tracerMaterial;
-            tracerTip = tip.transform;
+            tracerMaterial = CreateEmissiveMaterial(shader, "Tracer - incandescent amber body",
+                new Color(1f, 0.43f, 0.055f, 1f), new Color(3.5f, 1.05f, 0.12f, 1f));
+            tracerHeadMaterial = CreateEmissiveMaterial(shader, "Tracer - hot yellow-white core",
+                new Color(1f, 0.91f, 0.57f, 1f), new Color(5f, 2.6f, 0.62f, 1f));
+
+            GameObject tail = new GameObject("Tracer - round tapered incandescent tail");
+            tail.transform.SetParent(transform, false);
+            tracerMeshFilter = tail.AddComponent<MeshFilter>();
+            MeshRenderer tailRenderer = tail.AddComponent<MeshRenderer>();
+            tracerMesh = new Mesh { name = "Tracer - 3D circular tapered mesh" };
+            tracerMesh.MarkDynamic();
+            tracerMeshFilter.sharedMesh = tracerMesh;
+            tailRenderer.sharedMaterial = tracerMaterial;
+            tailRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            tailRenderer.receiveShadows = false;
+
+            int ringCount = TracerRingT.Length;
+            int vertexCount = ringCount * TracerSides;
+            tracerVertices = new Vector3[vertexCount];
+            tracerNormals = new Vector3[vertexCount];
+            tracerUv = new Vector2[vertexCount];
+            tracerTriangles = new int[(ringCount - 1) * TracerSides * 6];
+            int triangle = 0;
+            for (int ring = 0; ring < ringCount; ring++)
+            for (int side = 0; side < TracerSides; side++)
+            {
+                int index = ring * TracerSides + side;
+                float angle = (Mathf.PI * 2f * side) / TracerSides;
+                float x = Mathf.Cos(angle), y = Mathf.Sin(angle);
+                tracerNormals[index] = new Vector3(x, y, 0f);
+                tracerUv[index] = new Vector2(side / (float)TracerSides, TracerRingT[ring]);
+            }
+            for (int ring = 0; ring < ringCount - 1; ring++)
+            for (int side = 0; side < TracerSides; side++)
+            {
+                int next = (side + 1) % TracerSides;
+                int a = ring * TracerSides + side, b = ring * TracerSides + next;
+                int c = (ring + 1) * TracerSides + side, d = (ring + 1) * TracerSides + next;
+                tracerTriangles[triangle++] = a; tracerTriangles[triangle++] = c; tracerTriangles[triangle++] = b;
+                tracerTriangles[triangle++] = b; tracerTriangles[triangle++] = c; tracerTriangles[triangle++] = d;
+            }
+            tracerMesh.vertices = tracerVertices;
+            tracerMesh.normals = tracerNormals;
+            tracerMesh.uv = tracerUv;
+            tracerMesh.triangles = tracerTriangles;
+            tracerMesh.RecalculateBounds();
+
+            GameObject head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            head.name = "Tracer - rounded incandescent projectile head";
+            head.transform.SetParent(transform, false);
+            head.transform.localPosition = Vector3.zero;
+            head.transform.localScale = Vector3.one * tracerDiameter * 1.85f;
+            Collider headCollider = head.GetComponent<Collider>();
+            if (headCollider != null) Destroy(headCollider);
+            MeshRenderer headRenderer = head.GetComponent<MeshRenderer>();
+            headRenderer.sharedMaterial = tracerHeadMaterial;
+            headRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            headRenderer.receiveShadows = false;
+            UpdateTracerGeometry(0.016f);
+        }
+
+        private void UpdateTracerGeometry(float frameDelta)
+        {
+            if (tracerMesh == null || velocity.sqrMagnitude < 0.001f) return;
+            transform.rotation = Quaternion.LookRotation(velocity.normalized, Vector3.up);
+            float tailLength = Mathf.Clamp(velocity.magnitude * frameDelta * 0.42f, 0.55f, 8.5f);
+            float rootRadius = tracerDiameter * 0.62f;
+            for (int ring = 0; ring < TracerRingT.Length; ring++)
+            {
+                float z = -tailLength * TracerRingT[ring];
+                float radius = rootRadius * TracerRingRadius[ring];
+                for (int side = 0; side < TracerSides; side++)
+                {
+                    int index = ring * TracerSides + side;
+                    float angle = (Mathf.PI * 2f * side) / TracerSides;
+                    tracerVertices[index] = new Vector3(Mathf.Cos(angle) * radius,
+                        Mathf.Sin(angle) * radius, z);
+                }
+            }
+            tracerMesh.vertices = tracerVertices;
+            tracerMesh.RecalculateBounds();
         }
 
         private void Update()
@@ -162,7 +214,7 @@ namespace TacticalStrike
                     }
 
                     if (cover != null)
-                        cover.ApplyBallisticDamage(damage, penetration, "5.45x39mm");
+                        cover.ApplyBallisticDamage(damage, penetration, ammunitionName);
 
                     transform.position = nearest.point;
                     Destroy(gameObject);
@@ -178,18 +230,7 @@ namespace TacticalStrike
                 }
             }
 
-            if (line != null)
-            {
-                Vector3 direction = velocity.sqrMagnitude > 0.01f
-                    ? velocity.normalized : transform.forward;
-                // A 900 m/s round advances about 15 m per rendered frame at 60 FPS.
-                // Size the tail to the distance travelled this frame so the tracer does
-                // not appear as isolated tiny dashes with empty gaps between frames.
-                float visibleTrailLength = Mathf.Clamp(velocity.magnitude * frameDelta * 1.45f,
-                    8f, 55f);
-                line.SetPosition(0, transform.position - direction * Mathf.Max(visibleTrailLength, 16f));
-                line.SetPosition(1, transform.position);
-            }
+            if (tracerMesh != null) UpdateTracerGeometry(frameDelta);
         }
 
         private void ApplyNearMissSuppression(Vector3 start, Vector3 end)
@@ -250,7 +291,13 @@ namespace TacticalStrike
 
         private void OnDestroy()
         {
+            if (tracerMesh != null)
+            {
+                if (tracerMeshFilter != null) tracerMeshFilter.sharedMesh = null;
+                Destroy(tracerMesh);
+            }
             if (tracerMaterial != null) Destroy(tracerMaterial);
+            if (tracerHeadMaterial != null) Destroy(tracerHeadMaterial);
         }
     }
 }

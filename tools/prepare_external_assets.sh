@@ -69,11 +69,41 @@ if missing:
 print("AK74M authored animation clips:", ", ".join(names))
 PY
 
-# Real firearm field recordings. Multiple takes reduce the machine-gun-like repeated sample.
-for take in C_27P C_28P C_29P C_31P C_34P C_36P; do
-  download "$AUDIO_BASE/sfx/firearm_sfx/Prepared%20SFX%20Library/AK-47/$take.wav" "$TMP/$take.wav"
-  ffmpeg -hide_banner -loglevel error -y -i "$TMP/$take.wav" -ac 1 -ar 44100 -c:a libvorbis -q:a 4 "$AUDIO_DIR/ak_$take.ogg"
-done
+# Correct single-shot field recordings: C_28P is AK-47 near/shooter perspective,
+# C_31P is its mid-distance perspective. Preserve stereo and the natural decay;
+# do not crop long-burst recordings into artificial one-shot sounds.
+download "$AUDIO_BASE/sfx/firearm_sfx/Prepared%20SFX%20Library/AK-47/C_28P.wav" "$TMP/ak_report_near.wav"
+download "$AUDIO_BASE/sfx/firearm_sfx/Prepared%20SFX%20Library/AK-47/C_31P.wav" "$TMP/ak_report_mid.wav"
+ffmpeg -hide_banner -loglevel error -y -i "$TMP/ak_report_near.wav" \
+  -ac 2 -ar 48000 -c:a libvorbis -q:a 6 "$AUDIO_DIR/ak_report_near.ogg"
+ffmpeg -hide_banner -loglevel error -y -i "$TMP/ak_report_mid.wav" \
+  -ac 2 -ar 48000 -c:a libvorbis -q:a 6 "$AUDIO_DIR/ak_report_mid.ogg"
+
+# Prepare the later M4 profile from single-shot AR-15 / 5.56x45 reference recordings.
+download "$AUDIO_BASE/sfx/firearm_sfx/Prepared%20SFX%20Library/AR-15/D_32P.wav" "$TMP/m4_report_near.wav"
+download "$AUDIO_BASE/sfx/firearm_sfx/Prepared%20SFX%20Library/AR-15/D_24P.wav" "$TMP/m4_report_mid.wav"
+ffmpeg -hide_banner -loglevel error -y -i "$TMP/m4_report_near.wav" \
+  -ac 2 -ar 48000 -c:a libvorbis -q:a 6 "$AUDIO_DIR/m4_report_near.ogg"
+ffmpeg -hide_banner -loglevel error -y -i "$TMP/m4_report_mid.wav" \
+  -ac 2 -ar 48000 -c:a libvorbis -q:a 6 "$AUDIO_DIR/m4_report_mid.ogg"
+
+cat > "$AUDIO_DIR/FIREARM_AUDIO_SOURCES.txt" <<'EOF'
+Firearm recording provenance
+Collection: The Free Firearm Sound Library
+Repository: https://github.com/petroulacl/fps-asset-kit
+Original page: https://opengameart.org/content/the-free-firearm-sound-library
+Recordists: Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney
+Licence: CC0 1.0
+
+ak_report_near.ogg: AK-47 7.62x39 single shot, near/shooter perspective (C_28P).
+ak_report_mid.ogg: AK-47 7.62x39 single shot, mid-distance perspective (C_31P).
+m4_report_near.ogg: AR-15 / 5.56x45 single shot, near/shooter perspective (D_32P).
+m4_report_mid.ogg: AR-15 / 5.56x45 single shot, mid-distance perspective (D_24P).
+
+The AK-47 7.62x39 recordings are a closest-available CC0 reference for the AK-74M;
+they are not represented as exact AK-74M / 5.45x39 recordings. 12.7mm DShK and
+M2 recordings still need their own licensed field recordings.
+EOF
 
 for pair in "sand_l:Fantozzi-SandL1" "sand_r:Fantozzi-SandR1" "sand_l2:Fantozzi-SandL2" "sand_r2:Fantozzi-SandR2"; do
   name="${pair%%:*}"

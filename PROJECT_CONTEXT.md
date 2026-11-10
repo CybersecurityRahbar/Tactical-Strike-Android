@@ -1221,3 +1221,30 @@ Official playtest announcement: https://steamcommunity.com/app/393380/
 - **No:** this preview is not a complete game with the full seven-weapon roster or the full movement, squad AI, audio, vehicles, networking and overall quality/scope of Squad. It must not be advertised as “like Squad in everything” or as finished.
 - The source and CI deployment have been verified, but no automated screenshot/visual browser acceptance was produced. The user must inspect the rendered map, weapon alignment, mounted gun use, sight picture, tracers, collision, interiors and performance in the browser; record screenshots/video findings and fix them before calling this milestone visually accepted.
 - For a clean check after deployment, open the preview and perform a hard refresh (Ctrl+F5) to avoid a stale cached WebGL payload.
+
+
+## User runtime failure review and first corrective pass — 2026-11-10
+
+The user tested the deployed Northwind preview and reported four blocking runtime defects: (1) the player continuously falls through the map, (2) the AK-74M is not visible/held in the first-person view, (3) the shot sound is unacceptable, and (4) tracer rounds are pink, flat/rectangular and unlike a glowing projectile. These are gameplay blockers, not cosmetic feedback.
+
+### Confirmed source-level causes and corrections
+
+- Grounding: the player spawned only 0.12m above sampled terrain and depended solely on CharacterController contact with a runtime TerrainCollider; there was no recovery path if contact was missed. The current pass explicitly assigns/enables the TerrainCollider, adds colliders to conforming ground patches, synchronizes transforms before spawning, raises spawn clearance, enables CharacterController overlap recovery and adds a Terrain.SampleHeight emergency ground correction.
+- Viewmodel: the imported model received an additional 180-degree yaw after the glTF-to-FBX conversion had already used Unity's forward-axis convention. This turned the rifle away from the first-person sight line. That extra yaw is removed; the viewmodel also has corrected fit bounds, enabled renderers/layer inheritance and an updated camera near clip.
+- Firearm sound: the asset pipeline downloaded AK-47 long-burst recordings C_27P/C_36P, cropped them to 0.42 seconds and converted stereo to mono before treating them as individual shots. This was incorrect. The new pipeline selects actual single-shot near/mid recordings C_28P/C_31P, preserves stereo and natural report decay, and prepares AR-15/M4 single-shot samples D_32P/D_24P for later. The AK-47 7.62x39 recordings are documented as the closest available CC0 reference, not exact AK-74M 5.45 recordings.
+- Tracer: the prior presentation was a 3.8cm flat LineRenderer plus a 6.5cm sphere. It is replaced by a rounded incandescent head and narrow circular 3D tapered mesh trail. The material uses yellow/amber emission, camera HDR and restrained global Bloom. Tracer diameter is read from each projectile profile, so 5.45mm and 12.7mm rounds have different visual scales.
+
+### Calibre-specific profiles added in source
+
+- AK-74M: 5.45×39 7N6 PS nominal 3.42g, 5.45mm, 890m/s; 7T3 tracer nominal 3.20g/883m/s; separate 7N22-style AP profile.
+- DShK: 12.7×108 nominal 48.3g/850m/s reference profile.
+- M2: 12.7×99 M33 nominal 42.87g/887m/s reference profile.
+- The quadratic drag factor is computed from relative frontal area and projectile mass against a 5.45mm baseline. It is explicitly a game-tuned approximation, not a published G1/G7 ballistic coefficient. Damage, penetration and ranges remain gameplay tuning values.
+
+### Verification boundary
+
+- These source changes and asset-preparation changes are committed together so WebGL and Android consume the same runtime content. Prepared-asset cache keys must invalidate because the preparation scripts changed.
+- Compilation/build success is not confirmed until the next Unity Android and WebGL runs complete. WebGL must also finish payload validation and Pages deployment.
+- No visual success is claimed until a new preview is tested: the player must remain on the ground, AK/arms must be visible and aligned, the shot must sound natural, and tracers must be yellow/orange and round rather than pink/rectangular.
+- The sound pipeline now fixes the incorrect source recordings/truncation/channel conversion, but only the AK first-person report is wired in this pass. Complete weapon-specific audio for all seven guns and authentic 12.7mm DShK/M2 recordings remain outstanding.
+- Full seven-weapon inventory, final weapon rig/animation alignment, tactical AI, objectives, vehicles, networking, advanced audio and physical Android performance acceptance remain outstanding.

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.Rendering.Universal;
 
 namespace TacticalStrike
 {
@@ -12,6 +13,8 @@ namespace TacticalStrike
         public bool IsMounted => mountedEmplacement != null;
 
         private CharacterController character;
+        private Terrain groundTerrain;
+        private bool hasLoggedTerrainRecovery;
         private MobileHud hud;
         private MountedWeaponEmplacement mountedEmplacement;
         private float mountScanTimer;
@@ -54,20 +57,25 @@ namespace TacticalStrike
             character.radius = 0.34f;
             character.center = new Vector3(0f, 0.92f, 0f);
             character.slopeLimit = 49f;
-            character.stepOffset = 0.30f;
-            character.skinWidth = 0.035f;
+            character.stepOffset = 0.32f;
+            character.skinWidth = 0.06f;
+            character.enableOverlapRecovery = true;
             character.minMoveDistance = 0f;
+            groundTerrain = Terrain.activeTerrain;
 
             GameObject cameraObject = new GameObject("PlayerCamera - infantry eye");
             cameraObject.transform.SetParent(transform, false);
             cameraObject.transform.localPosition = new Vector3(0f, StandingCameraHeight, 0f);
             PlayerCamera = cameraObject.AddComponent<Camera>();
             PlayerCamera.fieldOfView = 78f;
-            PlayerCamera.nearClipPlane = 0.055f;
+            PlayerCamera.nearClipPlane = 0.025f;
             PlayerCamera.farClipPlane = 1800f;
-            PlayerCamera.allowHDR = false;
+            PlayerCamera.allowHDR = true;
             PlayerCamera.allowMSAA = true;
             PlayerCamera.depth = 0f;
+            UniversalAdditionalCameraData cameraData =
+                cameraObject.AddComponent<UniversalAdditionalCameraData>();
+            cameraData.renderPostProcessing = true;
 
             cameraObject.AddComponent<AudioListener>();
             footstepSource = cameraObject.AddComponent<AudioSource>();
@@ -363,8 +371,10 @@ namespace TacticalStrike
             }
             jumpRequested = false;
             character.Move((planarVelocity + Vector3.up * verticalVelocity) * dt);
+            EnforceTerrainGroundSupport();
 
-            bool moving = hasMoveInput && grounded && planarVelocity.sqrMagnitude > 0.20f;
+            bool moving = hasMoveInput && (grounded || character.isGrounded) &&
+                          planarVelocity.sqrMagnitude > 0.20f;
             bool running = sprinting && moving;
             float targetEyeHeight = proneHeld ? 0.58f : (crouchHeld ? 1.06f : StandingCameraHeight);
             float bobScale = proneHeld ? 0.004f : (aimEnabled ? 0.006f : (running ? 0.034f : 0.019f));
@@ -388,6 +398,48 @@ namespace TacticalStrike
                 Weapon.SetSuppression(suppression);
             }
             hud?.SetStamina(stamina);
+        }
+
+        private void EnforceTerrainGroundSupport()
+        {
+            if (groundTerrain == null) groundTerrain = Terrain.activeTerrain;
+            if (groundTerrain == null || !groundTerrain.enabled ||
+                groundTerrain.terrainData == null || verticalVelocity > 0f)
+                return;
+
+            Vector3 terrainPosition = groundTerrain.transform.position;
+            Vector3 terrainSize = groundTerrain.terrainData.size;
+            Vector3 worldPosition = transform.position;
+            if (worldPosition.x < terrainPosition.x ||
+                worldPosition.z < terrainPosition.z ||
+                worldPosition.x > terrainPosition.x + terrainSize.x ||
+                worldPosition.z > terrainPosition.z + terrainSize.z)
+                return;
+
+            // Terrain.SampleHeight returns a height in world units. This guard is
+            // independent of the CharacterController contact cache: if normal contact
+            // is missed, the player is restored just above the sampled terrain.
+            float surfaceY = groundTerrain.SampleHeight(worldPosition);
+            float safeFootY = surfaceY + 0.085f;
+            if (worldPosition.y < safeFootY)
+            {
+                float penetrationDepth = safeFootY - worldPosition.y;
+                worldPosition.y = safeFootY;
+                transform.position = worldPosition;
+                verticalVelocity = -0.65f;
+                planarVelocity.y = 0f;
+
+                if (penetrationDepth > 0.25f && !hasLoggedTerrainRecovery)
+                {
+                    Debug.LogWarning("Player terrain recovery engaged. Recovered from " +
+                        penetrationDepth.ToString("F2") + "m below sampled Northwind terrain.");
+                    hasLoggedTerrainRecovery = true;
+                }
+            }
+            else if (worldPosition.y > surfaceY + 0.40f)
+            {
+                hasLoggedTerrainRecovery = false;
+            }
         }
 
         private void UpdateMountAvailability(float deltaTime)

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 namespace TacticalStrike
 {
@@ -8,6 +9,7 @@ namespace TacticalStrike
         public static TacticalStrikeBootstrap Instance { get; private set; }
         private Light sun;
         private Material skyMaterial;
+        private VolumeProfile tracerBloomProfile;
         private bool nightMode;
 
         private void Awake()
@@ -26,14 +28,16 @@ namespace TacticalStrike
             QualitySettings.maxQueuedFrames = 2;
             Input.multiTouchEnabled = true;
             ConfigureEnvironment();
+            ConfigureTracerBloom();
 
             Transform worldRoot = new GameObject("Battlefield").transform;
             worldRoot.SetParent(transform, false);
             NorthwindValleyGenerator.Build(worldRoot);
+            Physics.SyncTransforms();
 
             float spawnHeight = NorthwindValleyGenerator.HeightAt(0f, 304f);
             FpsPlayerController player = FpsPlayerController.Create(
-                new Vector3(0f, spawnHeight + 0.12f, 304f), transform);
+                new Vector3(0f, spawnHeight + 0.62f, 304f), transform);
             MobileHud hud = MobileHud.Create(player, transform);
             player.AttachHud(hud);
         }
@@ -72,6 +76,23 @@ namespace TacticalStrike
             sun.shadowBias = 0.045f;
             sun.shadowNormalBias = 0.35f;
             sunObject.name = "Sun - warm highland daylight";
+        }
+
+        private void ConfigureTracerBloom()
+        {
+            GameObject volumeObject = new GameObject("Global Post Processing - controlled tracer bloom");
+            volumeObject.transform.SetParent(transform, false);
+            Volume volume = volumeObject.AddComponent<Volume>();
+            volume.isGlobal = true;
+            volume.priority = 1f;
+            volume.weight = 1f;
+
+            tracerBloomProfile = ScriptableObject.CreateInstance<VolumeProfile>();
+            Bloom bloom = tracerBloomProfile.Add<Bloom>(true);
+            bloom.threshold.Override(1.05f);
+            bloom.intensity.Override(0.52f);
+            bloom.scatter.Override(0.58f);
+            volume.sharedProfile = tracerBloomProfile;
         }
 
         public void ToggleNightMode()
@@ -116,6 +137,8 @@ namespace TacticalStrike
                 Instance = null;
             if (skyMaterial != null)
                 Destroy(skyMaterial);
+            if (tracerBloomProfile != null)
+                Destroy(tracerBloomProfile);
         }
     }
 }

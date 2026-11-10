@@ -378,6 +378,11 @@ namespace TacticalStrike
             terrainObject.transform.SetParent(parent, false);
             terrainObject.transform.localPosition = new Vector3(-half, baseHeight, -half);
             Terrain terrain = terrainObject.GetComponent<Terrain>();
+            TerrainCollider terrainCollider = terrainObject.GetComponent<TerrainCollider>();
+            if (terrainCollider == null)
+                terrainCollider = terrainObject.AddComponent<TerrainCollider>();
+            terrainCollider.terrainData = data;
+            terrainCollider.enabled = true;
             terrain.drawInstanced = true;
             terrain.heightmapPixelError = 6f;
             terrain.basemapDistance = 520f;
@@ -453,6 +458,9 @@ namespace TacticalStrike
             GameObject patch = new GameObject(label);
             patch.transform.SetParent(parent, false);
             patch.AddComponent<MeshFilter>().sharedMesh = mesh;
+            MeshCollider groundCollider = patch.AddComponent<MeshCollider>();
+            groundCollider.sharedMesh = mesh;
+            groundCollider.convex = false;
             MeshRenderer renderer = patch.AddComponent<MeshRenderer>();
             renderer.sharedMaterial = soilMaterial;
             renderer.shadowCastingMode = ShadowCastingMode.Off;

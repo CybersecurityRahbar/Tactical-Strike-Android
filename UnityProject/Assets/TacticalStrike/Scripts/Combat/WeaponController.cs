@@ -197,6 +197,13 @@ namespace TacticalStrike
             }
         }
 
+        private static void SetLayerRecursively(Transform node, int layer)
+        {
+            node.gameObject.layer = layer;
+            for (int i = 0; i < node.childCount; i++)
+                SetLayerRecursively(node.GetChild(i), layer);
+        }
+
         private void BuildFallbackRifle(Transform root)
         {
             Material receiver = MakeWeaponMaterial(new Color(0.105f, 0.12f, 0.105f));
