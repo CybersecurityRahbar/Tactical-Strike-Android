@@ -140,8 +140,10 @@ namespace TacticalStrike
 
         private void BuildStatusPanel(RectTransform root)
         {
+            // For a top-left anchored rect, the lower edge must be farther below
+            // the anchor than the upper edge; the old values produced negative height.
             GameObject panel = CreateImage("Mission status", root, new Color(0.025f, 0.035f, 0.032f, 0.86f),
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(24f, -22f), new Vector2(550f, -148f));
+                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(24f, -148f), new Vector2(550f, -22f));
             statusText = CreateText("NORTHWIND VALLEY / SECTOR 01    -    FIELD OPERATIONS", panel.transform,
                 22, new Color(0.92f, 0.88f, 0.77f), TextAnchor.MiddleLeft,
                 new Vector2(0f, 0.66f), new Vector2(1f, 1f), new Vector2(18f, 0f), new Vector2(-16f, -4f));

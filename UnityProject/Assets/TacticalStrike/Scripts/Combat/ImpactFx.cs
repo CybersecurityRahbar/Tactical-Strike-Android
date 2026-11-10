@@ -145,7 +145,7 @@ namespace TacticalStrike
             // is not destructive TerrainData sculpting.
             float radius = heavy ? 0.28f : 0.15f;
             GameObject root = new GameObject("Ground impact - compacted soil mark");
-            root.transform.position = position + normal * 0.024f;
+            root.transform.position = position + normal * 0.003f;
             root.transform.rotation = Quaternion.FromToRotation(Vector3.up, normal) *
                                       Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
 
@@ -157,9 +157,9 @@ namespace TacticalStrike
                     new Color(0.30f, 0.235f, 0.155f));
 
             CreateScarDisk(root.transform, "Depressed dark centre", radius * 0.68f,
-                -0.006f, soilScarMaterial);
+                0.001f, soilScarMaterial);
             CreateScarRing(root.transform, "Raised irregular soil lip", radius * 0.70f,
-                radius, -0.002f, 0.012f, soilRimMaterial);
+                radius, 0.001f, 0.008f, soilRimMaterial);
             Object.Destroy(root, 32f);
         }
 
@@ -200,6 +200,7 @@ namespace TacticalStrike
             renderer.sharedMaterial = material;
             renderer.shadowCastingMode = ShadowCastingMode.Off;
             renderer.receiveShadows = false;
+            Object.Destroy(mesh, 32f);
         }
 
         private static void CreateScarRing(Transform parent, string label, float innerRadius,
@@ -245,6 +246,7 @@ namespace TacticalStrike
             renderer.sharedMaterial = material;
             renderer.shadowCastingMode = ShadowCastingMode.Off;
             renderer.receiveShadows = false;
+            Object.Destroy(mesh, 32f);
         }
 
         private static Material MakeSolidMaterial(string label, Color color)

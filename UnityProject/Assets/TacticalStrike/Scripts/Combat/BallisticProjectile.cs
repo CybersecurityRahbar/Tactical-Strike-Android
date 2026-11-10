@@ -58,7 +58,9 @@ namespace TacticalStrike
         private void CreateTracer(float projectileDiameter)
         {
             // Calibre-scaled bright core; don't enlarge the tracer into a laser tube.
-            tracerDiameter = Mathf.Clamp(projectileDiameter * 1.55f, 0.008f, 0.025f);
+            // The emissive envelope must remain visible at battlefield distances;
+            // it is intentionally larger than the real metal projectile diameter.
+            tracerDiameter = Mathf.Clamp(projectileDiameter * 6.0f, 0.028f, 0.06f);
             Shader shader = Shader.Find("Universal Render Pipeline/Lit");
             if (shader == null) shader = Shader.Find("Standard");
             if (shader == null) { Debug.LogError("Tracer visual could not find a supported lit shader."); return; }
@@ -114,7 +116,7 @@ namespace TacticalStrike
             head.name = "Tracer - rounded incandescent projectile head";
             head.transform.SetParent(transform, false);
             head.transform.localPosition = Vector3.zero;
-            head.transform.localScale = Vector3.one * tracerDiameter * 1.45f;
+            head.transform.localScale = Vector3.one * tracerDiameter * 1.35f;
             Collider headCollider = head.GetComponent<Collider>();
             if (headCollider != null) Destroy(headCollider);
             MeshRenderer headRenderer = head.GetComponent<MeshRenderer>();
@@ -131,7 +133,7 @@ namespace TacticalStrike
             // The old formula yielded 6-8m trails at rifle speed. Tracer glow should
             // be a short incandescent wake attached to the moving projectile.
             float tailLength = Mathf.Clamp(velocity.magnitude * frameDelta * 0.015f, 0.09f, 0.22f);
-            float rootRadius = tracerDiameter * 0.82f;
+            float rootRadius = tracerDiameter * 0.56f;
             for (int ring = 0; ring < TracerRingT.Length; ring++)
             {
                 float z = -tailLength * TracerRingT[ring];

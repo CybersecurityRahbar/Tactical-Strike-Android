@@ -1375,3 +1375,11 @@ The user tested the deployed Northwind preview and reported four blocking runtim
 - A follow-up build-script audit found that the newly raised URP properties were set only inside the `pipeline == null` asset-creation branch. If Unity restored a previously generated URP asset from its Library cache, the existing asset could retain the old HDR-off / 0.90 render scale / 85m shadow profile.
 - The URP quality assignments are now applied unconditionally after loading or creating the pipeline asset. This makes the configured profile deterministic across a fresh import and a cache restore.
 - Source commit `e937e17fb43bc72431083416940fa1f8d01060f1`; this is a build-configuration correctness fix. Current build validation must still complete for the exact latest main commit.
+
+
+### HUD bounds, tracer envelope and impact-mesh follow-up — 2026-11-10
+
+- Screenshot review found the top-left `Mission status` panel used inverted vertical RectTransform offsets (`offsetMin.y=-22`, `offsetMax.y=-148`) for a top-left fixed anchor, yielding a negative-height rectangle. The offsets are now ordered as `-148` to `-22`, restoring a positive 126px panel height.
+- The initial shortened tracer wake was paired with a 5.45mm-scale luminous head that would subtend substantially less than a pixel at normal engagement distances. The emissive envelope is now scaled to a visible 2.8–6cm profile by calibre, with a rounded core and shorter tapered wake. This is a deliberate visual-light envelope larger than the physical bullet diameter, not a claim that the projectile itself physically grows.
+- Ground impact scars now sit closer to the contacted surface and schedule their transient runtime meshes for destruction together with the 32-second mark, avoiding unbounded native mesh accumulation during sustained fire.
+- These are source changes awaiting CI; no visual acceptance is claimed until the deployed scene is inspected.
