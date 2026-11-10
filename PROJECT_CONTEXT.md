@@ -989,3 +989,10 @@ Official playtest announcement: https://steamcommunity.com/app/393380/
 - Current validator fix is source-level only until a new Actions run passes validation, uploads the Pages artifact, deploys, and the expected URL is opened successfully.
 - Expected URL (not yet declared live until verified): https://cybersecurityrahbar.github.io/Tactical-Strike-Android/
 
+### Corrected WebGL pipeline validation run started — 2026-11-10
+
+- Latest corrective WebGL workflow run: `42836781579` (commit `ec062e4b79db0ac2b69e9cf11c0e164408b1c228`): https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42836781579 .
+- GitHub accepted the updated workflow and created the job. At the latest inspection it was still running the `Free runner disk space for Unity Web build` step; the runtime-assets cache, validator, Pages artifact and deployment steps had not yet run.
+- Earlier runs `42836663512` and `42836702284` were cancelled by the next commits under the intended `cancel-in-progress` concurrency rule; they are superseded attempts, not new build defects.
+- The latest source code/validator fixes are committed to `main`; the current Pages deployment is still unverified until run `42836781579` succeeds through `Deploy browser preview` and the URL is opened.
+
