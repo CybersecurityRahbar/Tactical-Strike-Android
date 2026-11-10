@@ -914,3 +914,14 @@ Official playtest announcement: https://steamcommunity.com/app/393380/
 - A second HUD review found that the transparent right-side touch-look surface was still being created on desktop WebGL even though the joystick/combat buttons were hidden. That raycast target would have intercepted mouse clicks over most of the right half of the viewport, preventing the browser build from requesting pointer lock.
 - Moved creation of the touch-look surface inside the mobile-platform condition. Desktop Web builds now have no transparent touch surface; only visible HUD controls intercept clicks. Android continues to create the look surface, joystick and touch combat buttons.
 - This is a source-level input correction. Unity WebGL/Android builds and actual cursor/touch behavior still require CI and runtime verification.
+
+
+### First WebGL and Android verification runs started — 2026-11-10
+
+- Final source commit under current browser-preview test: `48209d190668eded6fd809ef4f8dfc092bbaaca1` (desktop touch-look surface correction). Latest main docs-only commit at this note: `61df6976dfec5a08055b866d4a39845677055567`.
+- WebGL workflow run `42830985681`: https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42830985681 . GitHub registered the workflow, started the job, passed runner setup, free-disk preparation, checkout and all three Unity Personal secret-presence checks. At the latest status inspection it was still running the Blender/FFmpeg/NumPy installation step. Asset preparation, WebGL Unity compilation, output validation, Pages setup/deployment and live URL check have not yet occurred.
+- Android regression workflow run `42830985872`: https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42830985872 . It was still in the free-disk preparation stage at the latest status inspection. No conclusion is available.
+- Earlier attempts were cancelled only because subsequent commits intentionally superseded them under the branch concurrency rule; the latest source test above is the surviving attempt for the current code.
+- The browser URL `https://cybersecurityrahbar.github.io/Tactical-Strike-Android/` remains an expected URL only, not a confirmed live deployment. Do not tell the user it is ready until GitHub Pages deployment succeeds and the exact URL is verified.
+- One repository-owner action may be needed: Settings -> Pages -> Build and deployment -> Source = GitHub Actions. The Pages workflow will expose an explicit failure if the repository is not enabled/configured.
+- Android's prior verified APK (run 42702747580) does not contain these WebGL input/HUD changes; this current Android CI run is required to establish no regression. A successful compile/build does not replace phone visual testing.
