@@ -1445,3 +1445,41 @@ The user tested the deployed Northwind preview and reported four blocking runtim
 - Current weapon viewmodel is still imported from an FBX/legacy animation path and has no confirmed visual acceptance: the new deployed build must show both arms and AK in the intended lower-right first-person pose, correctly gripped, scaled, oriented and animated. If it does not, the rig needs a separate replacement/re-rig pass; build success alone does not prove viewmodel visibility.
 - Professional target therefore requires a true art-production pass after current corrections deploy: authored/sourced military sandbag and revetment assets, detailed terrain/road shoulder materials, ground-cover/vegetation scatter with correct alpha/LOD, authored buildings and interiors, dressing/decals, plus a validated first-person rig. No claim that the current procedural geometry is already visually equivalent to Squad.
 - Acceptance remains pending exact current-source WebGL deployment and a fresh screenshot. User testing must not be requested against the old published page.
+
+
+## Unity build CS0104 fix and first-person AK-74M camera calibration — 2026-11-11
+
+### Latest failed build — exact root cause
+
+- WebGL run #34 `42900456819` and Android run #51 `42900456803`, both for source `1dddd0be498b02d147ed309c6d0e45393b79bb0b`, failed at C# compilation before packaging.
+- Both logs report `CS0104` at `Assets/TacticalStrike/Scripts/Core/TacticalStrikeBootstrap.cs(30,48)`: `ShadowResolution` is ambiguous between `UnityEngine.ShadowResolution` and `UnityEngine.Rendering.Universal.ShadowResolution`. The same unqualified enum use was also present in the editor build setup at `TacticalStrikeBuild.cs`.
+- The cause is importing both UnityEngine and URP namespaces while referencing `ShadowResolution.High` without qualifying the owning type. Fix: use `UnityEngine.ShadowResolution.High` in both runtime and build setup. This is unrelated to assets, Unity licensing or runner resources.
+
+### Root-cause investigation of rifle / hands orientation
+
+- The pinned original AK glTF source is the Sketchfab asset “FPS AK-74m animations” by Cransh, with CC-BY-4.0 attribution. Its glTF scene hierarchy contains an authored node named `Camera` under the arms rig and 8 animation takes: `Rig|AK_Idle`, `Rig|AK_Draw`, `Rig|AK_Walk`, `Rig|AK_Run`, `Rig|AK_Shot`, `Rig|AK_Reload`, `Rig|AK_Reload_var2`, and `Rig|AK_Reload_full`.
+- Runtime `WeaponController.BuildViewModel()` previously ignored that authored camera reference, repositioned the whole arm/rifle rig using the combined renderer bounds centre, and used a generic fixed offset. Runtime `Update()` then replaced the root local rotation every frame with only the procedural sway/recoil Euler rotation. This discarded the rig's authored camera-space orientation and grip reference. Therefore changing a guessed 180-degree yaw or a hand-made offset could not reliably align the rifle and both hands.
+- The converter already exports Blender EMPTY objects; the source Camera is a transform-only node in the glTF hierarchy. The revised converter preserves/renames that source node as `Viewmodel_Camera_Anchor` and logs it as part of FBX conversion.
+- Runtime now computes the marker rotation relative to the imported rig root, sets the inverse base orientation so the marker faces the player's camera, and translates the marker to a calibrated camera-space reference position. Per-frame sway/recoil is applied on top of this base rotation, rather than overwriting the base rig orientation.
+- The editor build validator now requires the camera anchor and checks for idle, draw, walk, run, shot and reload animation clips. This prevents building a rifle asset that silently lacks its first-person camera reference or core motions.
+- The original asset's existence and hierarchy have been inspected from the pinned glTF JSON. The new FBX marker preservation and actual rendered pose remain pending Unity CI and visual screenshot acceptance; do not claim the weapon is now visually correct until checked in the built WebGL/Android runtime.
+
+### Squad mapping research — design references, not proprietary implementation claims
+
+- Official Squad / Offworld Fallujah development articles describe restarting the layout design based on real-world city layout and imagery, collecting extensive photo references, building gameplay blockouts, validating spaces, progressing from basic-material Alpha to secondary/tertiary forms, Beta material development and final decals/prop dressing. Their follow-up describes roughly six months of map optimization and broad playtesting. Sources:
+  - `https://store.steampowered.com/news/posts/?appids=393380&enddate=1597860357&feed=steam_community_announcements`
+  - `https://store.steampowered.com/news/posts/?appids=393380&enddate=1598644081`
+- Official Squad's Harju interview explains how foliage and road networks create gameplay constraints and how much of the map was refined/rebuilt before official release; the designer reported 950 hours before the last Workshop release and another 1,400 hours of official integration work. Source: `https://store.steampowered.com/news/posts/?appids=393380&enddate=1670353163&feed=steam_community_announcements`
+- Squad's official modding help points users to the UE4 Squad SDK and official map-design/modding learning communities: `https://offworldindustries.zendesk.com/hc/en-us/articles/221394408-How-do-I-start-modding-in-Squad`.
+- Community Squad SDK guides identify World Machine and USGS-to-Unreal heightmaps as common terrain source workflows; this is community guidance, not a claim that every official Squad map uses one tool: `https://squad.fandom.com/wiki/Creating_a_Custom_Map`.
+- Unreal's official docs demonstrate height/weight Landscape material layer blends, including height blending between rock/soil/grass; Landscape foliage tooling supports controlled scatter over landscape and surfaces. Sources:
+  - `https://dev.epicgames.com/documentation/unreal-engine/landscape-materials-in-unreal-engine`
+  - `https://dev.epicgames.com/documentation/unreal-engine/landscape-quick-start-guide-in-unreal-engine`
+  - `https://dev.epicgames.com/documentation/unreal-engine/unreal-engines-systems-and-workflows-overview-for-unity-developers`
+- Practical design principles to adopt for Northwind: real-world reference board and terrain source; broad macro terrain sculpt with erosion-derived drainage/ridges; a gameplay greybox and route/POI playtesting pass before art; a consistent layered landscape material system; dense but gameplay-aware foliage and cover placement; a vertical-slice quality gate; secondary/tertiary forms; decals and environmental storytelling; and performance profiling after art dressing. Avoid copying proprietary Squad assets or source.
+
+### Source changes now being committed
+
+- Qualify the shadow enum explicitly in both runtime bootstrap and the editor setup.
+- Preserve the source AK camera reference in the FBX conversion, align the runtime rig through that marker, retain its base rotation during sway/recoil, and validate marker plus required animation takes before either build.
+- These changes are not considered complete until fresh WebGL and Android CI runs pass and the rendered first-person rig is inspected. The map research has been recorded; a separate art-production pass for terrain detail, vegetation density, trench/road material transitions and authored military assets remains necessary.

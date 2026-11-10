@@ -73,7 +73,7 @@ namespace TacticalStrike.Editor
             GraphicsSettings.defaultRenderPipeline = pipeline;
             QualitySettings.renderPipeline = pipeline;
             QualitySettings.shadowDistance = 220f;
-            QualitySettings.shadowResolution = ShadowResolution.High;
+            QualitySettings.shadowResolution = UnityEngine.ShadowResolution.High;
             QualitySettings.pixelLightCount = 4;
             QualitySettings.maximumLODLevel = 0;
             QualitySettings.lodBias = 1.75f;
@@ -300,14 +300,24 @@ namespace TacticalStrike.Editor
             if (model == null)
                 throw new BuildFailedException("AK-74M FBX failed to import as a Unity model.");
 
+            Transform authoredCamera = model.GetComponentsInChildren<Transform>(true)
+                .FirstOrDefault(t => string.Equals(t.name, "Viewmodel_Camera_Anchor",
+                    StringComparison.OrdinalIgnoreCase));
+            if (authoredCamera == null)
+                throw new BuildFailedException(
+                    "AK-74M FBX is missing Viewmodel_Camera_Anchor; the first-person rig cannot be calibrated safely.");
+
             UnityEngine.Object[] imported = AssetDatabase.LoadAllAssetsAtPath(
                 "Assets/Resources/TacticalStrike/Imported/AK74M.fbx");
             AnimationClip[] clips = imported.OfType<AnimationClip>().ToArray();
-            if (clips.Length == 0)
-                Debug.LogWarning("AK-74M imported without separate animation clips; the build will retain the procedural viewmodel fallback.");
-            else
-                Debug.Log("AK-74M animation clips imported: " +
-                    string.Join(", ", clips.Select(clip => clip.name)));
+            string[] requiredMotionNames = { "idle", "draw", "walk", "run", "shot", "reload" };
+            foreach (string motion in requiredMotionNames)
+            {
+                if (!clips.Any(clip => clip.name.IndexOf(motion, StringComparison.OrdinalIgnoreCase) >= 0))
+                    throw new BuildFailedException("AK-74M FBX is missing its required first-person animation: " + motion);
+            }
+            Debug.Log("AK-74M first-person rig validated: camera anchor=" + authoredCamera.name +
+                ", clips=" + string.Join(", ", clips.Select(clip => clip.name)));
 
             string[] terrainTextures = Directory.GetFiles(
                 "Assets/Resources/TacticalStrike/Imported/Terrain", "*.jpg");

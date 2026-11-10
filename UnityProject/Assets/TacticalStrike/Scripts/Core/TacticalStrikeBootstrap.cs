@@ -27,7 +27,7 @@ namespace TacticalStrike
             QualitySettings.vSyncCount = 0;
             QualitySettings.maxQueuedFrames = 2;
             QualitySettings.shadowDistance = 220f;
-            QualitySettings.shadowResolution = ShadowResolution.High;
+            QualitySettings.shadowResolution = UnityEngine.ShadowResolution.High;
             QualitySettings.lodBias = 1.75f;
             QualitySettings.maximumLODLevel = 0;
             QualitySettings.anisotropicFiltering = AnisotropicFiltering.ForceEnable;

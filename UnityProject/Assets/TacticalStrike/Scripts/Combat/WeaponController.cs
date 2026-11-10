@@ -13,6 +13,7 @@ namespace TacticalStrike
         private AudioClip nearFireClip, midFireClip;
         private Transform sightAnchor;
         private Transform muzzleAnchor;
+        private Quaternion viewModelBaseRotation = Quaternion.identity;
         private float swayClock;
         private float staminaFactor = 1f;
         private float suppressionFactor;
@@ -93,13 +94,10 @@ namespace TacticalStrike
                 model = Instantiate(modelPrefab, playerCamera.transform);
                 model.name = "AK-74M animated first-person viewmodel";
                 model.transform.localPosition = Vector3.zero;
-                // glTF -> FBX already applies Unity's forward-axis convention.
-                // A second 180-degree yaw turns the rifle away from the camera.
                 model.transform.localRotation = Quaternion.identity;
                 model.transform.localScale = Vector3.one;
+                viewModelBaseRotation = Quaternion.identity;
 
-                // Fit the imported full arms-and-rifle rig to its renderer bounds.
-                // A fixed 0.72 scale ignored source dimensions and made the rig fill the view.
                 Renderer[] renderers = model.GetComponentsInChildren<Renderer>(true);
                 viewModelRootOffset = Vector3.zero;
                 if (renderers.Length > 0)
@@ -108,15 +106,41 @@ namespace TacticalStrike
                     for (int i = 1; i < renderers.Length; i++)
                         combined.Encapsulate(renderers[i].bounds);
 
-                    // Center the imported rig's visible bounds as well as fitting its
-                    // length. Imported FBX pivots are not guaranteed to sit at the rig centre.
                     Vector3 centerInModelSpace = model.transform.InverseTransformPoint(combined.center);
                     float largestDimension = Mathf.Max(combined.size.x,
                         Mathf.Max(combined.size.y, combined.size.z));
                     float fitScale = largestDimension > 0.001f ? 0.64f / largestDimension : 0.38f;
                     fitScale = Mathf.Clamp(fitScale, 0.18f, 0.54f);
                     model.transform.localScale = Vector3.one * fitScale;
-                    viewModelRootOffset = -(model.transform.localRotation * (centerInModelSpace * fitScale));
+
+                    Transform authoredCamera = FindViewModelCameraAnchor(model.transform);
+                    if (authoredCamera != null)
+                    {
+                        // The imported rig contains its own first-person camera reference.
+                        // Align that reference with the game camera so both hands and rifle
+                        // keep the authored grip/orientation from the animation asset.
+                        Quaternion anchorRotationInRoot =
+                            Quaternion.Inverse(model.transform.rotation) * authoredCamera.rotation;
+                        viewModelBaseRotation = Quaternion.Inverse(anchorRotationInRoot);
+                        model.transform.localRotation = viewModelBaseRotation;
+
+                        Vector3 anchorLocal = model.transform.InverseTransformPoint(authoredCamera.position);
+                        viewModelRestPosition = new Vector3(0f, -0.022f, 0.018f);
+                        viewModelRootOffset = -model.transform.localRotation *
+                            Vector3.Scale(anchorLocal, model.transform.localScale);
+                        Debug.Log("AK-74M authored camera alignment enabled: " +
+                            "anchor=" + authoredCamera.name +
+                            ", relativeRotation=" + anchorRotationInRoot.eulerAngles +
+                            ", fitScale=" + fitScale.ToString("F3"));
+                    }
+                    else
+                    {
+                        // Compatibility path for externally replaced rigs without a camera marker.
+                        viewModelBaseRotation = Quaternion.identity;
+                        viewModelRootOffset = -(viewModelBaseRotation *
+                            Vector3.Scale(centerInModelSpace, model.transform.localScale));
+                        Debug.LogWarning("AK-74M camera marker missing at runtime; using bounds-centred fallback pose.");
+                    }
                 }
 
                 model.transform.localPosition = viewModelRestPosition + viewModelRootOffset;
@@ -158,6 +182,19 @@ namespace TacticalStrike
                 Debug.LogWarning("AK-74M rig has no named rear-sight/optic anchor; ADS is using the calibrated fallback offset.");
             if (muzzleAnchor == null)
                 Debug.LogWarning("AK-74M rig has no named muzzle anchor; projectile origin is using the camera muzzle reference.");
+        }
+
+        private static Transform FindViewModelCameraAnchor(Transform root)
+        {
+            Transform[] nodes = root.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < nodes.Length; i++)
+            {
+                string name = nodes[i].name;
+                if (string.Equals(name, "Viewmodel_Camera_Anchor", System.StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(name, "Camera", System.StringComparison.OrdinalIgnoreCase))
+                    return nodes[i];
+            }
+            return null;
         }
 
         private static Transform FindWeaponAnchor(Transform root, bool sight)
@@ -322,7 +359,7 @@ namespace TacticalStrike
                 float swayX = Mathf.Sin(swayClock * 0.91f) * 0.020f * swayScale;
                 float swayY = Mathf.Sin(swayClock * 1.83f + 0.8f) * 0.014f * swayScale;
                 float roll = Mathf.Sin(swayClock * 0.73f) * 1.05f * swayScale;
-                Quaternion targetRotation = Quaternion.Euler(
+                Quaternion targetRotation = viewModelBaseRotation * Quaternion.Euler(
                     -recoilOffset * 2.25f + swayY * 42f,
                     swayX * 38f,
                     roll);
