@@ -62,7 +62,36 @@ jobs:
             exit 1
           }
 
+      # Runtime models, textures and audio are pinned by the preparation scripts.
+      # Cache their converted Unity-ready outputs so ordinary gameplay edits do not
+      # reinstall Blender/FFmpeg or re-download/reconvert the full asset set.
+      - name: Restore prepared runtime assets cache
+        id: prepared-runtime-assets-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            assets/runtime
+            UnityProject/Assets/Resources/TacticalStrike/Imported
+          key: tactical-runtime-assets-v1-${{ hashFiles('tools/prepare_external_assets.sh', 'tools/prepare_unity_assets.sh', 'tools/convert_ak74m_to_fbx.py', 'tools/convert_nature_assets.py') }}
+
+      - name: Verify restored runtime asset cache
+        id: prepared-runtime-assets-check
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -s assets/runtime/.prepared-assets-v1 \
+            && -s UnityProject/Assets/Resources/TacticalStrike/Imported/AK74M.fbx \
+            && -s UnityProject/Assets/Resources/TacticalStrike/Imported/Nature/tree-oak.fbx \
+            && -s UnityProject/Assets/Resources/TacticalStrike/Imported/Terrain/sparse_grass_diff_1k.jpg ]]; then
+            echo "valid=true" >> "$GITHUB_OUTPUT"
+            echo "Prepared runtime asset cache is valid; skipping external downloads and conversion."
+          else
+            echo "valid=false" >> "$GITHUB_OUTPUT"
+            echo "Prepared runtime asset cache is missing or incomplete; a full preparation is required."
+          fi
+
       - name: Install asset conversion tools
+        if: steps.prepared-runtime-assets-check.outputs.valid != 'true'
         timeout-minutes: 12
         env:
           DEBIAN_FRONTEND: noninteractive
@@ -71,7 +100,30 @@ jobs:
           blender --background --factory-startup --python-expr "import numpy; print('Blender NumPy import passed:', numpy.__version__)"
 
       - name: Prepare pinned runtime assets
-        run: bash tools/prepare_unity_assets.sh
+        if: steps.prepared-runtime-assets-check.outputs.valid != 'true'
+        run: |
+          set -euo pipefail
+          bash tools/prepare_unity_assets.sh
+          printf 'prepared-assets-v1\\n' > assets/runtime/.prepared-assets-v1
+
+      - name: Verify prepared runtime assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s assets/runtime/.prepared-assets-v1
+          test -s UnityProject/Assets/Resources/TacticalStrike/Imported/AK74M.fbx
+          test -s UnityProject/Assets/Resources/TacticalStrike/Imported/Nature/tree-oak.fbx
+          test -s UnityProject/Assets/Resources/TacticalStrike/Imported/Terrain/sparse_grass_diff_1k.jpg
+
+      - name: Save prepared runtime assets cache
+        if: success() && steps.prepared-runtime-assets-check.outputs.valid != 'true'
+        uses: actions/cache/save@v4
+        continue-on-error: true
+        with:
+          path: |
+            assets/runtime
+            UnityProject/Assets/Resources/TacticalStrike/Imported
+          key: tactical-runtime-assets-v1-${{ hashFiles('tools/prepare_external_assets.sh', 'tools/prepare_unity_assets.sh', 'tools/convert_ak74m_to_fbx.py', 'tools/convert_nature_assets.py') }}
 
       - name: Restore Unity WebGL Library cache
         uses: actions/cache/restore@v4
