@@ -1383,3 +1383,12 @@ The user tested the deployed Northwind preview and reported four blocking runtim
 - The initial shortened tracer wake was paired with a 5.45mm-scale luminous head that would subtend substantially less than a pixel at normal engagement distances. The emissive envelope is now scaled to a visible 2.8–6cm profile by calibre, with a rounded core and shorter tapered wake. This is a deliberate visual-light envelope larger than the physical bullet diameter, not a claim that the projectile itself physically grows.
 - Ground impact scars now sit closer to the contacted surface and schedule their transient runtime meshes for destruction together with the 32-second mark, avoiding unbounded native mesh accumulation during sustained fire.
 - These are source changes awaiting CI; no visual acceptance is claimed until the deployed scene is inspected.
+
+
+### Nature foliage material/alpha import correction — 2026-11-10
+
+- A further screenshot-focused audit found `NatureModelPostprocessor` changed imported tree/shrub/grass materials to URP/Lit but preserved only base color. It did not transfer the imported albedo or normal texture and did not retain the alpha-test render state.
+- For leaf/grass card meshes, this can render the complete rectangular card as an opaque dark polygon instead of cutting out transparent pixels. This is a credible source-level explanation for parts of the floating black geometry along the horizon; the screenshot alone cannot prove every polygon comes from this path.
+- The postprocessor now captures and restores albedo/normal maps when switching to URP/Lit, restores metallic/smoothness, enables AlphaClip with cutoff 0.42, uses two-sided culling for foliage cards, sets the alpha-test render queue and instancing.
+- A dedicated Nature texture importer now keeps source alpha, mipmaps, compression and a 2K texture ceiling for imported nature textures.
+- Source commit: `b56212a5a26ad48a5532cbbc33a7bc2efaa7b193`. WebGL/Android validation for this exact source remains pending. If the polygons persist after the new build, the next investigation is the imported model hierarchy/FBX axis and per-renderer bounds, then remove/replace any asset that fails that inspection.
