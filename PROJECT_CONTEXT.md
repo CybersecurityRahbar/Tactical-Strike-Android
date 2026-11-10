@@ -1289,3 +1289,12 @@ The user tested the deployed Northwind preview and reported four blocking runtim
 - `MobileHud.cs` now builds the dual-thumb control scheme; `TouchJoystick.cs` and `TouchLookArea.cs` isolate multitouch pointer ownership.
 - The fix is committed directly to `main`. It is not considered successful until new Unity Android and WebGL runs compile; WebGL must also pass manifest validation and GitHub Pages deployment. No physical-device acceptance or browser screenshot is claimed yet.
 - QA gate after CI: verify actual deployed SHA; player-ground collision; simultaneous left-stick movement/right-look/fire/ADS; sprint, crouch, prone and lean; mounted DShK/M2; AK viewmodel; shot sound; tracer appearance and frame rate.
+
+
+### CI tracking for tactical-controls commit — 2026-11-10
+
+- Source commit under validation: `bde1ff61427d22294f1f904b6b95fe7eea5cd005`.
+- Unity Browser Preview run #21: `42886394093` — still `in_progress` at the latest poll; Unity WebGL build step active. No validation manifest, Pages artifact or deployment completion was yet visible.
+- Unity Android Build run #38: `42886393910` — still `in_progress` at the latest poll; cache restoration active before Unity Android build. No APK validation or artifact upload completion was yet visible.
+- No current-source CI failure had been reported in those two runs at the time of this entry, but neither run was complete. Do not interpret the active status as a successful build.
+- The working preview URL remains the previous deployment until WebGL run #21 completes its build, output validation and Pages deployment. The Android APK artifact is not available until run #38 completes APK verification and uploads the artifact.
