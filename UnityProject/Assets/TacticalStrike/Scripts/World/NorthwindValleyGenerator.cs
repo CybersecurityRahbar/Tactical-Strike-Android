@@ -270,7 +270,7 @@ namespace TacticalStrike
                 throw new System.InvalidOperationException(
                     "Northwind terrain layer is missing a prepared PBR texture: " + label);
 
-            TerrainLayer layer = ScriptableObject.CreateInstance<TerrainLayer>();
+            TerrainLayer layer = new TerrainLayer();
             layer.name = label;
             layer.diffuseTexture = diffuse;
             layer.normalMapTexture = normal;
