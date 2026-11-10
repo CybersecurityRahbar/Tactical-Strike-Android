@@ -86,21 +86,9 @@ namespace TacticalStrike
             tip.transform.localScale = Vector3.one * 0.065f;
             Collider tipCollider = tip.GetComponent<Collider>();
             if (tipCollider != null) Destroy(tipCollider);
-            Shader tipShader = Shader.Find("Universal Render Pipeline/Unlit");
-            if (tipShader == null) tipShader = Shader.Find("Unlit/Color");
-            if (tipShader != null)
-            {
-                Material tipMaterial = new Material(tipShader);
-                Color tipColor = new Color(1f, 0.82f, 0.24f, 1f);
-                if (tipMaterial.HasProperty("_BaseColor")) tipMaterial.SetColor("_BaseColor", tipColor);
-                if (tipMaterial.HasProperty("_Color")) tipMaterial.SetColor("_Color", tipColor);
-                if (tipMaterial.HasProperty("_EmissionColor"))
-                {
-                    tipMaterial.EnableKeyword("_EMISSION");
-                    tipMaterial.SetColor("_EmissionColor", new Color(4.0f, 2.0f, 0.35f, 1f));
-                }
-                tip.GetComponent<Renderer>().sharedMaterial = tipMaterial;
-            }
+            // Share the already-owned emissive material with the line and projectile tip.
+            // This keeps the tracer fully visible without leaking one material per shot.
+            tip.GetComponent<Renderer>().sharedMaterial = tracerMaterial;
             tracerTip = tip.transform;
         }
 

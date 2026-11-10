@@ -183,8 +183,10 @@ namespace TacticalStrike
                 terrainMaterial.SetTexture("_BaseMap", diffuse);
                 terrainMaterial.SetTexture("_MainTex", diffuse);
                 diffuse.wrapMode = TextureWrapMode.Repeat;
-                terrainMaterial.SetTextureScale("_BaseMap", new Vector2(0.055f, 0.055f));
-                terrainMaterial.SetTextureScale("_MainTex", new Vector2(0.055f, 0.055f));
+                if (terrainMaterial.HasProperty("_BaseMap"))
+                    terrainMaterial.SetTextureScale("_BaseMap", new Vector2(0.055f, 0.055f));
+                if (terrainMaterial.HasProperty("_MainTex"))
+                    terrainMaterial.SetTextureScale("_MainTex", new Vector2(0.055f, 0.055f));
             }
             if (normal != null)
             {
@@ -298,19 +300,20 @@ namespace TacticalStrike
                     {
                         float along = Mathf.Min(length - 0.2f, (i + 0.5f) * length / count);
                         Vector2 point = a + direction2 * along;
-                        float y = HeightAt(point.x, point.y);
-                        Vector3 center = new Vector3(point.x, y + 0.42f, point.y);
+                        Vector3 trenchCenter = new Vector3(point.x, HeightAt(point.x, point.y), point.y);
                         bool firingGap = (i % 10 == 8) || (p > 0 && i % 8 == 6);
                         if (!firingGap)
                         {
-                            Vector3 front = center + lateral * 3.45f;
+                            Vector3 front = trenchCenter + lateral * 3.45f;
+                            front.y = HeightAt(front.x, front.z) + 0.44f;
                             AddCube(parapets, cube, parent, front,
-                                new Vector3(0.72f, 0.84f, Mathf.Min(2.65f, length / count + 0.12f)), rotation);
+                                new Vector3(0.72f, 0.88f, Mathf.Min(2.65f, length / count + 0.12f)), rotation);
                         }
 
-                        Vector3 rear = center - lateral * 3.0f;
+                        Vector3 rear = trenchCenter - lateral * 3.0f;
+                        rear.y = HeightAt(rear.x, rear.z) + 0.25f;
                         AddCube(traverses, cube, parent,
-                            new Vector3(rear.x, y + 0.25f, rear.z),
+                            rear,
                             new Vector3(0.58f, 0.50f, Mathf.Min(2.55f, length / count + 0.12f)), rotation);
                     }
                 }
@@ -333,13 +336,16 @@ namespace TacticalStrike
 
         private static void BuildFireBay(Transform parent, Vector2 point, bool defenders)
         {
-            float y = HeightAt(point.x, point.y);
             float forward = defenders ? 1f : -1f;
-            CreateBox(parent, new Vector3(point.x - 2.2f, y + 0.58f, point.y + forward * 3.4f),
+            float leftX = point.x - 2.2f;
+            float rightX = point.x + 2.2f;
+            float cheekZ = point.y + forward * 3.4f;
+            CreateBox(parent, new Vector3(leftX, HeightAt(leftX, cheekZ) + 0.58f, cheekZ),
                 new Vector3(1.0f, 1.15f, 1.0f), sandbagMaterial, Quaternion.identity, "Fighting bay - left cheek");
-            CreateBox(parent, new Vector3(point.x + 2.2f, y + 0.58f, point.y + forward * 3.4f),
+            CreateBox(parent, new Vector3(rightX, HeightAt(rightX, cheekZ) + 0.58f, cheekZ),
                 new Vector3(1.0f, 1.15f, 1.0f), sandbagMaterial, Quaternion.identity, "Fighting bay - right cheek");
-            CreateBox(parent, new Vector3(point.x, y + 0.30f, point.y - forward * 2.3f),
+            float rearZ = point.y - forward * 2.3f;
+            CreateBox(parent, new Vector3(point.x, HeightAt(point.x, rearZ) + 0.30f, rearZ),
                 new Vector3(5.0f, 0.58f, 0.8f), trenchSoilMaterial, Quaternion.identity, "Fighting bay - rear firing step");
         }
 
