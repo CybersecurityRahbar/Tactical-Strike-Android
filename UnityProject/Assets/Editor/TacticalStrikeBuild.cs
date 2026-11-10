@@ -474,7 +474,7 @@ namespace TacticalStrike.Editor
             if (metallicGloss != null && material.HasProperty("_MetallicGlossMap"))
             {
                 material.SetTexture("_MetallicGlossMap", metallicGloss);
-                material.EnableKeyword("_METALLICGLOSSMAP");
+                material.EnableKeyword("_METALLICSPECGLOSSMAP");
             }
             if (material.HasProperty("_Metallic")) material.SetFloat("_Metallic", metallic);
             if (material.HasProperty("_Smoothness"))
