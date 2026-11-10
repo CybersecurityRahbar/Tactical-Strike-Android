@@ -1360,3 +1360,11 @@ The user tested the deployed Northwind preview and reported four blocking runtim
 - The AK first-person rig/hands still require visual inspection against the screenshot/device; full weapon inventory, advanced animations and weapon-specific sounds for all guns remain outside this corrective pass.
 - CI success only proves Unity compilation, packaging and WebGL deployment. It does not prove that the resulting scene renders correctly. Do not ask the user to test until new WebGL and Android jobs pass, the exact WebGL SHA is deployed, and a new runtime screenshot is inspected.
 - Acceptance criteria for the next preview: no floating/detached geometry; continuous terrain-matched roads and trench floors; parapets seated on slopes; grounded foliage at reasonable scale; visible correctly sized AK/arms at lower right; short visible incandescent tracer, not a beam; surface-appropriate dust/sparks and visible ground marks; stable browser frame rate. A screenshot/video is still needed to verify these points.
+
+
+### Spawn sightline correction — 2026-11-10
+
+- Follow-up inspection of the active spawn/map coordinates found the attacker covered assembly dugout was placed at `(-8, z=266)`, only about 38m in front of the player spawn at `(0, z=304)` and nearly on the forward viewing axis. This could dominate the opening view and resemble the central upright obstruction in the submitted screenshot.
+- Moved this covered assembly shelter laterally to `(-132, z=266)`, leaving the central forward approach clearer. The location still uses the generated terrain height.
+- Source commit: `d87549ef25c3b972cde1bea96b0b3b1763538c32`.
+- New Unity Browser Preview run #24 `42897243040` and Android Build run #41 `42897243202` were queued for that exact source commit. Do not claim visual correctness until WebGL is deployed and inspected.
