@@ -56,11 +56,15 @@ namespace TacticalStrike
             root.offsetMin = Vector2.zero;
             root.offsetMax = Vector2.zero;
 
-            // Look area is created first so controls layered above it always receive their own touches.
-            GameObject look = CreateImage("Right-side look surface", root, new Color(1f, 1f, 1f, 0.001f),
-                new Vector2(0.31f, 0.14f), new Vector2(1f, 0.91f), Vector2.zero, Vector2.zero);
-            look.GetComponent<Image>().raycastTarget = true;
-            look.AddComponent<TouchLookArea>().Initialize(player);
+            // The transparent look surface belongs only to touch devices. Leaving it
+            // active in the desktop preview would intercept browser mouse clicks.
+            if (Application.isMobilePlatform)
+            {
+                GameObject look = CreateImage("Right-side look surface", root, new Color(1f, 1f, 1f, 0.001f),
+                    new Vector2(0.31f, 0.14f), new Vector2(1f, 0.91f), Vector2.zero, Vector2.zero);
+                look.GetComponent<Image>().raycastTarget = true;
+                look.AddComponent<TouchLookArea>().Initialize(player);
+            }
 
             BuildStatusPanel(root);
             BuildCrosshair(root);
