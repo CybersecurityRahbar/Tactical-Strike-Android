@@ -29,11 +29,11 @@ namespace TacticalStrike
 
             Transform worldRoot = new GameObject("Battlefield").transform;
             worldRoot.SetParent(transform, false);
-            BattlefieldGenerator.Build(worldRoot);
+            NorthwindValleyGenerator.Build(worldRoot);
 
-            float spawnHeight = BattlefieldGenerator.HeightAt(0f, 292f);
+            float spawnHeight = NorthwindValleyGenerator.HeightAt(0f, 304f);
             FpsPlayerController player = FpsPlayerController.Create(
-                new Vector3(0f, spawnHeight + 0.12f, 292f), transform);
+                new Vector3(0f, spawnHeight + 0.12f, 304f), transform);
             MobileHud hud = MobileHud.Create(player, transform);
             player.AttachHud(hud);
         }
