@@ -163,44 +163,59 @@ namespace TacticalStrike
             Shader lit = Shader.Find("Universal Render Pipeline/Lit");
             if (lit == null) lit = Shader.Find("Standard");
 
-            terrainMaterial = MakeMaterial(lit, new Color(0.73f, 0.76f, 0.65f), "Northwind - muted highland grass PBR");
-            soilMaterial = MakeMaterial(lit, new Color(0.34f, 0.29f, 0.22f), "Northwind - exposed brown earth");
-            trenchSoilMaterial = MakeMaterial(lit, new Color(0.25f, 0.22f, 0.17f), "Northwind - disturbed trench soil");
-            sandbagMaterial = MakeMaterial(lit, new Color(0.43f, 0.42f, 0.30f), "Northwind - weathered olive sandbags");
-            masonryMaterial = MakeMaterial(lit, new Color(0.43f, 0.39f, 0.33f), "Northwind - weathered rural masonry");
-            concreteMaterial = MakeMaterial(lit, new Color(0.31f, 0.33f, 0.31f), "Northwind - chipped field concrete");
-            roofMaterial = MakeMaterial(lit, new Color(0.20f, 0.23f, 0.21f), "Northwind - aged roof slate");
-            roadMaterial = MakeMaterial(lit, new Color(0.36f, 0.33f, 0.27f), "Northwind - compacted service road");
+            terrainMaterial = MakeMaterial(lit, new Color(0.83f, 0.87f, 0.75f), "Northwind - grassland PBR");
+            soilMaterial = MakeMaterial(lit, new Color(0.78f, 0.72f, 0.62f), "Northwind - exposed field earth PBR");
+            trenchSoilMaterial = MakeMaterial(lit, new Color(0.53f, 0.48f, 0.40f), "Northwind - disturbed trench earth PBR");
+            sandbagMaterial = MakeMaterial(lit, new Color(0.43f, 0.42f, 0.30f), "Northwind - weathered olive canvas sandbags");
+            masonryMaterial = MakeMaterial(lit, new Color(0.77f, 0.73f, 0.67f), "Northwind - weathered brick masonry PBR");
+            concreteMaterial = MakeMaterial(lit, new Color(0.82f, 0.81f, 0.76f), "Northwind - chipped concrete PBR");
+            roofMaterial = MakeMaterial(lit, new Color(0.46f, 0.47f, 0.43f), "Northwind - weathered slate and roof PBR");
+            roadMaterial = MakeMaterial(lit, new Color(0.77f, 0.73f, 0.66f), "Northwind - compacted road PBR");
             waterMaterial = MakeMaterial(lit, new Color(0.13f, 0.22f, 0.23f), "Northwind - drainage water");
             metalMaterial = MakeMaterial(lit, new Color(0.075f, 0.085f, 0.078f), "Northwind - dark gunmetal");
             foliageMaterial = MakeMaterial(lit, new Color(0.21f, 0.28f, 0.19f), "Northwind - woodland undergrowth");
 
-            Texture2D diffuse = Resources.Load<Texture2D>("TacticalStrike/Imported/Terrain/sparse_grass_diff_1k");
-            Texture2D normal = Resources.Load<Texture2D>("TacticalStrike/Imported/Terrain/sparse_grass_nor_gl_1k");
-            Texture2D roughness = Resources.Load<Texture2D>("TacticalStrike/Imported/Terrain/sparse_grass_rough_1k");
+            ApplySurfaceTextures(terrainMaterial, "grass", new Vector2(0.055f, 0.055f), 0.16f);
+            ApplySurfaceTextures(soilMaterial, "ground", new Vector2(1.7f, 1.7f), 0.12f);
+            ApplySurfaceTextures(trenchSoilMaterial, "ground", new Vector2(2.4f, 2.4f), 0.10f);
+            ApplySurfaceTextures(masonryMaterial, "brick", new Vector2(2.1f, 1.6f), 0.18f);
+            ApplySurfaceTextures(concreteMaterial, "concrete", new Vector2(1.8f, 1.8f), 0.20f);
+            ApplySurfaceTextures(roofMaterial, "concrete", new Vector2(2.3f, 2.0f), 0.12f);
+            ApplySurfaceTextures(roadMaterial, "road", new Vector2(3.2f, 1.7f), 0.10f);
+        }
+
+        private static void ApplySurfaceTextures(Material material, string surface,
+            Vector2 tiling, float smoothness)
+        {
+            string resourceBase = "TacticalStrike/Imported/Terrain/northwind_" + surface;
+            Texture2D diffuse = Resources.Load<Texture2D>(resourceBase + "_diff_1k");
+            Texture2D normal = Resources.Load<Texture2D>(resourceBase + "_nor_gl_1k");
+
             if (diffuse != null)
             {
-                terrainMaterial.SetTexture("_BaseMap", diffuse);
-                terrainMaterial.SetTexture("_MainTex", diffuse);
                 diffuse.wrapMode = TextureWrapMode.Repeat;
-                if (terrainMaterial.HasProperty("_BaseMap"))
-                    terrainMaterial.SetTextureScale("_BaseMap", new Vector2(0.055f, 0.055f));
-                if (terrainMaterial.HasProperty("_MainTex"))
-                    terrainMaterial.SetTextureScale("_MainTex", new Vector2(0.055f, 0.055f));
+                if (material.HasProperty("_BaseMap"))
+                {
+                    material.SetTexture("_BaseMap", diffuse);
+                    material.SetTextureScale("_BaseMap", tiling);
+                }
+                if (material.HasProperty("_MainTex"))
+                {
+                    material.SetTexture("_MainTex", diffuse);
+                    material.SetTextureScale("_MainTex", tiling);
+                }
             }
-            if (normal != null)
+
+            if (normal != null && material.HasProperty("_BumpMap"))
             {
-                terrainMaterial.SetTexture("_BumpMap", normal);
-                terrainMaterial.EnableKeyword("_NORMALMAP");
                 normal.wrapMode = TextureWrapMode.Repeat;
+                material.SetTexture("_BumpMap", normal);
+                material.SetTextureScale("_BumpMap", tiling);
+                material.EnableKeyword("_NORMALMAP");
             }
-            if (roughness != null && terrainMaterial.HasProperty("_MetallicGlossMap"))
-            {
-                terrainMaterial.SetTexture("_MetallicGlossMap", roughness);
-                terrainMaterial.EnableKeyword("_METALLICGLOSSMAP");
-                roughness.wrapMode = TextureWrapMode.Repeat;
-            }
-            if (terrainMaterial.HasProperty("_Smoothness")) terrainMaterial.SetFloat("_Smoothness", 0.14f);
+
+            if (material.HasProperty("_Metallic")) material.SetFloat("_Metallic", 0f);
+            if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", smoothness);
         }
 
         private static Material MakeMaterial(Shader shader, Color color, string name)
