@@ -18,10 +18,11 @@ command -v ffmpeg >/dev/null 2>&1 || {
 
 UNITY_RES="UnityProject/Assets/Resources/TacticalStrike/Imported"
 NATURE_DIR="assets/runtime/models/nature"
+PROPS_DIR="assets/runtime/models/battlefield_props"
 NATURE_BASE="https://raw.githubusercontent.com/Hidencod/tge-assets/ea2f2aa1ca8da0898330c97df8a5489976b051d0/packs/nature-kit"
 mkdir -p "$UNITY_RES/Terrain" "$UNITY_RES/Textures" "$UNITY_RES/Nature" \
   "$UNITY_RES/Audio/Firearms" "$UNITY_RES/Audio/Footsteps" "$UNITY_RES/Audio/Impacts" \
-  "$NATURE_DIR" assets/runtime/audio/impacts
+  "$UNITY_RES/Props" "$NATURE_DIR" "$PROPS_DIR" assets/runtime/audio/impacts
 
 download_asset() {
   local url="$1"
@@ -59,6 +60,11 @@ for name in tree-pinerounda tree-pineroundb tree-oak tree-default plant-bushdeta
 done
 blender --background --factory-startup --python tools/convert_nature_assets.py -- \
   "$NATURE_DIR" "$UNITY_RES/Nature"
+
+# Convert CC0 Poly Haven cover and resupply models to Unity FBX.
+blender --background --factory-startup --python tools/convert_battlefield_props.py -- \
+  "$PROPS_DIR" "$UNITY_RES/Props"
+cp "$PROPS_DIR/POLYHAVEN_PROPS_SOURCES.txt" "$UNITY_RES/Props/"
 
 # Preserve the stereo near/mid report recordings and their complete natural decay.
 cp assets/runtime/audio/ak_report_near.ogg "$UNITY_RES/Audio/Firearms/"
@@ -115,6 +121,10 @@ test -s "$UNITY_RES/Nature/tree-oak.fbx"
 test -s "$UNITY_RES/Nature/tree-default.fbx"
 test -s "$UNITY_RES/Nature/plant-bushdetailed.fbx"
 test -s "$UNITY_RES/Nature/grass-large.fbx"
+for prop in concrete_road_barrier old_military_crate ammo_box metal_jerrycan_green; do
+  test -s "$UNITY_RES/Props/$prop.fbx"
+done
+test -s "$UNITY_RES/Props/POLYHAVEN_PROPS_SOURCES.txt"
 test -s "$UNITY_RES/Audio/Firearms/ak_report_near.ogg"
 test -s "$UNITY_RES/Audio/Firearms/ak_report_mid.ogg"
 test -s "$UNITY_RES/Audio/Firearms/m4_report_near.ogg"
