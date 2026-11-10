@@ -9,9 +9,10 @@ MODEL_DIR="assets/runtime/models/ak74m"
 TEXTURE_DIR="$MODEL_DIR/textures"
 AUDIO_DIR="assets/runtime/audio"
 TERRAIN_DIR="assets/runtime/terrain"
+BATTLEFIELD_PROPS_DIR="assets/runtime/models/battlefield_props"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
-mkdir -p "$TEXTURE_DIR" "$AUDIO_DIR" "$TERRAIN_DIR"
+mkdir -p "$TEXTURE_DIR" "$AUDIO_DIR" "$TERRAIN_DIR" "$BATTLEFIELD_PROPS_DIR"
 
 download() {
   local url="$1"
@@ -20,6 +21,9 @@ download() {
   curl --fail --location --retry 3 --retry-delay 2 --user-agent "TacticalStrikeAssetBuilder/2.0" "$url" -o "$output"
   test -s "$output"
 }
+
+# Four CC0 Poly Haven battlefield props, pinned to the 1K glTF variant.
+python3 tools/download_polyhaven_models.py "$BATTLEFIELD_PROPS_DIR"
 
 # Real first-person AK-74M + hands + skeleton + eight authored animation clips.
 download "$BASE/Models/fps_ak-74m_animations/scene.gltf" "$MODEL_DIR/scene.gltf"
