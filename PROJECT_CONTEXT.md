@@ -936,3 +936,56 @@ Official playtest announcement: https://steamcommunity.com/app/393380/
 - Android run `42830985872` has completed all reported build and APK verification steps successfully; its final run/job state was still finishing the final GitHub post-job step at last inspection. Run URL: https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42830985872 .
 - Therefore, no live WebGL URL is confirmed yet. The expected URL remains `https://cybersecurityrahbar.github.io/Tactical-Strike-Android/`, and must only be called ready after the WebGL run completes its Pages deployment and the exact URL is opened/verified.
 - Next user instruction: open repository Actions tab and select the latest **Unity Browser Preview** run to inspect its status; no more changes in Pages settings are needed. If the WebGL workflow later fails specifically because Pages is not configured/available, inspect that failure and re-run after confirming the already-saved setting. Do not ask the user to repeat the Pages-source setup.
+
+## WebGL preview failure diagnosis and repeat-build optimization — 2026-11-10
+
+### Failed run root cause (verified from GitHub Actions logs)
+
+- Inspected Unity Browser Preview run `42830985681`:
+  https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42830985681
+- The run completed in 24 minutes 6 seconds (`14:07:48Z` to `14:31:54Z`) with conclusion `failure`.
+- This was **not** a Unity compiler/build failure and **not** a GitHub Pages configuration failure:
+  - Unity license checks passed.
+  - Runtime asset preparation passed.
+  - Unity WebGL Player build completed successfully (`Build succeeded`; `TACTICAL STRIKE WEB PREVIEW BUILD PASSED`) with reported player content of 17,534,539 bytes.
+  - Pages configuration/upload/deployment were skipped only because the validator failed first.
+- Exact validator exception: `RuntimeError: Missing required WebGL compressed data file; tried ('*.data.gz',)`.
+- Unity's build log explicitly produced GzipMarker files with names:
+  - `build/WebGL/Build/WebGL.data.unityweb`
+  - `build/WebGL/Build/WebGL.framework.js.unityweb`
+  - `build/WebGL/Build/WebGL.wasm.unityweb`
+  The validator incorrectly assumed `.gz` suffixes. Unity's Gzip output uses `.unityweb` suffix in this build.
+- The Android build run for the same source commit `48209d190668eded6fd809ef4f8dfc092bbaaca1` completed successfully: run `42830985872`.
+  https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42830985872
+
+### Why the first preview build was slow
+
+- The first WebGL run was a cold build. Its Unity Library restore explicitly reported: `Cache not found for input keys`.
+- Unity therefore imported the project from scratch and created a new Library cache. The first run then saved a cache of approximately 911,707,445 bytes (about 912 MB).
+- The workflow also installed Blender, FFmpeg and NumPy, then re-downloaded and converted the pinned AK-74M, nature, terrain and audio runtime assets on the first run.
+- Unity's actual WebGL Player build succeeded; the failure happened during post-build file validation, so the long wait did not represent a failed Unity compilation.
+- A WebGL build and deployment still run for every relevant gameplay/source change. The user's Pages source setting is one-time; the site URL stays the same and is replaced on each successful deployment. Documentation-only commits do not trigger the build.
+- Build timing is inherently variable on hosted runners. Do not promise a fixed duration.
+
+### Corrective changes committed
+
+1. `cf0f3bc8ed80c798e94ac621a6a19c6e74e095a2` — fixed `tools/validate_web_preview.py`:
+   - Accepts Unity's `*.data.unityweb`, `*.framework.js.unityweb`, and `*.wasm.unityweb` output as well as `.gz` variants.
+   - Reads each gzip stream to completion in chunks, so truncation/CRC errors are detected instead of checking only the first 64 bytes.
+   - Records actual filenames and compressed/decompressed sizes in `preview-build.json`.
+2. `5741911f76d304a33db8ba7d405f798b77027116` — adds a distinct prepared-runtime-assets cache in `.github/workflows/unity-web-preview.yml`:
+   - Caches `assets/runtime` and `UnityProject/Assets/Resources/TacticalStrike/Imported`.
+   - Cache key is tied to the pinned asset preparation and conversion scripts.
+   - On a valid hit, skips installing Blender/FFmpeg/NumPy and skips repeated asset downloads/conversion.
+   - On a miss or invalid cache, prepares the assets and saves them for subsequent runs.
+3. `ec062e4b79db0ac2b69e9cf11c0e164408b1c228` — corrected the runtime-cache marker write command.
+4. `f7de6f4b450687744a145d1ec904bff3bc9e7eaf` — documented build cadence and cache behavior in `docs/WEB_PREVIEW_GUIDE.md`.
+
+### Expected behavior after optimization
+
+- The first run using the new runtime-asset cache still needs to create that cache, so it can still perform the asset-tool installation and asset conversion once.
+- Subsequent runs with unchanged preparation scripts should reuse both the prepared-runtime-assets cache and Unity Library cache. Gameplay code changes still cause a fresh WebGL build/deployment, but should no longer repeat the full external-asset installation/download/conversion stage.
+- Changes to the pinned asset preparation/conversion scripts intentionally invalidate the prepared runtime asset cache. Changes to Unity project assets may cause Unity to reimport the changed assets, while cached unchanged Library data can still be reused.
+- Current validator fix is source-level only until a new Actions run passes validation, uploads the Pages artifact, deploys, and the expected URL is opened successfully.
+- Expected URL (not yet declared live until verified): https://cybersecurityrahbar.github.io/Tactical-Strike-Android/
+
