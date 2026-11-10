@@ -1418,3 +1418,30 @@ The user tested the deployed Northwind preview and reported four blocking runtim
 - Inspection against the URP Lit shader reference showed the metallic/roughness map shader variant is named `_METALLICSPECGLOSSMAP`, not `_METALLICGLOSSMAP`.
 - Updated the Poly Haven prop material importer to enable the actual URP keyword when restoring the metallic-gloss texture. This prevents imported weathered metal assets from silently falling back to a plain scalar metallic value.
 - Source commit: `1dddd0be498b02d147ed309c6d0e45393b79bb0b`. Build run triggered for the updated source; this correction has not yet passed Unity import/build verification.
+
+
+## User screenshot review: old WebGL deployment, floating foliage, map-art gap — 2026-11-11
+
+### Screenshot and deployment verification
+
+- User uploaded a 1366×768 browser screenshot showing a first-person view with dark detached foliage/large slab-like geometry across the horizon, a tall dark upright slab near the centre, broad flat olive ground, a separated dark road slab, uneven/discontinuous trench/road edges, and no visible acceptable AK-74M/arms viewmodel.
+- The latest successful GitHub Pages deployment at this checkpoint is still WebGL run #17, source commit `86d5729731a837a9385b7928bcade35a61d4d07a`. All later preview runs up to #33 were cancelled or failed; current WebGL run #34 (`42900456819`) was still building source `1dddd0be498b02d147ed309c6d0e45393b79bb0b`. Android run #51 (`42900456803`) was also still building that source. Therefore the screenshot URL still served the prior deployed build; the map/foliage/quality corrections on newer `main` commits had not yet been published when the screenshot was captured.
+- Do not ask the user to retest the same link until run #34 passes Unity WebGL build, output validation, Pages artifact upload, and Pages deployment. Confirm the published source SHA before asking for any retest.
+
+### Confirmed source issues already corrected on current main (not yet visually accepted)
+
+- Commit `84122e3e08bbcdafaeb94acaaae9eb3bf0c615c7` documents and corrects the old screenshot causes: old URP was render scale 0.90 / MSAA 2x / HDR off / 85m shadow distance / LOD bias 1.25; old roads used separated flat cube sections; trench floors used spaced thin plates and horizontal-only block rotations; foliage scale/pivots were not normalized or grounded; tracer tail could reach 6–8.5m; surface impacts lacked suitable dirt marks and differentiated effects.
+- Current URP build configuration is applied unconditionally, including after Unity Library cache restoration: render scale 1.0, 4x MSAA, HDR enabled, 220m shadow distance, four cascades, 2048 main-light shadow map, two additional lights, depth texture, LOD bias 1.75 and anisotropic filtering. Runtime QualitySettings are aligned.
+- Terrain/road/trench correction raises the terrain heightmap to 513×513 and alphamap to 512 over 700m, creates Catmull-Rom-smoothed road ribbons following both terrain edges, makes trench floors continuous conforming ribbons, and aligns parapet blocks to local 3D slope. This fixes the former spaced slab construction at source level, pending deployed visual verification.
+- Nature model transforms are normalized from renderer bounds and placed on the terrain surface. Commit `b56212a5a26ad48a5532cbbc33a7bc2efaa7b193` also fixes the URP foliage material postprocessor: it preserves albedo/normal/alpha inputs and enables alpha-tested, two-sided foliage rendering. This directly addresses the previous dark opaque foliage-card/slab appearance.
+- Tracer source now uses a short 0.09–0.22m tapered wake with calibre-scaled 2.8–6cm luminous envelope instead of the prior multi-metre laser-like tail. Impact logic distinguishes hard surfaces from dirt/grass, spawns sparks for metal/masonry, dust for non-metal strikes, and a temporary 32-second soil mark/lip on suitable ground hits. These are first-pass effects; the ground scar is a temporary mesh, not destructive TerrainData deformation.
+- HUD mission panel negative-height RectTransform was corrected in commit `706c2d4e2fd1b32dec45cd6e6b7964f58e8487cb`.
+
+### Remaining art and gameplay gap — do not claim Squad-quality parity
+
+- The current 700m world still uses substantial procedural greybox geometry: houses, sheds, dugouts, firing bays, parts of parapets and field debris are made from primitive cubes; ridge rocks are combined scaled spheres; several props are four CC0 Poly Haven models (road barrier, military crate, ammo box and green jerrycan).
+- The map currently places about 210 tree instances and some shrubs along the flanks. The imported `grass-large` model is prepared but is not yet painted/scattered as a ground-detail layer; the central valley still lacks dense natural ground cover, litter, small rocks, varied vegetation clusters, realistic terrain transitions and environmental dressing.
+- The top-down `docs/northwind-valley-layout.svg` is explicitly a conceptual layout plan, not a rendered 3D map, terrain sculpt or visual-quality proof. It should not be presented as if it were the in-game map screenshot.
+- Current weapon viewmodel is still imported from an FBX/legacy animation path and has no confirmed visual acceptance: the new deployed build must show both arms and AK in the intended lower-right first-person pose, correctly gripped, scaled, oriented and animated. If it does not, the rig needs a separate replacement/re-rig pass; build success alone does not prove viewmodel visibility.
+- Professional target therefore requires a true art-production pass after current corrections deploy: authored/sourced military sandbag and revetment assets, detailed terrain/road shoulder materials, ground-cover/vegetation scatter with correct alpha/LOD, authored buildings and interiors, dressing/decals, plus a validated first-person rig. No claim that the current procedural geometry is already visually equivalent to Squad.
+- Acceptance remains pending exact current-source WebGL deployment and a fresh screenshot. User testing must not be requested against the old published page.
