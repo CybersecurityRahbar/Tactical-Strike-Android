@@ -360,12 +360,64 @@ namespace TacticalStrike.Editor
             if (!assetPath.Contains("/Imported/Nature/") || material == null) return;
             Shader urp = Shader.Find("Universal Render Pipeline/Lit");
             if (urp == null) return;
+
+            // Capture textures/properties before changing shader. The old postprocessor
+            // retained only BaseColor, silently dropping the GLB/FBX leaf albedo and
+            // alpha channel; foliage cards then rendered as dark opaque floating slabs.
+            Texture albedo = material.HasProperty("_BaseMap")
+                ? material.GetTexture("_BaseMap") : null;
+            if (albedo == null && material.HasProperty("_MainTex"))
+                albedo = material.GetTexture("_MainTex");
+            Texture normal = material.HasProperty("_BumpMap")
+                ? material.GetTexture("_BumpMap") : null;
             Color baseColor = material.HasProperty("_BaseColor")
                 ? material.GetColor("_BaseColor") : material.color;
+            float metallic = material.HasProperty("_Metallic")
+                ? material.GetFloat("_Metallic") : 0f;
+            float smoothness = material.HasProperty("_Smoothness")
+                ? material.GetFloat("_Smoothness") : 0.18f;
+
             material.shader = urp;
             if (material.HasProperty("_BaseColor"))
                 material.SetColor("_BaseColor", baseColor);
+            if (material.HasProperty("_BaseMap") && albedo != null)
+                material.SetTexture("_BaseMap", albedo);
+            if (material.HasProperty("_MainTex") && albedo != null)
+                material.SetTexture("_MainTex", albedo);
+            if (material.HasProperty("_BumpMap") && normal != null)
+            {
+                material.SetTexture("_BumpMap", normal);
+                material.EnableKeyword("_NORMALMAP");
+            }
+
+            // Nature-kit leaf and grass cards use alpha-tested cutouts rather than
+            // transparent blended quads. Keep them two-sided so both leaf faces render.
+            if (material.HasProperty("_Surface")) material.SetFloat("_Surface", 0f);
+            if (material.HasProperty("_AlphaClip")) material.SetFloat("_AlphaClip", 1f);
+            if (material.HasProperty("_Cutoff")) material.SetFloat("_Cutoff", 0.42f);
+            if (material.HasProperty("_Cull")) material.SetFloat("_Cull", (float)CullMode.Off);
+            material.EnableKeyword("_ALPHATEST_ON");
+            material.renderQueue = (int)RenderQueue.AlphaTest;
+            if (material.HasProperty("_Metallic")) material.SetFloat("_Metallic", metallic);
+            if (material.HasProperty("_Smoothness"))
+                material.SetFloat("_Smoothness", Mathf.Clamp(smoothness, 0.02f, 0.24f));
             material.enableInstancing = true;
+        }
+    }
+
+    public sealed class NatureTexturePostprocessor : AssetPostprocessor
+    {
+        private void OnPreprocessTexture()
+        {
+            if (!assetPath.Contains("/Imported/Nature/")) return;
+            TextureImporter importer = (TextureImporter)assetImporter;
+            importer.mipmapEnabled = true;
+            importer.textureCompression = TextureImporterCompression.Compressed;
+            importer.maxTextureSize = 2048;
+            // Preserve PNG/embedded alpha so the URP AlphaClip pass can cut out
+            // foliage cards instead of drawing their transparent rectangular canvas.
+            importer.alphaSource = TextureImporterAlphaSource.FromInput;
+            importer.alphaIsTransparency = true;
         }
     }
 
