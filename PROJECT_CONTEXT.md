@@ -907,3 +907,10 @@ Official playtest announcement: https://steamcommunity.com/app/393380/
 - Reviewed the current `actions/upload-pages-artifact@v4` input contract after the first workflow was queued. Hidden files are excluded by default, which would silently omit Unity's `.nojekyll` marker.
 - Added `include-hidden-files: true` to the Pages artifact upload step so the marker created by the post-build validator is actually published. The upload path contains only the generated Unity WebGL build and its generated preview manifest/inventory; no repository secrets or source-control directories are inside that path.
 - This is a preventive packaging correction. The new workflow attempt must still prove the action accepts the input and the final site deploys.
+
+
+### Desktop pointer-capture correction — 2026-11-10
+
+- A second HUD review found that the transparent right-side touch-look surface was still being created on desktop WebGL even though the joystick/combat buttons were hidden. That raycast target would have intercepted mouse clicks over most of the right half of the viewport, preventing the browser build from requesting pointer lock.
+- Moved creation of the touch-look surface inside the mobile-platform condition. Desktop Web builds now have no transparent touch surface; only visible HUD controls intercept clicks. Android continues to create the look surface, joystick and touch combat buttons.
+- This is a source-level input correction. Unity WebGL/Android builds and actual cursor/touch behavior still require CI and runtime verification.
