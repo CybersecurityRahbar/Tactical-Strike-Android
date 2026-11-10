@@ -1248,3 +1248,12 @@ The user tested the deployed Northwind preview and reported four blocking runtim
 - No visual success is claimed until a new preview is tested: the player must remain on the ground, AK/arms must be visible and aligned, the shot must sound natural, and tracers must be yellow/orange and round rather than pink/rectangular.
 - The sound pipeline now fixes the incorrect source recordings/truncation/channel conversion, but only the AK first-person report is wired in this pass. Complete weapon-specific audio for all seven guns and authentic 12.7mm DShK/M2 recordings remain outstanding.
 - Full seven-weapon inventory, final weapon rig/animation alignment, tactical AI, objectives, vehicles, networking, advanced audio and physical Android performance acceptance remain outstanding.
+
+
+## Follow-up integration correction — 2026-11-10
+
+- A post-commit diff review found that the initial corrective tree had a partial `WeaponController` version. A follow-up source update now wires the AK single-shot near/mid audio clips, the 7N6 / 7T3 tracer / 7N22 AP profiles, and the corrected first-person yaw in both the initial pose and the per-frame sway target. The mounted DShK/M2 components use their separate 12.7×108 and 12.7×99 profiles.
+- Ground recovery sampling was tightened to avoid ambiguity from a non-zero Terrain transform: it now samples `TerrainData.GetInterpolatedHeight` in Terrain-local coordinates and transforms that point back into world space. This matters because the Northwind Terrain origin has a vertical offset of -25m.
+- The current AK sound uses a genuine single-shot near recording with a restrained mid-distance recording layer. The source recordings are AK-47 7.62×39 CC0 reference audio, not exact AK-74M 5.45×39 recordings; this limitation remains explicit. DShK/M2 still need their own licensed 12.7mm recordings.
+- The initial source/asset corrective change and this follow-up integration/ground-sampling change are separate main-branch commits. Rebuild validation must be read from the latest run for the current main commit; a prior completed run must not be used to claim this final source is built.
+- Final acceptance remains pending new WebGL/Android CI completion plus user browser testing of ground contact, visible hand/weapon pose, sound character, tracer geometry and tracer colour.
