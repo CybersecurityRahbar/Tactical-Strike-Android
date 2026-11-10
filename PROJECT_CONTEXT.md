@@ -996,3 +996,13 @@ Official playtest announcement: https://steamcommunity.com/app/393380/
 - Earlier runs `42836663512` and `42836702284` were cancelled by the next commits under the intended `cancel-in-progress` concurrency rule; they are superseded attempts, not new build defects.
 - The latest source code/validator fixes are committed to `main`; the current Pages deployment is still unverified until run `42836781579` succeeds through `Deploy browser preview` and the URL is opened.
 
+### First successful Unity WebGL browser preview deployment — 2026-11-10
+
+- Corrected WebGL run `42836781579` completed with `conclusion: success` on commit `ec062e4b79db0ac2b69e9cf11c0e164408b1c228`:
+  https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42836781579
+- Verified every job step succeeded, including prepared runtime asset checks/cache, Unity WebGL build, Unity payload validation, GitHub Pages configuration, Pages artifact upload, and `Deploy browser preview`.
+- GitHub Actions job final environment URL was evaluated as `https://cybersecurityrahbar.github.io/Tactical-Strike-Android/`.
+- This confirms the first WebGL build was published successfully. It remains a desktop browser review build; visual/gameplay correctness and browser runtime loading still need the user's manual review.
+- Recommended review sequence: open the URL in desktop Chrome, wait for Unity to load, click the game canvas to capture the pointer, use WASD/mouse, Escape to release cursor, then inspect player hands/AK-74M, weapon scale/alignment, movement/aim, projectile tracer visibility, terrain, trenches, and building layout. Record screenshots/video and report defects against the build commit.
+- Successful run URL remains the same for subsequent preview updates; relevant commits trigger another build/deploy and replace the published browser version.
+
