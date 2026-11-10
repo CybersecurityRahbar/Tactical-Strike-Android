@@ -1081,3 +1081,35 @@ Official playtest announcement: https://steamcommunity.com/app/393380/
 - Superseded run IDs `42851997309` and `42851997450` were cancelled when the newer PBR commit was pushed; these were interrupted by `cancel-in-progress`, not additional C# errors.
 - The old deployed GitHub Pages preview still corresponds to the old Greenridge scene until run `42852093866` successfully deploys the new `main` source.
 
+## First Northwind Valley browser deployment and crew-served weapon integration — 2026-11-10
+
+### First playable-map build successfully deployed
+
+- WebGL run `42852093866` completed with `conclusion: success` for source commit `8c4e6516abd2585a0084788359e2e3bc11382f73`:
+  https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42852093866
+- Verified success through `Build WebGL preview`, `Validate WebGL files and add preview manifest`, `Configure GitHub Pages`, `Upload WebGL preview as Pages artifact`, and `Deploy browser preview`.
+- This is the first successful browser deployment whose Unity bootstrap invokes `NorthwindValleyGenerator.Build(worldRoot)` and whose new valley PBR surfaces are loaded by the active map generator. It is the first preview build of the actual new Northwind source, not the previous Greenridge version.
+- The deployed page is a Unity WebGL runtime. Deployment success confirms publish; it does not replace a visual/browser interaction test. The user must still review actual scene appearance, scale, collision, building interiors, movement, sight picture, tracer and browser performance.
+
+### Android build succeeded for the new Northwind map source
+
+- Android workflow run `42852093702` completed with `conclusion: success` on the same commit `8c4e6516abd2585a0084788359e2e3bc11382f73`:
+  https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42852093702
+- Verified `Build Android APK`, APK archive integrity, APK signature, manifest/dex and `lib/arm64-v8a/libil2cpp.so` + `libunity.so`. Artifact `TacticalStrike-Unity-Android-verified` was uploaded (about 33.7 MB artifact size).
+- Android build success is not a physical-phone gameplay/performance test; still needs device review.
+
+### New crew-served weapon implementation on main
+
+- Commit `30cc3a967330c362a5cde873cbc59beeded47a8d` adds `UnityProject/Assets/TacticalStrike/Scripts/Combat/MountedWeaponEmplacement.cs` and wires the HMG nests in `NorthwindValleyGenerator` to this component.
+- Both named positions (`DShK 12.7mm` and `M2 Browning .50`) now spawn an active mounted-emplacement component in the runtime world. One operator can approach within 3.8m and mount with `E` on desktop/WebGL or the contextual `MOUNT` touch button on Android. `E`/`DISMOUNT` returns the operator to a safe dismount point.
+- The weapon assembly is attached to a traverse/elevation pivot. Traverse is clamped to ±66°, elevation +24°, depression -18°. The camera aligns to the pivot while mounted, the personal AK viewmodel is hidden, and player movement is disabled while operating the mount.
+- The HMG fires original 12.7mm ballistic projectiles at 890m/s with 128 damage, 0.94 penetration factor, 1250m max range, 9.2 rounds/s cyclic rate, and a tracer presentation every third shot. Each mount has a 250-round belt plus 750 reserve, and a 3.35-second belt-change reload using `R` or the touch reload button.
+- `FpsPlayerController` routes look/fire/reload and mounting to the crew-served station while occupied. `MobileHud` shows the contextual mount/dismount button and mounted belt/reserve ammunition, and keeps AK ammunition display separate after dismount. `WeaponController` exposes `SetViewModelVisible` for the operator transition.
+- The current DShK/M2 receiver/barrel/sight geometry is still assembled from runtime primitive meshes. The firing/traverse/reload loop is functional in source; it is **not yet a high-detail authentic DShK/M2 model**, and the mounts still need Unity CI and actual gameplay validation. Do not describe them as art-complete.
+
+### Ground detail and current validation
+
+- `NorthwindValleyGenerator` now creates conforming PBR earth patches at the south staging area, northern reserve, defensive compounds, farm/village yards and HMG positions, using the imported Ground037 surface map. These sit on the actual heightfield and are separate from the trench-floor geometry.
+- Source commit `30cc3a967330c362a5cde873cbc59beeded47a8d` triggers the follow-up validation runs: WebGL `42855335693` and Android `42855335569`. Both were in progress at the last check; don't claim the mounted-weapon changes compile until these runs complete.
+- The previously successful WebGL preview run `42852093866` is the currently deployed Northwind baseline before the just-added HMG controls. The newer HMG commit is not deployed until run `42855335693` passes WebGL build/validation/deployment.
+
