@@ -38,6 +38,8 @@ namespace TacticalStrike
         private bool jumpRequested;
         private bool aimEnabled;
         private bool isFocusing;
+        private float leanInput;
+        private float leanTarget;
 
         private const float StandingCameraHeight = 1.62f;
 
@@ -109,7 +111,7 @@ namespace TacticalStrike
                 freeLookYaw = Mathf.MoveTowards(freeLookYaw, 0f, 0.22f);
             }
             pitch = Mathf.Clamp(pitch - delta.y * sensitivity, -82f, 82f);
-            PlayerCamera.transform.localRotation = Quaternion.Euler(pitch, freeLookYaw, 0f);
+            PlayerCamera.transform.localRotation = Quaternion.Euler(pitch, freeLookYaw, -leanInput * 7.5f);
         }
 
         public void SetSprint(bool held) { sprintHeld = held; }
@@ -117,6 +119,23 @@ namespace TacticalStrike
         {
             if (!proneHeld) crouchHeld = held;
         }
+
+        public void ToggleCrouch()
+        {
+            if (proneHeld)
+            {
+                proneHeld = false;
+                crouchHeld = true;
+                return;
+            }
+            crouchHeld = !crouchHeld;
+        }
+
+        public void SetLean(float direction)
+        {
+            leanTarget = Mathf.Clamp(direction, -1f, 1f);
+        }
+
         public void RequestJump() { jumpRequested = true; }
 
         public void ToggleProne()
@@ -181,6 +200,8 @@ namespace TacticalStrike
         public void BeginMounted(MountedWeaponEmplacement mount, Vector3 operatorPosition, Quaternion operatorRotation)
         {
             mountedEmplacement = mount;
+            leanInput = 0f;
+            leanTarget = 0f;
             mobileMove = Vector2.zero;
             planarVelocity = Vector3.zero;
             verticalVelocity = 0f;
@@ -201,6 +222,8 @@ namespace TacticalStrike
         {
             if (mountedEmplacement != mount) return;
             mountedEmplacement = null;
+            leanInput = 0f;
+            leanTarget = 0f;
             transform.SetPositionAndRotation(exitPosition, exitRotation);
             if (character != null && !character.enabled) character.enabled = true;
             pitch = 0f;
@@ -219,7 +242,7 @@ namespace TacticalStrike
             hud?.SetMountButtonState(mounted || mountedEmplacement != null, mounted, label);
             if (!mounted && Weapon != null)
                 hud?.SetWeaponInfo(Weapon.Magazine, Weapon.Reserve, Weapon.AmmoMode);
-            hud?.ShowMessage(mounted ? "MOUNTED: " + label + "  /  E TO DISMOUNT" : "DISMOUNTED: " + label);
+            hud?.ShowMessage(mounted ? "MOUNTED: " + label + "  /  F TO DISMOUNT" : "DISMOUNTED: " + label);
         }
 
         public void ShowHudMessage(string message) { hud?.ShowMessage(message); }
@@ -241,7 +264,7 @@ namespace TacticalStrike
         {
             pitch = Mathf.Clamp(pitch - verticalDegrees, -82f, 82f);
             transform.Rotate(Vector3.up, horizontalDegrees, Space.World);
-            PlayerCamera.transform.localRotation = Quaternion.Euler(pitch, freeLookYaw, 0f);
+            PlayerCamera.transform.localRotation = Quaternion.Euler(pitch, freeLookYaw, -leanInput * 7.5f);
         }
 
         private void Update()
@@ -249,6 +272,7 @@ namespace TacticalStrike
             if (PlayerCamera == null || character == null) return;
             float dt = Mathf.Min(Time.deltaTime, 0.05f);
             UpdateSuppression(dt);
+            leanInput = Mathf.MoveTowards(leanInput, leanTarget, dt * 5.2f);
 
 #if UNITY_EDITOR || UNITY_STANDALONE || UNITY_WEBGL
             bool pointerOverUi = EventSystem.current != null &&
@@ -268,7 +292,7 @@ namespace TacticalStrike
             MountedWeaponEmplacement activeMount = mountedEmplacement;
             if (activeMount != null)
             {
-                if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Escape))
+                if (Input.GetKeyDown(KeyCode.F) || Input.GetKeyDown(KeyCode.Escape))
                     activeMount.Dismount();
                 else
                 {
@@ -303,21 +327,21 @@ namespace TacticalStrike
                 else if (!Application.isMobilePlatform) sprintHeld = false;
                 if (Input.GetKeyDown(KeyCode.Space)) jumpRequested = true;
                 if (Input.GetKeyDown(KeyCode.Z)) ToggleProne();
-                if (Input.GetKey(KeyCode.C) && !proneHeld) crouchHeld = true;
-                else if (!Application.isMobilePlatform) crouchHeld = false;
+                if (Input.GetKeyDown(KeyCode.C)) ToggleCrouch();
+                SetLean(Input.GetKey(KeyCode.Q) ? -1f : (Input.GetKey(KeyCode.E) ? 1f : 0f));
 
                 bool canUseCombatMouse = Cursor.lockState == CursorLockMode.Locked && !justLockedCursor;
-                if (canUseCombatMouse && Input.GetMouseButton(0)) SetFireHeld(true);
+                if (canUseCombatMouse) SetFireHeld(Input.GetMouseButton(0));
                 else if (!Application.isMobilePlatform) SetFireHeld(false);
-                if (canUseCombatMouse && Input.GetMouseButtonDown(1)) SetAim(!aimEnabled);
+                if (!Application.isMobilePlatform) SetAim(canUseCombatMouse && Input.GetMouseButton(1));
                 if (Input.GetKeyDown(KeyCode.R)) ReloadCurrentWeapon();
                 if (Input.GetKeyDown(KeyCode.T)) Weapon.CycleAmmo();
-                if (Input.GetKeyDown(KeyCode.E)) InteractWithMountedWeapon();
+                if (Input.GetKeyDown(KeyCode.F)) InteractWithMountedWeapon();
 
                 if (!Input.GetKey(KeyCode.LeftAlt))
                 {
                     freeLookYaw = Mathf.MoveTowards(freeLookYaw, 0f, 90f * dt);
-                    PlayerCamera.transform.localRotation = Quaternion.Euler(pitch, freeLookYaw, 0f);
+                    PlayerCamera.transform.localRotation = Quaternion.Euler(pitch, freeLookYaw, -leanInput * 7.5f);
                 }
             }
 #endif
@@ -384,8 +408,10 @@ namespace TacticalStrike
             float bob = moving ? Mathf.Sin(cameraBob) * bobScale : 0f;
 
             Vector3 cameraPosition = PlayerCamera.transform.localPosition;
+            cameraPosition.x = Mathf.Lerp(cameraPosition.x, leanInput * 0.20f, dt * 10f);
             cameraPosition.y = Mathf.Lerp(cameraPosition.y, targetEyeHeight + bob, dt * 9f);
             PlayerCamera.transform.localPosition = cameraPosition;
+            PlayerCamera.transform.localRotation = Quaternion.Euler(pitch, freeLookYaw, -leanInput * 7.5f);
 
             float targetFov = isFocusing ? 48f : (aimEnabled ? 55f : 78f);
             PlayerCamera.fieldOfView = Mathf.Lerp(PlayerCamera.fieldOfView, targetFov, dt * 8.5f);

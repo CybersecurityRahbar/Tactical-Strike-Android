@@ -16,11 +16,12 @@ namespace TacticalStrike
         private GameObject mountButton;
         private Text mountButtonLabel;
         private bool mountedWeaponMode;
+        private bool sprintToggle;
+        private Image sprintButtonImage;
         private Image suppressionVignette;
         private GameObject settingsPanel;
         private GameObject pausePanel;
         private float messageTimer;
-        private bool aim;
 
         private static Sprite circleSprite;
         private static Sprite suppressionSprite;
@@ -68,7 +69,7 @@ namespace TacticalStrike
             if (Application.isMobilePlatform)
             {
                 GameObject look = CreateImage("Right-side look surface", root, new Color(1f, 1f, 1f, 0.001f),
-                    new Vector2(0.31f, 0.14f), new Vector2(1f, 0.91f), Vector2.zero, Vector2.zero);
+                    new Vector2(0.37f, 0.08f), new Vector2(1f, 0.96f), Vector2.zero, Vector2.zero);
                 look.GetComponent<Image>().raycastTarget = true;
                 look.AddComponent<TouchLookArea>().Initialize(player);
             }
@@ -177,7 +178,7 @@ namespace TacticalStrike
 
         private void BuildDesktopHelp(RectTransform root)
         {
-            CreateText("WASD MOVE   |   MOUSE LOOK   |   CLICK CAPTURE   |   LMB FIRE   |   RMB AIM   |   SHIFT RUN / FOCUS   |   C CROUCH   |   Z PRONE   |   SPACE JUMP   |   R RELOAD   |   T AMMO   |   E MOUNT / DISMOUNT   |   ESC RELEASE",
+            CreateText("WASD MOVE  |  MOUSE LOOK  |  LMB FIRE  |  HOLD RMB AIM  |  SHIFT SPRINT  |  C CROUCH  |  Z PRONE  |  SPACE JUMP  |  Q / E LEAN  |  R RELOAD  |  T AMMO  |  F INTERACT  |  ESC RELEASE",
                 root, 15, new Color(0.94f, 0.91f, 0.82f, 0.88f), TextAnchor.MiddleCenter,
                 new Vector2(0.08f, 0f), new Vector2(0.92f, 0f),
                 new Vector2(0f, 12f), new Vector2(0f, 48f));
@@ -185,41 +186,117 @@ namespace TacticalStrike
 
         private void BuildJoystick(RectTransform root)
         {
-            GameObject baseObject = CreateImage("Movement joystick base", root, new Color(0.12f, 0.15f, 0.13f, 0.56f),
-                new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(28f, 28f), new Vector2(228f, 228f));
+            GameObject baseObject = CreateImage("Tactical movement stick", root,
+                new Color(0.045f, 0.065f, 0.055f, 0.70f),
+                new Vector2(0f, 0f), new Vector2(0f, 0f),
+                new Vector2(26f, 26f), new Vector2(258f, 258f));
             Image baseImage = baseObject.GetComponent<Image>();
             baseImage.sprite = Circle();
             baseImage.type = Image.Type.Simple;
-            GameObject knobObject = CreateImage("Movement joystick thumb", baseObject.transform,
-                new Color(0.73f, 0.65f, 0.48f, 0.7f), new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f), new Vector2(-42f, -42f), new Vector2(84f, 84f));
+            GameObject innerRing = CreateImage("Movement stick inner ring", baseObject.transform,
+                new Color(0.55f, 0.61f, 0.46f, 0.12f),
+                new Vector2(0.18f, 0.18f), new Vector2(0.82f, 0.82f),
+                Vector2.zero, Vector2.zero);
+            innerRing.GetComponent<Image>().sprite = Circle();
+            GameObject knobObject = CreateImage("Movement stick thumb", baseObject.transform,
+                new Color(0.70f, 0.72f, 0.59f, 0.86f), new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f), new Vector2(-46f, -46f), new Vector2(46f, 46f));
             knobObject.GetComponent<Image>().sprite = Circle();
-            baseObject.AddComponent<TouchJoystick>().Initialize(player, knobObject.transform as RectTransform, 78f);
+            baseObject.AddComponent<TouchJoystick>().Initialize(player,
+                knobObject.transform as RectTransform, 86f);
         }
 
         private void BuildCombatButtons(RectTransform root)
         {
-            AddHoldButton(root, "FIRE", new Vector2(1f, 0f), new Vector2(-118f, 145f), new Vector2(126f, 126f),
-                new Color(0.52f, 0.18f, 0.10f, 0.86f), held => player.SetFireHeld(held), 24);
-            AddButton(root, "AIM", new Vector2(1f, 0f), new Vector2(-286f, 224f), new Vector2(88f, 62f),
-                () => { aim = !aim; player.SetAim(aim); }, new Color(0.20f, 0.25f, 0.21f, 0.86f));
-            AddHoldButton(root, "RUN", new Vector2(1f, 0f), new Vector2(-278f, 140f), new Vector2(88f, 60f),
-                new Color(0.20f, 0.25f, 0.21f, 0.86f), player.SetSprint, 17);
-            AddHoldButton(root, "CROUCH", new Vector2(1f, 0f), new Vector2(-376f, 72f), new Vector2(90f, 58f),
-                new Color(0.20f, 0.25f, 0.21f, 0.86f), player.SetCrouch, 15);
-            AddButton(root, "JUMP", new Vector2(1f, 0f), new Vector2(-274f, 72f), new Vector2(88f, 58f),
-                player.RequestJump, new Color(0.20f, 0.25f, 0.21f, 0.86f));
-            AddButton(root, "PRONE", new Vector2(1f, 0f), new Vector2(-376f, 145f), new Vector2(90f, 58f),
-                player.ToggleProne, new Color(0.20f, 0.25f, 0.21f, 0.86f), 15);
-            AddButton(root, "RELOAD", new Vector2(1f, 0f), new Vector2(-478f, 72f), new Vector2(90f, 58f),
-                player.ReloadCurrentWeapon, new Color(0.20f, 0.25f, 0.21f, 0.86f), 14);
-            AddButton(root, "AMMO", new Vector2(1f, 0f), new Vector2(-578f, 72f), new Vector2(82f, 58f),
-                player.Weapon.CycleAmmo, new Color(0.20f, 0.25f, 0.21f, 0.86f), 15);
-            mountButton = AddButton(root, "MOUNT", new Vector2(1f, 0f), new Vector2(-478f, 145f),
-                new Vector2(90f, 58f), player.InteractWithMountedWeapon,
-                new Color(0.34f, 0.28f, 0.15f, 0.92f), 15);
+            // Dual-thumb tactical layout: movement with the left thumb, view with the right;
+            // independent hold actions support simultaneous ADS and fire.
+            AddTacticalHoldButton(root, "FIRE", new Vector2(1f, 0f),
+                new Vector2(-164f, 164f), new Vector2(146f, 146f),
+                new Color(0.48f, 0.15f, 0.10f, 0.92f), player.SetFireHeld, 19, true);
+            AddTacticalHoldButton(root, "ADS", new Vector2(1f, 0f),
+                new Vector2(-326f, 206f), new Vector2(94f, 94f),
+                new Color(0.24f, 0.31f, 0.24f, 0.90f), player.SetAim, 16, true);
+            AddTacticalHoldButton(root, "LEAN\nL", new Vector2(1f, 0f),
+                new Vector2(-510f, 178f), new Vector2(76f, 76f),
+                new Color(0.18f, 0.23f, 0.19f, 0.88f), held => player.SetLean(held ? -1f : 0f), 12, true);
+            AddTacticalHoldButton(root, "LEAN\nR", new Vector2(1f, 0f),
+                new Vector2(-420f, 178f), new Vector2(76f, 76f),
+                new Color(0.18f, 0.23f, 0.19f, 0.88f), held => player.SetLean(held ? 1f : 0f), 12, true);
+
+            AddTacticalTapButton(root, "JUMP", new Vector2(1f, 0f),
+                new Vector2(-326f, 78f), new Vector2(78f, 72f),
+                new Color(0.24f, 0.30f, 0.23f, 0.92f), player.RequestJump, 13, true);
+            AddTacticalTapButton(root, "CROUCH", new Vector2(1f, 0f),
+                new Vector2(-416f, 78f), new Vector2(78f, 72f),
+                new Color(0.21f, 0.27f, 0.22f, 0.92f), player.ToggleCrouch, 11, true);
+            AddTacticalTapButton(root, "PRONE", new Vector2(1f, 0f),
+                new Vector2(-506f, 78f), new Vector2(78f, 72f),
+                new Color(0.21f, 0.27f, 0.22f, 0.92f), player.ToggleProne, 11, true);
+            AddTacticalTapButton(root, "RELOAD", new Vector2(1f, 0f),
+                new Vector2(-164f, 68f), new Vector2(76f, 66f),
+                new Color(0.18f, 0.23f, 0.19f, 0.93f), player.ReloadCurrentWeapon, 11, false);
+            AddTacticalTapButton(root, "AMMO", new Vector2(1f, 0f),
+                new Vector2(-250f, 68f), new Vector2(76f, 66f),
+                new Color(0.18f, 0.23f, 0.19f, 0.93f), player.Weapon.CycleAmmo, 12, false);
+
+            GameObject sprint = AddTacticalTapButton(root, "SPRINT", new Vector2(0f, 0f),
+                new Vector2(286f, 58f), new Vector2(102f, 78f),
+                new Color(0.22f, 0.29f, 0.22f, 0.92f), () =>
+                {
+                    sprintToggle = !sprintToggle;
+                    player.SetSprint(sprintToggle);
+                    if (sprintButtonImage != null)
+                        sprintButtonImage.color = sprintToggle
+                            ? new Color(0.52f, 0.48f, 0.23f, 0.96f)
+                            : new Color(0.22f, 0.29f, 0.22f, 0.92f);
+                }, 13, false);
+            sprintButtonImage = sprint.GetComponent<Image>();
+
+            mountButton = AddTacticalTapButton(root, "MOUNT", new Vector2(1f, 0f),
+                new Vector2(-596f, 178f), new Vector2(76f, 76f),
+                new Color(0.39f, 0.31f, 0.16f, 0.95f), player.InteractWithMountedWeapon, 12, true);
             mountButtonLabel = mountButton.GetComponentInChildren<Text>();
             mountButton.SetActive(false);
+        }
+
+        private GameObject AddTacticalTapButton(RectTransform parent, string label, Vector2 anchor,
+            Vector2 offset, Vector2 size, Color tint, UnityEngine.Events.UnityAction action,
+            int fontSize, bool circular)
+        {
+            GameObject go = CreateImage(label + " tactical control", parent, tint, anchor, anchor,
+                offset, offset + size);
+            Image image = go.GetComponent<Image>();
+            if (circular) image.sprite = Circle();
+            Button button = go.AddComponent<Button>();
+            button.targetGraphic = image;
+            ColorBlock colors = button.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = Color.white;
+            colors.pressedColor = new Color(0.72f, 0.76f, 0.62f, 1f);
+            colors.selectedColor = Color.white;
+            colors.fadeDuration = 0.08f;
+            button.colors = colors;
+            button.onClick.AddListener(action);
+            CreateText(label, go.transform, fontSize, new Color(0.96f, 0.95f, 0.87f),
+                TextAnchor.MiddleCenter, Vector2.zero, Vector2.one,
+                new Vector2(4f, 3f), new Vector2(-4f, -3f));
+            return go;
+        }
+
+        private GameObject AddTacticalHoldButton(RectTransform parent, string label, Vector2 anchor,
+            Vector2 offset, Vector2 size, Color tint, System.Action<bool> callback,
+            int fontSize, bool circular)
+        {
+            GameObject go = CreateImage(label + " tactical hold", parent, tint, anchor, anchor,
+                offset, offset + size);
+            Image image = go.GetComponent<Image>();
+            if (circular) image.sprite = Circle();
+            HoldButton hold = go.AddComponent<HoldButton>();
+            hold.OnHoldChanged = callback;
+            CreateText(label, go.transform, fontSize, new Color(0.98f, 0.96f, 0.88f),
+                TextAnchor.MiddleCenter, Vector2.zero, Vector2.one,
+                new Vector2(4f, 3f), new Vector2(-4f, -3f));
+            return go;
         }
 
         private void BuildTopButtons(RectTransform root)

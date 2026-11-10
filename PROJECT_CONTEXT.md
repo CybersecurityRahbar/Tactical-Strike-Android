@@ -1257,3 +1257,35 @@ The user tested the deployed Northwind preview and reported four blocking runtim
 - The current AK sound uses a genuine single-shot near recording with a restrained mid-distance recording layer. The source recordings are AK-47 7.62×39 CC0 reference audio, not exact AK-74M 5.45×39 recordings; this limitation remains explicit. DShK/M2 still need their own licensed 12.7mm recordings.
 - The initial source/asset corrective change and this follow-up integration/ground-sampling change are separate main-branch commits. Rebuild validation must be read from the latest run for the current main commit; a prior completed run must not be used to claim this final source is built.
 - Final acceptance remains pending new WebGL/Android CI completion plus user browser testing of ground contact, visible hand/weapon pose, sound character, tracer geometry and tracer colour.
+
+
+## Build failure audit and tactical control-system replacement — 2026-11-10
+
+### Confirmed root cause of latest failed Unity builds
+
+- Android run #37 (`42878716029`) and WebGL run #20 (`42878716026`), both for source commit `bb79f3b8d2a36143ea67ef5eb75d3cafcafd55a8`, failed at C# compilation in `NorthwindValleyGenerator.cs` lines 381-383.
+- The compiler emitted `CS1069`: `TerrainCollider` was forwarded to `UnityEngine.TerrainPhysicsModule`, but this built-in module was not enabled in `UnityProject/Packages/manifest.json`.
+- The missing built-in requirement is `com.unity.modules.terrainphysics`; the terrain runtime is also explicitly included as `com.unity.modules.terrain`. Unity documentation identifies Terrain Physics as the module implementing `TerrainCollider`. This is a project package-manifest defect, not a Unity licence or runner-storage issue.
+- Since Unity compilation failed, Android APK verification and WebGL payload/Pages deployment were skipped. The public preview remains on the previous successful deployment and does not include the latest grounding, AK viewmodel/audio/tracer corrections.
+
+### Player controls — user-requested redesign
+
+- User explicitly rejected the primitive touch-control layout and requested a tactical-FPS scheme comparable in control feel to Squad.
+- Replaced the mobile layout with a dual-thumb arrangement:
+  - Left thumb: dedicated movement joystick.
+  - Right thumb: broad look surface.
+  - Independent hold actions: fire, ADS, left lean and right lean.
+  - Tap actions: jump, crouch toggle, prone toggle, reload, ammunition mode and contextual mount/dismount.
+  - Sprint is a toggle, so steering can remain on the left thumb.
+- Touch joystick and look surface now track active pointer IDs. This allows movement, camera look and additional combat/stance actions on multiple fingers without one finger-up event cancelling another finger's input.
+- Desktop/browser controls are aligned to the tactical layout: WASD movement, mouse look, left mouse held fire, right mouse held ADS, Shift sprint, C crouch toggle, Z prone toggle, Space jump, Q/E lean, R reload, T ammunition and F interact/mount/dismount.
+- Lean is smoothed and shifts the first-person camera laterally with a restrained roll. This is a first-person input/presentation pass, not yet a complete collision-aware body lean or final character animation rig.
+- These changes do not claim finished vaulting, an interchangeable weapon inventory, controller remapping, full-body stance/lean animations or final Android ergonomics.
+
+### Source edits and validation boundary
+
+- Package manifest now includes Terrain and Terrain Physics built-in modules.
+- `FpsPlayerController.cs` has toggle crouch, smoothed lean, hold-to-ADS and the revised keyboard bindings.
+- `MobileHud.cs` now builds the dual-thumb control scheme; `TouchJoystick.cs` and `TouchLookArea.cs` isolate multitouch pointer ownership.
+- The fix is committed directly to `main`. It is not considered successful until new Unity Android and WebGL runs compile; WebGL must also pass manifest validation and GitHub Pages deployment. No physical-device acceptance or browser screenshot is claimed yet.
+- QA gate after CI: verify actual deployed SHA; player-ground collision; simultaneous left-stick movement/right-look/fire/ADS; sprint, crouch, prone and lean; mounted DShK/M2; AK viewmodel; shot sound; tracer appearance and frame rate.
