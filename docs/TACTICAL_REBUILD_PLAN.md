@@ -148,3 +148,7 @@ A first-pass near-miss suppression system is also in source: unblocked projectil
 
 The immediately preceding CI runs for the crew-served weapons failed because the HMG pedestal referenced the undefined material name `darkMetal` rather than `metalMaterial`. This reference has been corrected. WebGL run `42857326872` and Android run `42857326877` are building the corrected layered-terrain/suppression source; this milestone is not complete until both validate and WebGL deployment succeeds.
 
+## Native Terrain compile review — 2026-11-10
+
+Build review found and corrected two successive implementation issues: the orphaned legacy Mesh terrain body left after switching to native Unity Terrain, plus the incorrect use of `ScriptableObject.CreateInstance<TerrainLayer>()`. The latter is replaced by the Unity-native `new TerrainLayer()` construction. Latest source commit `86d5729731a837a9385b7928bcade35a61d4d07a` is queued for new Android/WebGL builds `42863168319` and `42863168322`. Native terrain blending remains unvalidated until those workflows succeed and the deployed map has been visually reviewed.
+
