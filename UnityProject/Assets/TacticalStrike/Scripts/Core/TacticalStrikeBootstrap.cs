@@ -26,6 +26,12 @@ namespace TacticalStrike
             Application.targetFrameRate = 60;
             QualitySettings.vSyncCount = 0;
             QualitySettings.maxQueuedFrames = 2;
+            QualitySettings.shadowDistance = 220f;
+            QualitySettings.shadowResolution = ShadowResolution.High;
+            QualitySettings.lodBias = 1.75f;
+            QualitySettings.maximumLODLevel = 0;
+            QualitySettings.anisotropicFiltering = AnisotropicFiltering.ForceEnable;
+            QualitySettings.pixelLightCount = 4;
             Input.multiTouchEnabled = true;
             ConfigureEnvironment();
             ConfigureTracerBloom();
@@ -46,35 +52,35 @@ namespace TacticalStrike
         {
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.ExponentialSquared;
-            RenderSettings.fogColor = new Color(0.48f, 0.57f, 0.43f);
-            RenderSettings.fogDensity = 0.000075f;
+            RenderSettings.fogColor = new Color(0.38f, 0.43f, 0.44f);
+            RenderSettings.fogDensity = 0.00016f;
             RenderSettings.ambientMode = AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.56f, 0.68f, 0.81f);
-            RenderSettings.ambientEquatorColor = new Color(0.40f, 0.47f, 0.36f);
-            RenderSettings.ambientGroundColor = new Color(0.16f, 0.19f, 0.13f);
-            RenderSettings.ambientIntensity = 1.0f;
+            RenderSettings.ambientSkyColor = new Color(0.46f, 0.55f, 0.64f);
+            RenderSettings.ambientEquatorColor = new Color(0.30f, 0.34f, 0.31f);
+            RenderSettings.ambientGroundColor = new Color(0.12f, 0.14f, 0.12f);
+            RenderSettings.ambientIntensity = 0.92f;
 
             Shader skyShader = Shader.Find("Skybox/Procedural");
             if (skyShader != null)
             {
                 skyMaterial = new Material(skyShader);
-                skyMaterial.SetColor("_SkyTint", new Color(0.90f, 0.95f, 1.0f));
-                skyMaterial.SetColor("_GroundColor", new Color(0.28f, 0.33f, 0.25f));
-                skyMaterial.SetFloat("_AtmosphereThickness", 0.82f);
+                skyMaterial.SetColor("_SkyTint", new Color(0.82f, 0.89f, 0.96f));
+                skyMaterial.SetColor("_GroundColor", new Color(0.20f, 0.22f, 0.20f));
+                skyMaterial.SetFloat("_AtmosphereThickness", 1.08f);
                 RenderSettings.skybox = skyMaterial;
             }
 
             GameObject sunObject = new GameObject("Plateau Sun");
             sunObject.transform.SetParent(transform, false);
-            sunObject.transform.rotation = Quaternion.Euler(57f, -26f, 0f);
+            sunObject.transform.rotation = Quaternion.Euler(43f, -32f, 0f);
             sun = sunObject.AddComponent<Light>();
             sun.type = LightType.Directional;
-            sun.intensity = 1.42f;
-            sun.color = new Color(1f, 0.98f, 0.90f);
+            sun.intensity = 1.18f;
+            sun.color = new Color(1f, 0.985f, 0.95f);
             sun.shadows = LightShadows.Soft;
-            sun.shadowStrength = 0.82f;
-            sun.shadowBias = 0.045f;
-            sun.shadowNormalBias = 0.35f;
+            sun.shadowStrength = 0.88f;
+            sun.shadowBias = 0.035f;
+            sun.shadowNormalBias = 0.28f;
             sunObject.name = "Sun - warm highland daylight";
         }
 
@@ -89,9 +95,15 @@ namespace TacticalStrike
 
             tracerBloomProfile = ScriptableObject.CreateInstance<VolumeProfile>();
             Bloom bloom = tracerBloomProfile.Add<Bloom>(true);
-            bloom.threshold.Override(1.05f);
-            bloom.intensity.Override(0.52f);
-            bloom.scatter.Override(0.58f);
+            bloom.threshold.Override(1.12f);
+            bloom.intensity.Override(0.38f);
+            bloom.scatter.Override(0.52f);
+            Tonemapping tone = tracerBloomProfile.Add<Tonemapping>(true);
+            tone.mode.Override(TonemappingMode.ACES);
+            ColorAdjustments grade = tracerBloomProfile.Add<ColorAdjustments>(true);
+            grade.postExposure.Override(0f);
+            grade.contrast.Override(12f);
+            grade.saturation.Override(-7f);
             volume.sharedProfile = tracerBloomProfile;
         }
 

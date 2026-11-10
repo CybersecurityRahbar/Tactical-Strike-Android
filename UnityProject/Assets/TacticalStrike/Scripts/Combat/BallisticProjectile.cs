@@ -57,7 +57,8 @@ namespace TacticalStrike
 
         private void CreateTracer(float projectileDiameter)
         {
-            tracerDiameter = Mathf.Clamp(projectileDiameter, 0.004f, 0.032f);
+            // Calibre-scaled bright core; don't enlarge the tracer into a laser tube.
+            tracerDiameter = Mathf.Clamp(projectileDiameter * 1.55f, 0.008f, 0.025f);
             Shader shader = Shader.Find("Universal Render Pipeline/Lit");
             if (shader == null) shader = Shader.Find("Standard");
             if (shader == null) { Debug.LogError("Tracer visual could not find a supported lit shader."); return; }
@@ -113,7 +114,7 @@ namespace TacticalStrike
             head.name = "Tracer - rounded incandescent projectile head";
             head.transform.SetParent(transform, false);
             head.transform.localPosition = Vector3.zero;
-            head.transform.localScale = Vector3.one * tracerDiameter * 1.85f;
+            head.transform.localScale = Vector3.one * tracerDiameter * 1.45f;
             Collider headCollider = head.GetComponent<Collider>();
             if (headCollider != null) Destroy(headCollider);
             MeshRenderer headRenderer = head.GetComponent<MeshRenderer>();
@@ -127,8 +128,10 @@ namespace TacticalStrike
         {
             if (tracerMesh == null || velocity.sqrMagnitude < 0.001f) return;
             transform.rotation = Quaternion.LookRotation(velocity.normalized, Vector3.up);
-            float tailLength = Mathf.Clamp(velocity.magnitude * frameDelta * 0.42f, 0.55f, 8.5f);
-            float rootRadius = tracerDiameter * 0.62f;
+            // The old formula yielded 6-8m trails at rifle speed. Tracer glow should
+            // be a short incandescent wake attached to the moving projectile.
+            float tailLength = Mathf.Clamp(velocity.magnitude * frameDelta * 0.015f, 0.09f, 0.22f);
+            float rootRadius = tracerDiameter * 0.82f;
             for (int ring = 0; ring < TracerRingT.Length; ring++)
             {
                 float z = -tailLength * TracerRingT[ring];

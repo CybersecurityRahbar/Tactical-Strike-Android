@@ -1322,3 +1322,41 @@ The user tested the deployed Northwind preview and reported four blocking runtim
   - WebGL run #22: `42888188822` (queued at documentation time).
   - Android run #39: `42888188720` (pending at documentation time).
 - Do not claim success or ask the user to test the browser preview until WebGL run #22 completes Unity build, output validation, Pages artifact upload and deployment. Android run #39 must also pass APK validation before its artifact can be called ready.
+
+
+## User-reported browser preview visual failure and battlefield rebuild correction — 2026-11-10
+
+### Visual evidence and acceptance failure
+
+- User supplied a browser screenshot of the deployed WebGL preview. It shows a broken-looking first-person scene: detached/floating black geometry in the distance, a very large upright dark slab near the centre, broad flat green ground, a separate oversized dark road slab on the right, disconnected/uneven path and trench surfaces, and no acceptable first-person weapon/arms presentation in the visible view.
+- User also reports the AK/hands look wrong, tracers appear as long laser beams, impacts lack convincing sparks, dust and ground scars, and the map is not playable/finished. This evidence overrides the earlier assumption that a successful CI deployment made the preview ready for testing.
+- The top-down SVG is only a layout diagram. It is not the rendered 3D battlefield, does not encode surface geometry or material quality and must never be described as proof that the actual game already matches the diagram. The previous communication did not distinguish this clearly enough; that was misleading.
+
+### Confirmed source-level causes
+
+- URP was configured with render scale 0.90, MSAA 2x, HDR disabled, only 85m shadow distance, one pixel light and LOD bias 1.25. The runtime environment also used a bright olive/yellow-green procedural sky/ambient/fog tint. This was a low preview-quality preset, not an appropriate visual baseline for the 700m tactical map.
+- The native Terrain heightmap used 257×257 samples over 700m (about 2.73m between samples). Roads were assembled from independent flat cube segments with roughly 7m spacing and only horizontal rotation; this allowed seams, flat slabs, terrain intersections and large gaps on slopes.
+- Trench floors were separate thin cube plates at roughly 2.8m intervals. Parapets and traverses were also isolated cube segments rotated horizontally, not aligned to the local terrain slope. This construction could not produce a continuous, terrain-conforming trench system.
+- Nature models were scaled by assumed factors without normalizing their imported bounds or grounding their lowest renderer bounds to the heightfield. Unexpected FBX scale/pivot could therefore cause oversized or floating tree/shrub instances.
+- The tracer tail formula was `velocity.magnitude * frameDelta * 0.42`, clamped up to 8.5m. At rifle muzzle speeds this creates a long laser-like ribbon. The previous size did not read as a small moving incandescent projectile.
+- Impact logic created sparks even for dirt/grass, used a slightly upward dust gravity modifier, and had no visible temporary mark/soil scar on terrain. It therefore could not produce differentiated soil vs metal/masonry strike behaviour.
+- The AK-74M first-person rig was fit to a large 0.82m dimension and placed very close to the camera. The imported model/rig still needs actual visual validation and may require replacement; a build passing does not establish correct hand grip, animation, weapon proportions or sight alignment.
+
+### Corrective source pass prepared for validation
+
+- URP profile is raised to full render scale, HDR enabled, 4x MSAA, four shadow cascades, a 2048 main-light shadow map, 220m sun-shadow range, depth texture, and a higher LOD/aniso baseline. Runtime QualitySettings now match the intended higher-quality battlefield profile.
+- Runtime lighting/fog/sky colours are neutralized toward subdued daylight instead of the previous strong olive/yellow-green cast. ACES tonemapping and a restrained bloom/contrast grade are configured to preserve highlights and tracer readability.
+- Terrain heightmap and alphamap are raised to 513×513 / 512. The heightmap sample spacing is now about 1.37m. Terrain LOD/basemap/tree distances are increased and heightmap pixel error lowered.
+- Roads are now intended to be Catmull-Rom smoothed mesh ribbons with both edges sampled from `HeightAt`, not independent 7m cube slabs. Each road has a mesh collider. Trench floors use continuous terrain-conforming ribbons; parapet/rear-revetment blocks sample both ends and rotate to the local 3D slope.
+- Imported vegetation instances normalize their renderer-bounds height to a controlled target range and shift their lowest renderer bound down to the terrain surface. This only corrects imported scale/pivot placement; it does not replace poor source models with professional military environment assets.
+- Tracer core remains calibre-scaled but the luminous wake is shortened to 0.09–0.22m. This is intended to remove the long laser appearance; visual acceptance is still pending.
+- Impact sparks are now restricted to metal/hard masonry. Dust falls under positive gravity on non-metal impacts. Dirt/grass hits receive a temporary dark compacted mark with an irregular raised soil lip for 32 seconds. This is a surface-mark mesh, not real destructive TerrainData sculpting.
+- AK-74M ready pose and fit scale are reduced/repositioned. This is an alignment correction, not a completed full-body first-person rig replacement or proof that the weapon now looks like Squad.
+
+### Scope and truth boundary
+
+- These are corrective technical changes to terrain, roads, trenches, lighting, tracer shape and first-impact presentation. They do not turn the current greybox/procedural map into Squad-quality art assets by themselves.
+- Many compounds, walls, parapets, firing bays and props are still generated from primitive geometry/materials. The current environment still needs a separate genuine art-production phase: detailed terrain/road materials, authored trench profiles/revetment assets, realistic foliage/rocks, architectural material sets, vegetation dressing and proper composition.
+- The AK first-person rig/hands still require visual inspection against the screenshot/device; full weapon inventory, advanced animations and weapon-specific sounds for all guns remain outside this corrective pass.
+- CI success only proves Unity compilation, packaging and WebGL deployment. It does not prove that the resulting scene renders correctly. Do not ask the user to test until new WebGL and Android jobs pass, the exact WebGL SHA is deployed, and a new runtime screenshot is inspected.
+- Acceptance criteria for the next preview: no floating/detached geometry; continuous terrain-matched roads and trench floors; parapets seated on slopes; grounded foliage at reasonable scale; visible correctly sized AK/arms at lower right; short visible incandescent tracer, not a beam; surface-appropriate dust/sparks and visible ground marks; stable browser frame rate. A screenshot/video is still needed to verify these points.

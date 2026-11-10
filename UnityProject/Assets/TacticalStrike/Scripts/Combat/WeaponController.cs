@@ -23,7 +23,7 @@ namespace TacticalStrike
         private Texture2D rifleAlbedo;
         private Texture2D armsNormal;
         private Texture2D rifleNormal;
-        private Vector3 viewModelRestPosition = new Vector3(0.23f, -0.25f, 0.43f);
+        private Vector3 viewModelRestPosition = new Vector3(0.27f, -0.27f, 0.72f);
         private Vector3 viewModelRootOffset;
         private float recoilOffset;
         private float fireCooldown;
@@ -113,8 +113,8 @@ namespace TacticalStrike
                     Vector3 centerInModelSpace = model.transform.InverseTransformPoint(combined.center);
                     float largestDimension = Mathf.Max(combined.size.x,
                         Mathf.Max(combined.size.y, combined.size.z));
-                    float fitScale = largestDimension > 0.001f ? 0.82f / largestDimension : 0.42f;
-                    fitScale = Mathf.Clamp(fitScale, 0.24f, 0.64f);
+                    float fitScale = largestDimension > 0.001f ? 0.64f / largestDimension : 0.38f;
+                    fitScale = Mathf.Clamp(fitScale, 0.18f, 0.54f);
                     model.transform.localScale = Vector3.one * fitScale;
                     viewModelRootOffset = -(model.transform.localRotation * (centerInModelSpace * fitScale));
                 }

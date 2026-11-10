@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace TacticalStrike
 {
@@ -6,6 +7,8 @@ namespace TacticalStrike
     {
         private static Material sparkMaterial;
         private static Material dustMaterial;
+        private static Material soilScarMaterial;
+        private static Material soilRimMaterial;
         private static AudioClip dirtImpact;
         private static AudioClip masonryImpact;
         private static AudioClip metalImpact;
@@ -13,10 +16,18 @@ namespace TacticalStrike
         public static void Spawn(Vector3 position, Vector3 normal, bool heavy, string surface = "")
         {
             Vector3 facing = normal.sqrMagnitude > 0.001f ? normal.normalized : Vector3.up;
-            PlaySurfaceAudio(position, surface);
-            CreateSparks(position + facing * 0.025f, facing, heavy);
-            if (!surface.Contains("metal"))
-                CreateDust(position + facing * 0.035f, facing, heavy, surface);
+            string key = (surface ?? string.Empty).ToLowerInvariant();
+            bool metal = key.Contains("metal");
+            bool masonry = key.Contains("stone") || key.Contains("brick") ||
+                           key.Contains("concrete") || key.Contains("masonry");
+
+            PlaySurfaceAudio(position, key);
+            if (metal || masonry)
+                CreateSparks(position + facing * 0.025f, facing, heavy);
+            if (!metal)
+                CreateDust(position + facing * 0.035f, facing, heavy, key);
+            if (!metal && !masonry && facing.y > 0.58f)
+                CreateGroundImpactMark(position, facing, heavy);
         }
 
         private static void CreateSparks(Vector3 position, Vector3 normal, bool heavy)
@@ -91,7 +102,7 @@ namespace TacticalStrike
             main.startColor = surface.Contains("grass")
                 ? new Color(0.28f, 0.34f, 0.20f, 0.52f)
                 : new Color(0.40f, 0.34f, 0.25f, 0.56f);
-            main.gravityModifier = -0.06f;
+            main.gravityModifier = 0.18f;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
             main.maxParticles = heavy ? 54 : 28;
 
@@ -126,6 +137,125 @@ namespace TacticalStrike
 
             system.Play();
             Object.Destroy(root, 1.2f);
+        }
+
+        private static void CreateGroundImpactMark(Vector3 position, Vector3 normal, bool heavy)
+        {
+            // A temporary surface mesh leaves a visible compacted impact scar; this
+            // is not destructive TerrainData sculpting.
+            float radius = heavy ? 0.28f : 0.15f;
+            GameObject root = new GameObject("Ground impact - compacted soil mark");
+            root.transform.position = position + normal * 0.024f;
+            root.transform.rotation = Quaternion.FromToRotation(Vector3.up, normal) *
+                                      Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
+
+            if (soilScarMaterial == null)
+                soilScarMaterial = MakeSolidMaterial("Impact scar - dark compacted soil",
+                    new Color(0.095f, 0.073f, 0.052f));
+            if (soilRimMaterial == null)
+                soilRimMaterial = MakeSolidMaterial("Impact scar - disturbed earth rim",
+                    new Color(0.30f, 0.235f, 0.155f));
+
+            CreateScarDisk(root.transform, "Depressed dark centre", radius * 0.68f,
+                -0.006f, soilScarMaterial);
+            CreateScarRing(root.transform, "Raised irregular soil lip", radius * 0.70f,
+                radius, -0.002f, 0.012f, soilRimMaterial);
+            Object.Destroy(root, 32f);
+        }
+
+        private static void CreateScarDisk(Transform parent, string label, float radius,
+            float height, Material material)
+        {
+            const int segments = 20;
+            Vector3[] vertices = new Vector3[segments + 1];
+            int[] triangles = new int[segments * 3];
+            vertices[0] = new Vector3(0f, height, 0f);
+            for (int i = 0; i < segments; i++)
+            {
+                float angle = Mathf.PI * 2f * i / segments;
+                float irregular = 0.88f + Random.Range(0f, 0.20f);
+                vertices[i + 1] = new Vector3(Mathf.Cos(angle) * radius * irregular,
+                    height + Random.Range(-0.0015f, 0.0015f),
+                    Mathf.Sin(angle) * radius * irregular);
+            }
+            int t = 0;
+            for (int i = 0; i < segments; i++)
+            {
+                int current = i + 1;
+                int next = ((i + 1) % segments) + 1;
+                triangles[t++] = 0;
+                triangles[t++] = next;
+                triangles[t++] = current;
+            }
+            Mesh mesh = new Mesh { name = label };
+            mesh.vertices = vertices;
+            mesh.triangles = triangles;
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+
+            GameObject disc = new GameObject(label);
+            disc.transform.SetParent(parent, false);
+            disc.AddComponent<MeshFilter>().sharedMesh = mesh;
+            MeshRenderer renderer = disc.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = material;
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+        }
+
+        private static void CreateScarRing(Transform parent, string label, float innerRadius,
+            float outerRadius, float innerHeight, float outerHeight, Material material)
+        {
+            const int segments = 20;
+            Vector3[] vertices = new Vector3[segments * 2];
+            int[] triangles = new int[segments * 6];
+            for (int i = 0; i < segments; i++)
+            {
+                float angle = Mathf.PI * 2f * i / segments;
+                float irregular = 0.88f + Random.Range(0f, 0.20f);
+                float x = Mathf.Cos(angle) * irregular;
+                float z = Mathf.Sin(angle) * irregular;
+                vertices[i * 2] = new Vector3(x * innerRadius, innerHeight, z * innerRadius);
+                vertices[i * 2 + 1] = new Vector3(x * outerRadius, outerHeight, z * outerRadius);
+            }
+            int t = 0;
+            for (int i = 0; i < segments; i++)
+            {
+                int next = (i + 1) % segments;
+                int inner0 = i * 2;
+                int outer0 = inner0 + 1;
+                int inner1 = next * 2;
+                int outer1 = inner1 + 1;
+                triangles[t++] = inner0;
+                triangles[t++] = outer1;
+                triangles[t++] = outer0;
+                triangles[t++] = inner0;
+                triangles[t++] = inner1;
+                triangles[t++] = outer1;
+            }
+            Mesh mesh = new Mesh { name = label };
+            mesh.vertices = vertices;
+            mesh.triangles = triangles;
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+
+            GameObject ring = new GameObject(label);
+            ring.transform.SetParent(parent, false);
+            ring.AddComponent<MeshFilter>().sharedMesh = mesh;
+            MeshRenderer renderer = ring.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = material;
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+        }
+
+        private static Material MakeSolidMaterial(string label, Color color)
+        {
+            Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+            if (shader == null) shader = Shader.Find("Standard");
+            Material material = new Material(shader) { name = label };
+            if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", color);
+            if (material.HasProperty("_Color")) material.SetColor("_Color", color);
+            if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", 0.035f);
+            return material;
         }
 
         private static Material MakeParticleMaterial(Color tint)

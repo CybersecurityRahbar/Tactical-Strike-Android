@@ -283,8 +283,9 @@ namespace TacticalStrike
 
         private static void BuildTerrain(Transform parent)
         {
-            const int heightResolution = 257;
-            const int alphaResolution = 256;
+            // 513 height samples reduce spacing to about 1.37m across 700m.
+            const int heightResolution = 513;
+            const int alphaResolution = 512;
             const float baseHeight = -25f;
             const float verticalRange = 120f;
             float half = MapSize * 0.5f;
@@ -384,10 +385,10 @@ namespace TacticalStrike
             terrainCollider.terrainData = data;
             terrainCollider.enabled = true;
             terrain.drawInstanced = true;
-            terrain.heightmapPixelError = 6f;
-            terrain.basemapDistance = 520f;
-            terrain.detailObjectDistance = 45f;
-            terrain.treeDistance = 520f;
+            terrain.heightmapPixelError = 2.5f;
+            terrain.basemapDistance = 900f;
+            terrain.detailObjectDistance = 65f;
+            terrain.treeDistance = 700f;
             terrain.allowAutoConnect = false;
         }
 
@@ -472,13 +473,15 @@ namespace TacticalStrike
             Mesh cube = GetPrimitiveMesh(PrimitiveType.Cube);
             List<CombineInstance> parapets = new List<CombineInstance>(1200);
             List<CombineInstance> traverses = new List<CombineInstance>(480);
-            List<CombineInstance> trenchFloors = new List<CombineInstance>(720);
             string sideName = defenders ? "DEFENDER" : "ATTACKER";
             float facingSign = defenders ? 1f : -1f;
 
             for (int p = 0; p < network.Length; p++)
             {
                 Vector2[] path = network[p];
+                CreateConformingRibbon(parent, sideName + " trench floor " + (p + 1),
+                    path, 4.65f, 0.075f, trenchSoilMaterial, false);
+
                 for (int s = 0; s < path.Length - 1; s++)
                 {
                     Vector2 a = path[s];
@@ -488,33 +491,26 @@ namespace TacticalStrike
                     if (length < 0.1f) continue;
                     Vector2 direction2 = delta / length;
                     Vector3 direction = new Vector3(direction2.x, 0f, direction2.y).normalized;
-                    Vector3 lateral = Vector3.Cross(direction, Vector3.up).normalized * facingSign;
-                    Quaternion rotation = Quaternion.LookRotation(direction, Vector3.up);
-                    float step = 2.8f;
-                    int count = Mathf.Max(1, Mathf.CeilToInt(length / step));
+                    Vector3 lateral3 = Vector3.Cross(direction, Vector3.up).normalized * facingSign;
+                    Vector2 lateral = new Vector2(lateral3.x, lateral3.z);
+                    int count = Mathf.Max(1, Mathf.CeilToInt(length / 2.2f));
 
                     for (int i = 0; i < count; i++)
                     {
-                        float along = Mathf.Min(length - 0.2f, (i + 0.5f) * length / count);
+                        float along = (i + 0.5f) * length / count;
                         Vector2 point = a + direction2 * along;
-                        float floorY = HeightAt(point.x, point.y) + 0.035f;
-                        Vector3 trenchCenter = new Vector3(point.x, HeightAt(point.x, point.y) + 0.14f, point.y);
-                        AddCube(trenchFloors, cube, parent, trenchCenter,
-                            new Vector3(4.7f, 0.055f, length / count + 0.16f), rotation);
                         bool firingGap = (i % 10 == 8) || (p > 0 && i % 8 == 6);
+                        float blockLength = Mathf.Min(2.15f, length / count + 0.16f);
                         if (!firingGap)
                         {
-                            Vector3 front = trenchCenter + lateral * 3.45f;
-                            front.y = HeightAt(front.x, front.z) + 0.44f;
-                            AddCube(parapets, cube, parent, front,
-                                new Vector3(0.72f, 0.88f, Mathf.Min(2.65f, length / count + 0.12f)), rotation);
+                            Vector2 front = point + lateral * 3.45f;
+                            AddTerrainAlignedBlock(parapets, cube, parent, front, direction2,
+                                new Vector3(0.72f, 0.92f, blockLength), 0.015f);
                         }
 
-                        Vector3 rear = trenchCenter - lateral * 3.0f;
-                        rear.y = HeightAt(rear.x, rear.z) + 0.25f;
-                        AddCube(traverses, cube, parent,
-                            rear,
-                            new Vector3(0.58f, 0.50f, Mathf.Min(2.55f, length / count + 0.12f)), rotation);
+                        Vector2 rear = point - lateral * 3.0f;
+                        AddTerrainAlignedBlock(traverses, cube, parent, rear, direction2,
+                            new Vector3(0.58f, 0.52f, Mathf.Min(2.05f, blockLength)), 0.01f);
                     }
                 }
             }
@@ -523,10 +519,7 @@ namespace TacticalStrike
                 sandbagMaterial, true, 4200f);
             CreateCombined(parent, sideName + " - communication trench traverses and rear revetments", traverses,
                 trenchSoilMaterial, true, 2600f);
-            CreateCombined(parent, sideName + " - exposed disturbed-earth trench floor", trenchFloors,
-                trenchSoilMaterial, false, 0f);
 
-            // Protected firing bays and timber revetment entrances are recognizable landmarks.
             for (int i = 0; i < 8; i++)
             {
                 Vector2 point = defenders
@@ -534,6 +527,22 @@ namespace TacticalStrike
                     : new Vector2(-224f + i * 64f, 218f + Mathf.Sin(i * 1.2f) * 7f);
                 BuildFireBay(parent, point, defenders);
             }
+        }
+
+        private static void AddTerrainAlignedBlock(List<CombineInstance> list, Mesh cube,
+            Transform parent, Vector2 center, Vector2 direction, Vector3 size, float verticalOffset)
+        {
+            Vector2 along = direction.normalized;
+            Vector2 start = center - along * (size.z * 0.5f);
+            Vector2 end = center + along * (size.z * 0.5f);
+            Vector3 startWorld = new Vector3(start.x, HeightAt(start.x, start.y), start.y);
+            Vector3 endWorld = new Vector3(end.x, HeightAt(end.x, end.y), end.y);
+            Vector3 tangent = (endWorld - startWorld).normalized;
+            if (tangent.sqrMagnitude < 0.0001f) tangent = new Vector3(along.x, 0f, along.y);
+            Quaternion rotation = Quaternion.LookRotation(tangent, Vector3.up);
+            Vector3 centerWorld = (startWorld + endWorld) * 0.5f +
+                                  Vector3.up * (size.y * 0.5f + verticalOffset);
+            AddCube(list, cube, parent, centerWorld, size, rotation);
         }
 
         private static void BuildFireBay(Transform parent, Vector2 point, bool defenders)
@@ -579,38 +588,107 @@ namespace TacticalStrike
 
         private static void BuildRoadNetwork(Transform parent)
         {
-            Mesh cube = GetPrimitiveMesh(PrimitiveType.Cube);
-            List<CombineInstance> roads = new List<CombineInstance>(280);
             Vector2[][] paths =
             {
                 new[] { new Vector2(244,350), new Vector2(225,300), new Vector2(192,246), new Vector2(208,190), new Vector2(235,132), new Vector2(216,72), new Vector2(231,12), new Vector2(208,-52), new Vector2(240,-112), new Vector2(230,-175), new Vector2(270,-236), new Vector2(285,-320) },
                 new[] { new Vector2(-300,336), new Vector2(-266,284), new Vector2(-240,220), new Vector2(-252,158), new Vector2(-222,98), new Vector2(-190,40), new Vector2(-202,-28), new Vector2(-221,-92), new Vector2(-246,-156), new Vector2(-266,-226) },
                 new[] { new Vector2(8,330), new Vector2(-12,278), new Vector2(14,220), new Vector2(28,160), new Vector2(4,102), new Vector2(-17,43), new Vector2(5,-18), new Vector2(-18,-80), new Vector2(3,-143), new Vector2(12,-190) }
             };
-
             for (int p = 0; p < paths.Length; p++)
+                CreateConformingRibbon(parent, "Compacted service road " + (p + 1),
+                    paths[p], p == 2 ? 4.8f : 6.5f, 0.055f, roadMaterial, true);
+        }
+
+        private static List<Vector2> SmoothPath(Vector2[] path, float spacing)
+        {
+            List<Vector2> samples = new List<Vector2>(path.Length * 8);
+            if (path == null || path.Length == 0) return samples;
+            if (path.Length == 1) { samples.Add(path[0]); return samples; }
+            for (int i = 0; i < path.Length - 1; i++)
             {
-                Vector2[] path = paths[p];
-                for (int s = 0; s < path.Length - 1; s++)
+                Vector2 p0 = path[Mathf.Max(0, i - 1)];
+                Vector2 p1 = path[i];
+                Vector2 p2 = path[i + 1];
+                Vector2 p3 = path[Mathf.Min(path.Length - 1, i + 2)];
+                int steps = Mathf.Max(2, Mathf.CeilToInt(Vector2.Distance(p1, p2) /
+                    Mathf.Max(0.25f, spacing)));
+                for (int j = 0; j < steps; j++)
                 {
-                    Vector2 a = path[s];
-                    Vector2 b = path[s + 1];
-                    float length = Vector2.Distance(a, b);
-                    int count = Mathf.Max(1, Mathf.CeilToInt(length / 7f));
-                    for (int i = 0; i < count; i++)
-                    {
-                        float t = (i + 0.5f) / count;
-                        Vector2 point = Vector2.Lerp(a, b, t);
-                        Vector2 dir2 = (b - a).normalized;
-                        Vector3 dir = new Vector3(dir2.x, 0f, dir2.y);
-                        Vector3 position = new Vector3(point.x, HeightAt(point.x, point.y) + 0.14f, point.y);
-                        Quaternion rotation = Quaternion.LookRotation(dir, Vector3.up);
-                        AddCube(roads, cube, parent, position,
-                            new Vector3(p == 2 ? 4.8f : 6.5f, 0.07f, length / count + 0.5f), rotation);
-                    }
+                    float t = j / (float)steps;
+                    float t2 = t * t;
+                    float t3 = t2 * t;
+                    Vector2 point = 0.5f * (
+                        2f * p1 +
+                        (-p0 + p2) * t +
+                        (2f * p0 - 5f * p1 + 4f * p2 - p3) * t2 +
+                        (-p0 + 3f * p1 - 3f * p2 + p3) * t3);
+                    if (samples.Count == 0 ||
+                        (samples[samples.Count - 1] - point).sqrMagnitude > 0.0001f)
+                        samples.Add(point);
                 }
             }
-            CreateCombined(parent, "Compacted service roads and tactical tracks", roads, roadMaterial, false, 0f);
+            samples.Add(path[path.Length - 1]);
+            return samples;
+        }
+
+        private static void CreateConformingRibbon(Transform parent, string label,
+            Vector2[] controlPath, float width, float surfaceOffset, Material material,
+            bool addCollider)
+        {
+            List<Vector2> samples = SmoothPath(controlPath, 1.8f);
+            if (samples.Count < 2) return;
+            Vector3[] vertices = new Vector3[samples.Count * 2];
+            Vector2[] uv = new Vector2[vertices.Length];
+            int[] triangles = new int[(samples.Count - 1) * 6];
+            float travelled = 0f;
+            for (int i = 0; i < samples.Count; i++)
+            {
+                Vector2 tangent;
+                if (i == 0) tangent = (samples[1] - samples[0]).normalized;
+                else if (i == samples.Count - 1) tangent = (samples[i] - samples[i - 1]).normalized;
+                else tangent = (samples[i + 1] - samples[i - 1]).normalized;
+                Vector2 lateral = new Vector2(-tangent.y, tangent.x);
+                Vector2 left = samples[i] + lateral * (width * 0.5f);
+                Vector2 right = samples[i] - lateral * (width * 0.5f);
+                vertices[i * 2] = new Vector3(left.x, HeightAt(left.x, left.y) + surfaceOffset, left.y);
+                vertices[i * 2 + 1] = new Vector3(right.x, HeightAt(right.x, right.y) + surfaceOffset, right.y);
+                if (i > 0) travelled += Vector2.Distance(samples[i - 1], samples[i]);
+                float v = travelled / 6f;
+                uv[i * 2] = new Vector2(0f, v);
+                uv[i * 2 + 1] = new Vector2(1f, v);
+            }
+            int index = 0;
+            for (int i = 0; i < samples.Count - 1; i++)
+            {
+                int left0 = i * 2, right0 = left0 + 1, left1 = left0 + 2, right1 = left0 + 3;
+                triangles[index++] = left0;
+                triangles[index++] = left1;
+                triangles[index++] = right0;
+                triangles[index++] = right0;
+                triangles[index++] = left1;
+                triangles[index++] = right1;
+            }
+            Mesh mesh = new Mesh { name = label + " - heightfield-conforming ribbon",
+                indexFormat = IndexFormat.UInt32 };
+            mesh.vertices = vertices;
+            mesh.uv = uv;
+            mesh.triangles = triangles;
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+
+            GameObject ribbon = new GameObject(label);
+            ribbon.transform.SetParent(parent, false);
+            ribbon.AddComponent<MeshFilter>().sharedMesh = mesh;
+            MeshRenderer renderer = ribbon.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = material;
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = true;
+            if (addCollider)
+            {
+                MeshCollider collider = ribbon.AddComponent<MeshCollider>();
+                collider.sharedMesh = mesh;
+                collider.convex = false;
+            }
         }
 
         private static void BuildDrainageAndStream(Transform parent)
@@ -839,6 +917,8 @@ namespace TacticalStrike
                             Quaternion.Euler(0f, (float)random.NextDouble() * 360f, 0f), parent);
                         tree.name = "Northwind woodland - " + prefab.name;
                         tree.transform.localScale = Vector3.one * scale;
+                        NormalizeModelHeight(tree, UnityEngine.Random.Range(8.0f, 16.0f));
+                        AlignModelBottomToTerrain(tree, x, z, 0.025f);
                         foreach (Renderer r in tree.GetComponentsInChildren<Renderer>(true))
                         {
                             r.receiveShadows = true;
@@ -865,8 +945,35 @@ namespace TacticalStrike
                         Quaternion.Euler(0f, (float)random.NextDouble() * 360f, 0f), parent);
                     shrub.name = "Northwind woodland shrub";
                     shrub.transform.localScale = Vector3.one * (1.5f + (float)random.NextDouble());
+                    NormalizeModelHeight(shrub, UnityEngine.Random.Range(1.3f, 3.0f));
+                    AlignModelBottomToTerrain(shrub, bx, bz, 0.02f);
                 }
             }
+        }
+
+        private static void NormalizeModelHeight(GameObject instance, float targetHeight)
+        {
+            if (instance == null) return;
+            Renderer[] renderers = instance.GetComponentsInChildren<Renderer>(true);
+            if (renderers.Length == 0) return;
+            Bounds bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++) bounds.Encapsulate(renderers[i].bounds);
+            if (bounds.size.y < 0.02f) return;
+            float factor = Mathf.Clamp(targetHeight / bounds.size.y, 0.08f, 8f);
+            instance.transform.localScale *= factor;
+        }
+
+        private static void AlignModelBottomToTerrain(GameObject instance,
+            float worldX, float worldZ, float clearance)
+        {
+            if (instance == null) return;
+            Renderer[] renderers = instance.GetComponentsInChildren<Renderer>(true);
+            if (renderers.Length == 0) return;
+            Bounds bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++) bounds.Encapsulate(renderers[i].bounds);
+            Vector3 position = instance.transform.position;
+            position.y += HeightAt(worldX, worldZ) + clearance - bounds.min.y;
+            instance.transform.position = position;
         }
 
         private static void BuildRidgeRocks(Transform parent)
