@@ -1180,3 +1180,44 @@ Official playtest announcement: https://steamcommunity.com/app/393380/
 - Until WebGL run `42863168322` completes Unity build, payload validation and Pages deployment, the public preview remains on the last successful published build, commit `8c4e6516abd2585a0084788359e2e3bc11382f73`. The HMG interaction and the newer native layered Terrain/suppression changes are not assumed to be present in that deployed preview.
 - The context header was corrected in commit `75c7873a4dc0476e47abc053b29765e035b905d6`: the active project is Unity 6000.3.28f1 / URP 17.3.0. The dated Godot 4.7.2 notes remain as historical records only.
 - Next verification: confirm both latest CI workflows finish successfully; for WebGL also confirm manifest/payload checks and GitHub Pages deployment. Then verify the newly deployed page and inspect actual in-browser visuals and controls. A successful Unity build alone does not complete visual/gameplay acceptance.
+
+
+## Successful deployment and actual feature audit — 2026-11-10
+
+### Verified CI results for source commit `86d5729731a837a9385b7928bcade35a61d4d07a`
+
+- Unity Browser Preview run `42863168322` (run #17) completed with `conclusion: success`.
+  - Unity WebGL build passed.
+  - WebGL payload/manifest validation passed.
+  - GitHub Pages artifact upload passed (artifact ID `13787885242`, 28,751,620 bytes).
+  - GitHub Pages deployment passed; the deploy log reports success for Pages build version `86d5729731a837a9385b7928bcade35a61d4d07a`.
+  - Browser preview URL: https://cybersecurityrahbar.github.io/Tactical-Strike-Android/
+- Unity Android Build run `42863168319` (run #34) completed with `conclusion: success`.
+  - Unity Android/ARM64 IL2CPP build passed.
+  - APK archive integrity, signature, manifest/dex and ARM64 Unity/IL2CPP libraries all passed validation.
+  - Verified artifact `TacticalStrike-Unity-Android-verified` uploaded (artifact ID `13786947346`, 35,437,635 bytes).
+- These results prove the two target builds and WebGL deployment for the specified source commit. They do not prove physical Android device performance, browser-side visual quality or feature parity with Squad.
+- Documentation-only context commits after `86d5729...` do not change the deployed game source because the Unity workflows trigger on UnityProject, tools and their workflow files.
+
+### What the browser preview actually contains
+
+- `TacticalStrikeBootstrap` calls `NorthwindValleyGenerator.Build(worldRoot)`; it no longer calls the old Greenridge `BattlefieldGenerator`.
+- The active map is a runtime-generated, collidable 700m × 700m Northwind Valley world. It uses a native Unity Terrain heightfield/Collider (heightmap resolution 257) and three terrain layers (grass, exposed earth and rocky gravel) blended over a 256 alphamap.
+- Runtime world composition includes the southern attacker staging sector; central uneven valley and flank relief; separate branching attacker and defender trench paths with floors/parapets/traverse cover; four house/compound placements (including the two northern defensive compounds plus farm/village houses); open door and window apertures with basic interior floors/partitions; reserve/assembly dugouts; service roads; drainage/stream beds; village/farm sheds; two protected heavy-machine-gun positions; woodland belts, ridge rocks and field props.
+- This is the new playable map foundation and is materially different from the Greenridge prototype. However, much of the architecture/fortification/prop geometry is still assembled procedurally from primitive meshes and is not a final hand-authored, asset-rich Squad-quality environment. Terrain/material blending is a first pass, not a final art pass.
+
+### Actual weapon and player feature boundary
+
+- Fully integrated first-person handheld weapon: **AK-74M only**, with its current imported model/arms/viewmodel implementation. The current `WeaponController` loads AK-74M resources; there is no completed interchangeable inventory or `WeaponDefinition` data architecture for the roster.
+- **DShK 12.7mm and M2 Browning .50** are present as separate mounted emplacement positions with first-pass mounting/dismounting, traverse/elevation, firing, ballistic projectile, belt ammunition and reload logic. Their current geometry is procedural, not final authentic high-detail meshes/rigs/sounds/animations. Do not count them as completed portable player weapons.
+- **M4A1, PKM, RPG-7 and SVD/Dragunov are not yet integrated playable weapons.** They remain requirements.
+- Current player controller includes walk, sprint, crouch, prone, jump, stamina, aiming/focus, camera movement and first-pass weapon sway/recoil/spread. Lean, vaulting and complete Squad-style movement/animation layering are not finished.
+- Projectile logic includes ballistic travel, emissive tracer presentation and a first-pass near-miss suppression effect. It is not yet a complete per-calibre/per-surface Squad-equivalent ballistics, destruction and audio suite.
+- Tactical enemy squads/AI behaviour, objective/match logic, vehicles, command/communications, full multiplayer and Wi-Fi/hotspot networking, complete layered positional battle audio and full mobile controls/performance acceptance are not implemented/verified.
+
+### User-facing truth statement and acceptance boundary
+
+- **Yes:** the browser preview now deploys the actual Northwind Valley map source, not the previous Greenridge map. It includes the first-pass map geometry and the above AK-74M / mounted-heavy-gun features.
+- **No:** this preview is not a complete game with the full seven-weapon roster or the full movement, squad AI, audio, vehicles, networking and overall quality/scope of Squad. It must not be advertised as “like Squad in everything” or as finished.
+- The source and CI deployment have been verified, but no automated screenshot/visual browser acceptance was produced. The user must inspect the rendered map, weapon alignment, mounted gun use, sight picture, tracers, collision, interiors and performance in the browser; record screenshots/video findings and fix them before calling this milestone visually accepted.
+- For a clean check after deployment, open the preview and perform a hard refresh (Ctrl+F5) to avoid a stale cached WebGL payload.
