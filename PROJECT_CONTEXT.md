@@ -1392,3 +1392,22 @@ The user tested the deployed Northwind preview and reported four blocking runtim
 - The postprocessor now captures and restores albedo/normal maps when switching to URP/Lit, restores metallic/smoothness, enables AlphaClip with cutoff 0.42, uses two-sided culling for foliage cards, sets the alpha-test render queue and instancing.
 - A dedicated Nature texture importer now keeps source alpha, mipmaps, compression and a 2K texture ceiling for imported nature textures.
 - Source commit: `b56212a5a26ad48a5532cbbc33a7bc2efaa7b193`. WebGL/Android validation for this exact source remains pending. If the polygons persist after the new build, the next investigation is the imported model hierarchy/FBX axis and per-renderer bounds, then remove/replace any asset that fails that inspection.
+
+
+## CC0 authored battlefield prop integration — 2026-11-10
+
+- Added a reproducible Poly Haven 1K glTF asset path:
+  - `tools/download_polyhaven_models.py` downloads each selected 1K GLTF and all referenced include files, retries requests, calculates a SHA-256 for every downloaded file and writes `POLYHAVEN_PROPS_SOURCES.txt`.
+  - `tools/convert_battlefield_props.py` imports the downloaded GLTF files into Blender and exports Unity-ready FBX models while logging mesh count, dimensions and file size.
+  - `tools/prepare_external_assets.sh` now downloads the four selected CC0 prop assets, and `tools/prepare_unity_assets.sh` converts them into `Resources/TacticalStrike/Imported/Props`.
+- Selected authored assets from official Poly Haven sources:
+  - `concrete_road_barrier` for the two outer shoulders of the southern attacker staging lane.
+  - `old_military_crate` for defensive supply positions and the HMG nests.
+  - `ammo_box` for staging, HMG resupply and interior supply positions.
+  - `metal_jerrycan_green` for secondary supply dressing.
+- Source material import is handled by `BattlefieldPropModelPostprocessor` and `BattlefieldPropTexturePostprocessor`, which transfer albedo/normal/metallic-gloss maps to URP Lit and configure linear data maps/alpha import.
+- The Unity build gate requires all four prop FBX files, the provenance manifest and successful GameObject/Renderer imports before WebGL or Android build can proceed.
+- The runtime map now places these props at defined coordinates, scales them from imported renderer bounds, grounds the lowest renderer bound to `HeightAt`, adds collider bounds and ballistic cover integrity. The spawn's central approach remains free of barriers; resupply props are kept beside HMG mounts and building courtyards.
+- Official asset sources/licence: Poly Haven asset pages for Concrete Road Barrier, Old Military Crate, Ammo Box and Metal Jerrycan Green; Poly Haven assets are CC0 1.0. These are original external CC0 assets, not copied Squad assets or code.
+- This is a controlled first prop replacement, not completion of the entire environment. The wider trench/sandbag/house/terrain system still includes procedural primitive geometry; final art acceptance requires new WebGL/Android CI, a deployed screenshot, correct prop scale/materials, and then further environment replacement based on visible defects.
+- Build/cache note: both asset preparation scripts changed and are included in runtime asset cache key hashing; a new run must rebuild the prepared asset cache rather than assuming earlier cached props exist.
