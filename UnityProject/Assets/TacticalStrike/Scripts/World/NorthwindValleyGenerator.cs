@@ -66,6 +66,7 @@ namespace TacticalStrike
         {
             CreateMaterials();
             BuildTerrain(parent);
+            BuildGroundPatches(parent);
             BuildTrenchNetwork(parent, DefenderNetwork, true);
             BuildTrenchNetwork(parent, AttackerNetwork, false);
             BuildDugouts(parent);
@@ -284,6 +285,77 @@ namespace TacticalStrike
             renderer.shadowCastingMode = ShadowCastingMode.Off;
             renderer.receiveShadows = true;
             terrain.AddComponent<MeshCollider>().sharedMesh = terrainMesh;
+        }
+
+        private static void BuildGroundPatches(Transform parent)
+        {
+            CreateGroundPatch(parent, new Vector2(0f, 300f), new Vector2(172f, 48f),
+                "Southern attacker assembly - churned earth and vehicle staging");
+            CreateGroundPatch(parent, new Vector2(0f, -304f), new Vector2(148f, 28f),
+                "Northern defender reserve - disturbed field earth");
+            CreateGroundPatch(parent, new Vector2(-112f, -168f), new Vector2(42f, 40f),
+                "West defensive compound - exposed courtyard earth");
+            CreateGroundPatch(parent, new Vector2(116f, -174f), new Vector2(42f, 40f),
+                "East defensive compound - exposed courtyard earth");
+            CreateGroundPatch(parent, new Vector2(-190f, -54f), new Vector2(38f, 36f),
+                "West farmstead - packed yard earth");
+            CreateGroundPatch(parent, new Vector2(184f, -70f), new Vector2(38f, 36f),
+                "East village - packed yard earth");
+            CreateGroundPatch(parent, new Vector2(-207f, -201f), new Vector2(24f, 18f),
+                "West heavy machine gun - scraped firing position");
+            CreateGroundPatch(parent, new Vector2(207f, -201f), new Vector2(24f, 18f),
+                "East heavy machine gun - scraped firing position");
+        }
+
+        private static void CreateGroundPatch(Transform parent, Vector2 center,
+            Vector2 size, string label)
+        {
+            const float sampleSpacing = 3.0f;
+            int segmentsX = Mathf.Max(2, Mathf.CeilToInt(size.x / sampleSpacing));
+            int segmentsZ = Mathf.Max(2, Mathf.CeilToInt(size.y / sampleSpacing));
+            int sideX = segmentsX + 1;
+            int sideZ = segmentsZ + 1;
+            Vector3[] vertices = new Vector3[sideX * sideZ];
+            Vector2[] uv = new Vector2[vertices.Length];
+            int[] triangles = new int[segmentsX * segmentsZ * 6];
+            int v = 0;
+            for (int z = 0; z < sideZ; z++)
+            {
+                float wz = center.y - size.y * 0.5f + size.y * z / segmentsZ;
+                for (int x = 0; x < sideX; x++)
+                {
+                    float wx = center.x - size.x * 0.5f + size.x * x / segmentsX;
+                    vertices[v] = parent.InverseTransformPoint(
+                        new Vector3(wx, HeightAt(wx, wz) + 0.055f, wz));
+                    uv[v] = new Vector2(wx * 0.055f, wz * 0.055f);
+                    v++;
+                }
+            }
+            int t = 0;
+            for (int z = 0; z < segmentsZ; z++)
+            for (int x = 0; x < segmentsX; x++)
+            {
+                int index = z * sideX + x;
+                triangles[t++] = index;
+                triangles[t++] = index + sideX;
+                triangles[t++] = index + 1;
+                triangles[t++] = index + 1;
+                triangles[t++] = index + sideX;
+                triangles[t++] = index + sideX + 1;
+            }
+            Mesh mesh = new Mesh { name = label + " - conforming PBR mesh" };
+            mesh.vertices = vertices;
+            mesh.uv = uv;
+            mesh.triangles = triangles;
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            GameObject patch = new GameObject(label);
+            patch.transform.SetParent(parent, false);
+            patch.AddComponent<MeshFilter>().sharedMesh = mesh;
+            MeshRenderer renderer = patch.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = soilMaterial;
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = true;
         }
 
         private static void BuildTrenchNetwork(Transform parent, Vector2[][] network, bool defenders)
@@ -605,7 +677,7 @@ namespace TacticalStrike
 
         private static void BuildHmgPosition(Transform parent, Vector3 ground, string label)
         {
-            Transform nest = new GameObject(label + " - protected mounted heavy machine gun").transform;
+            Transform nest = new GameObject(label + " - protected crew-served machine-gun emplacement").transform;
             nest.SetParent(parent, false);
             nest.position = ground;
             for (int i = 0; i < 7; i++)
@@ -616,18 +688,11 @@ namespace TacticalStrike
                     new Vector3(1.7f, 1.25f, 0.72f), sandbagMaterial,
                     Quaternion.Euler(0f, angle, 0f), "HMG sandbag protection");
             }
+
             CreateBox(nest, new Vector3(0f, 1.15f, 0f), new Vector3(0.38f, 1.45f, 0.38f),
-                metalMaterial, Quaternion.identity, "Weapon pedestal");
-            CreateBox(nest, new Vector3(0f, 1.92f, 0.16f), new Vector3(0.9f, 0.55f, 0.72f),
-                metalMaterial, Quaternion.identity, "Heavy gun receiver");
-            CreateBox(nest, new Vector3(0f, 1.96f, 1.55f), new Vector3(0.20f, 0.20f, 2.55f),
-                metalMaterial, Quaternion.identity, "Heavy gun barrel");
-            CreateBox(nest, new Vector3(0f, 2.3f, 0.20f), new Vector3(1.1f, 0.10f, 0.52f),
-                metalMaterial, Quaternion.identity, "Heavy gun rear sight and feed cover");
-            CreateBox(nest, new Vector3(-0.50f, 1.45f, 0.20f), new Vector3(0.12f, 0.25f, 0.45f),
-                metalMaterial, Quaternion.Euler(0f, 0f, -18f), "Left traverse handle");
-            CreateBox(nest, new Vector3(0.50f, 1.45f, 0.20f), new Vector3(0.12f, 0.25f, 0.45f),
-                metalMaterial, Quaternion.Euler(0f, 0f, 18f), "Right traverse handle");
+                darkMetal, Quaternion.identity, "Fixed HMG pedestal");
+            MountedWeaponEmplacement emplacement = nest.gameObject.AddComponent<MountedWeaponEmplacement>();
+            emplacement.Initialize(label);
         }
 
         private static void BuildWoodlandBelts(Transform parent)

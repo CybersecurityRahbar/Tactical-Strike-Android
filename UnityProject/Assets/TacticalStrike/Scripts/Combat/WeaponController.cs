@@ -232,6 +232,11 @@ namespace TacticalStrike
 
         public void SetFireHeld(bool held) { fireHeld = held; }
         public void SetAiming(bool value) { aiming = value; }
+        public void SetViewModelVisible(bool visible)
+        {
+            if (viewModel != null) viewModel.gameObject.SetActive(visible);
+        }
+
         public void SetMovementState(bool isMoving, bool isRunning)
         {
             moving = isMoving;

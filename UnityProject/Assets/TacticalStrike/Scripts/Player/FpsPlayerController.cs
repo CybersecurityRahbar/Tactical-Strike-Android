@@ -9,9 +9,12 @@ namespace TacticalStrike
         public Camera PlayerCamera { get; private set; }
         public WeaponController Weapon { get; private set; }
         public float Stamina => stamina;
+        public bool IsMounted => mountedEmplacement != null;
 
         private CharacterController character;
         private MobileHud hud;
+        private MountedWeaponEmplacement mountedEmplacement;
+        private float mountScanTimer;
         private Vector2 mobileMove;
         private AudioSource footstepSource;
         private AudioClip[] footstepClips;
@@ -83,6 +86,11 @@ namespace TacticalStrike
 
         public void AddLookDelta(Vector2 delta)
         {
+            if (mountedEmplacement != null)
+            {
+                mountedEmplacement.AddLookDelta(delta);
+                return;
+            }
             if (Input.GetKey(KeyCode.LeftAlt))
                 freeLookYaw = Mathf.Clamp(freeLookYaw + delta.x * sensitivity, -85f, 85f);
             else
@@ -112,6 +120,83 @@ namespace TacticalStrike
             aimEnabled = enabled;
             if (!enabled) isFocusing = false;
             if (Weapon != null) Weapon.SetAiming(enabled);
+        }
+
+        public void SetFireHeld(bool held)
+        {
+            if (mountedEmplacement != null) mountedEmplacement.SetFireHeld(held);
+            else Weapon?.SetFireHeld(held);
+        }
+
+        public void ReloadCurrentWeapon()
+        {
+            if (mountedEmplacement != null) mountedEmplacement.ReloadBelt();
+            else Weapon?.Reload();
+        }
+
+        public void InteractWithMountedWeapon()
+        {
+            if (mountedEmplacement != null)
+            {
+                mountedEmplacement.Dismount();
+                return;
+            }
+
+            MountedWeaponEmplacement nearest = MountedWeaponEmplacement.FindNearest(transform.position, 3.8f);
+            if (nearest != null && nearest.Mount(this)) return;
+            hud?.ShowMessage("MOVE CLOSER TO A CREW-SERVED WEAPON");
+        }
+
+        public void BeginMounted(MountedWeaponEmplacement mount, Vector3 operatorPosition, Quaternion operatorRotation)
+        {
+            mountedEmplacement = mount;
+            mobileMove = Vector2.zero;
+            planarVelocity = Vector3.zero;
+            verticalVelocity = 0f;
+            sprintHeld = false;
+            crouchHeld = false;
+            proneHeld = false;
+            jumpRequested = false;
+            aimEnabled = false;
+            isFocusing = false;
+            Weapon?.SetFireHeld(false);
+            Weapon?.SetAiming(false);
+            if (character != null && character.enabled) character.enabled = false;
+            transform.SetPositionAndRotation(operatorPosition, operatorRotation);
+            Weapon?.SetViewModelVisible(false);
+        }
+
+        public void EndMounted(MountedWeaponEmplacement mount, Vector3 exitPosition, Quaternion exitRotation)
+        {
+            if (mountedEmplacement != mount) return;
+            mountedEmplacement = null;
+            transform.SetPositionAndRotation(exitPosition, exitRotation);
+            if (character != null && !character.enabled) character.enabled = true;
+            pitch = 0f;
+            freeLookYaw = 0f;
+            if (PlayerCamera != null)
+            {
+                PlayerCamera.fieldOfView = 78f;
+                PlayerCamera.transform.localRotation = Quaternion.identity;
+            }
+            Weapon?.SetViewModelVisible(true);
+            Weapon?.SetAiming(false);
+        }
+
+        public void NotifyMounted(bool mounted, string label)
+        {
+            hud?.SetMountButtonState(mounted || mountedEmplacement != null, mounted, label);
+            if (!mounted && Weapon != null)
+                hud?.SetWeaponInfo(Weapon.Magazine, Weapon.Reserve, Weapon.AmmoMode);
+            hud?.ShowMessage(mounted ? "MOUNTED: " + label + "  /  E TO DISMOUNT" : "DISMOUNTED: " + label);
+        }
+
+        public void ShowHudMessage(string message) { hud?.ShowMessage(message); }
+
+        public void UpdateMountedWeaponHud(MountedWeaponEmplacement emplacement)
+        {
+            if (mountedEmplacement == emplacement && emplacement != null)
+                hud?.SetMountedWeaponInfo(emplacement.DisplayName, emplacement.BeltAmmo, emplacement.BeltReserve);
         }
 
         public void AdjustSensitivity(float amount)
@@ -148,42 +233,71 @@ namespace TacticalStrike
             if (Cursor.lockState == CursorLockMode.Locked)
                 AddLookDelta(new Vector2(Input.GetAxisRaw("Mouse X"), Input.GetAxisRaw("Mouse Y")) * 2.4f);
 
-            if (Input.GetKeyDown(KeyCode.Escape))
+            MountedWeaponEmplacement activeMount = mountedEmplacement;
+            if (activeMount != null)
             {
-                Cursor.lockState = CursorLockMode.None;
-                Cursor.visible = true;
-                Weapon.SetFireHeld(false);
-                SetAim(false);
-                freeLookYaw = 0f;
+                if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Escape))
+                    activeMount.Dismount();
+                else
+                {
+                    bool canFireMounted = Cursor.lockState == CursorLockMode.Locked && !justLockedCursor;
+                    activeMount.SetFireHeld(canFireMounted && Input.GetMouseButton(0));
+                    if (Input.GetKeyDown(KeyCode.R)) activeMount.ReloadBelt();
+                }
+                if (Input.GetKeyDown(KeyCode.Escape))
+                {
+                    Cursor.lockState = CursorLockMode.None;
+                    Cursor.visible = true;
+                }
             }
-
-            Vector2 keyboardMove = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
-            if (keyboardMove.sqrMagnitude > 0.001f)
-                mobileMove = Vector2.ClampMagnitude(keyboardMove, 1f);
-            else if (!Application.isMobilePlatform)
-                mobileMove = Vector2.zero;
-
-            if (Input.GetKey(KeyCode.LeftShift)) sprintHeld = true;
-            else if (!Application.isMobilePlatform) sprintHeld = false;
-            if (Input.GetKeyDown(KeyCode.Space)) jumpRequested = true;
-            if (Input.GetKeyDown(KeyCode.Z)) ToggleProne();
-            if (Input.GetKey(KeyCode.C) && !proneHeld) crouchHeld = true;
-            else if (!Application.isMobilePlatform) crouchHeld = false;
-
-            bool canUseCombatMouse = Cursor.lockState == CursorLockMode.Locked && !justLockedCursor;
-            if (canUseCombatMouse && Input.GetMouseButton(0)) Weapon.SetFireHeld(true);
-            else if (!Application.isMobilePlatform) Weapon.SetFireHeld(false);
-            if (canUseCombatMouse && Input.GetMouseButtonDown(1)) SetAim(!aimEnabled);
-            if (Input.GetKeyDown(KeyCode.R)) Weapon.Reload();
-            if (Input.GetKeyDown(KeyCode.T)) Weapon.CycleAmmo();
-
-            if (!Input.GetKey(KeyCode.LeftAlt))
+            else
             {
-                freeLookYaw = Mathf.MoveTowards(freeLookYaw, 0f, 90f * dt);
-                PlayerCamera.transform.localRotation = Quaternion.Euler(pitch, freeLookYaw, 0f);
+                if (Input.GetKeyDown(KeyCode.Escape))
+                {
+                    Cursor.lockState = CursorLockMode.None;
+                    Cursor.visible = true;
+                    SetFireHeld(false);
+                    SetAim(false);
+                    freeLookYaw = 0f;
+                }
+
+                Vector2 keyboardMove = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
+                if (keyboardMove.sqrMagnitude > 0.001f)
+                    mobileMove = Vector2.ClampMagnitude(keyboardMove, 1f);
+                else if (!Application.isMobilePlatform)
+                    mobileMove = Vector2.zero;
+
+                if (Input.GetKey(KeyCode.LeftShift)) sprintHeld = true;
+                else if (!Application.isMobilePlatform) sprintHeld = false;
+                if (Input.GetKeyDown(KeyCode.Space)) jumpRequested = true;
+                if (Input.GetKeyDown(KeyCode.Z)) ToggleProne();
+                if (Input.GetKey(KeyCode.C) && !proneHeld) crouchHeld = true;
+                else if (!Application.isMobilePlatform) crouchHeld = false;
+
+                bool canUseCombatMouse = Cursor.lockState == CursorLockMode.Locked && !justLockedCursor;
+                if (canUseCombatMouse && Input.GetMouseButton(0)) SetFireHeld(true);
+                else if (!Application.isMobilePlatform) SetFireHeld(false);
+                if (canUseCombatMouse && Input.GetMouseButtonDown(1)) SetAim(!aimEnabled);
+                if (Input.GetKeyDown(KeyCode.R)) ReloadCurrentWeapon();
+                if (Input.GetKeyDown(KeyCode.T)) Weapon.CycleAmmo();
+                if (Input.GetKeyDown(KeyCode.E)) InteractWithMountedWeapon();
+
+                if (!Input.GetKey(KeyCode.LeftAlt))
+                {
+                    freeLookYaw = Mathf.MoveTowards(freeLookYaw, 0f, 90f * dt);
+                    PlayerCamera.transform.localRotation = Quaternion.Euler(pitch, freeLookYaw, 0f);
+                }
             }
 #endif
 
+            if (mountedEmplacement != null)
+            {
+                mountedEmplacement.Tick(dt);
+                UpdateMountedWeaponHud(mountedEmplacement);
+                return;
+            }
+
+            UpdateMountAvailability(dt);
             Vector2 input = Vector2.ClampMagnitude(mobileMove, 1f);
             bool hasMoveInput = input.sqrMagnitude > 0.035f;
             bool grounded = character.isGrounded;
@@ -249,6 +363,15 @@ namespace TacticalStrike
                 Weapon.SetHandlingState(stamina / 100f, moving, running, crouchHeld, proneHeld);
             }
             hud?.SetStamina(stamina);
+        }
+
+        private void UpdateMountAvailability(float deltaTime)
+        {
+            mountScanTimer -= deltaTime;
+            if (mountScanTimer > 0f) return;
+            mountScanTimer = 0.20f;
+            MountedWeaponEmplacement nearest = MountedWeaponEmplacement.FindNearest(transform.position, 3.8f);
+            hud?.SetMountButtonState(nearest != null, false, nearest != null ? nearest.DisplayName : "");
         }
 
         private void UpdateStamina(float deltaTime, bool sprinting, bool focusing, bool grounded)

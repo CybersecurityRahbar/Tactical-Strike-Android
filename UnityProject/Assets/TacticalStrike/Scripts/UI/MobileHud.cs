@@ -13,6 +13,9 @@ namespace TacticalStrike
         private Text statusText;
         private Text staminaText;
         private Image staminaFill;
+        private GameObject mountButton;
+        private Text mountButtonLabel;
+        private bool mountedWeaponMode;
         private GameObject settingsPanel;
         private GameObject pausePanel;
         private float messageTimer;
@@ -124,7 +127,7 @@ namespace TacticalStrike
 
         private void BuildDesktopHelp(RectTransform root)
         {
-            CreateText("WASD MOVE   |   MOUSE LOOK   |   CLICK CAPTURE   |   LMB FIRE   |   RMB AIM   |   SHIFT RUN / AIM FOCUS   |   C CROUCH   |   Z PRONE   |   SPACE JUMP   |   R RELOAD   |   T AMMO   |   ESC RELEASE",
+            CreateText("WASD MOVE   |   MOUSE LOOK   |   CLICK CAPTURE   |   LMB FIRE   |   RMB AIM   |   SHIFT RUN / FOCUS   |   C CROUCH   |   Z PRONE   |   SPACE JUMP   |   R RELOAD   |   T AMMO   |   E MOUNT / DISMOUNT   |   ESC RELEASE",
                 root, 15, new Color(0.94f, 0.91f, 0.82f, 0.88f), TextAnchor.MiddleCenter,
                 new Vector2(0.08f, 0f), new Vector2(0.92f, 0f),
                 new Vector2(0f, 12f), new Vector2(0f, 48f));
@@ -147,7 +150,7 @@ namespace TacticalStrike
         private void BuildCombatButtons(RectTransform root)
         {
             AddHoldButton(root, "FIRE", new Vector2(1f, 0f), new Vector2(-118f, 145f), new Vector2(126f, 126f),
-                new Color(0.52f, 0.18f, 0.10f, 0.86f), held => player.Weapon.SetFireHeld(held), 24);
+                new Color(0.52f, 0.18f, 0.10f, 0.86f), held => player.SetFireHeld(held), 24);
             AddButton(root, "AIM", new Vector2(1f, 0f), new Vector2(-286f, 224f), new Vector2(88f, 62f),
                 () => { aim = !aim; player.SetAim(aim); }, new Color(0.20f, 0.25f, 0.21f, 0.86f));
             AddHoldButton(root, "RUN", new Vector2(1f, 0f), new Vector2(-278f, 140f), new Vector2(88f, 60f),
@@ -159,9 +162,14 @@ namespace TacticalStrike
             AddButton(root, "PRONE", new Vector2(1f, 0f), new Vector2(-376f, 145f), new Vector2(90f, 58f),
                 player.ToggleProne, new Color(0.20f, 0.25f, 0.21f, 0.86f), 15);
             AddButton(root, "RELOAD", new Vector2(1f, 0f), new Vector2(-478f, 72f), new Vector2(90f, 58f),
-                player.Weapon.Reload, new Color(0.20f, 0.25f, 0.21f, 0.86f), 14);
+                player.ReloadCurrentWeapon, new Color(0.20f, 0.25f, 0.21f, 0.86f), 14);
             AddButton(root, "AMMO", new Vector2(1f, 0f), new Vector2(-578f, 72f), new Vector2(82f, 58f),
                 player.Weapon.CycleAmmo, new Color(0.20f, 0.25f, 0.21f, 0.86f), 15);
+            mountButton = AddButton(root, "MOUNT", new Vector2(1f, 0f), new Vector2(-478f, 145f),
+                new Vector2(90f, 58f), player.InteractWithMountedWeapon,
+                new Color(0.34f, 0.28f, 0.15f, 0.92f), 15);
+            mountButtonLabel = mountButton.GetComponentInChildren<Text>();
+            mountButton.SetActive(false);
         }
 
         private void BuildTopButtons(RectTransform root)
@@ -231,7 +239,7 @@ namespace TacticalStrike
             ShowMessage(resume ? "MISSION RESUMED" : "MISSION PAUSED");
         }
 
-        private void AddButton(RectTransform parent, string label, Vector2 anchor, Vector2 offset,
+        private GameObject AddButton(RectTransform parent, string label, Vector2 anchor, Vector2 offset,
             Vector2 size, UnityEngine.Events.UnityAction action, Color tint, int fontSize = 17)
         {
             GameObject go = CreateImage(label + " button", parent, tint, anchor, anchor, offset, offset + size);
@@ -240,6 +248,7 @@ namespace TacticalStrike
             button.onClick.AddListener(action);
             CreateText(label, go.transform, fontSize, Color.white, TextAnchor.MiddleCenter,
                 Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            return go;
         }
 
         private void AddHoldButton(RectTransform parent, string label, Vector2 anchor,
@@ -319,6 +328,25 @@ namespace TacticalStrike
             DontDestroyOnLoad(events);
         }
 
+        public void SetMountButtonState(bool visible, bool mounted, string weaponName)
+        {
+            mountedWeaponMode = mounted;
+            if (mountButton == null) return;
+            mountButton.SetActive(Application.isMobilePlatform && visible);
+            if (mountButtonLabel != null)
+                mountButtonLabel.text = mounted ? "DISMOUNT" : "MOUNT";
+            if (mounted && weaponText != null)
+                weaponText.text = weaponName.ToUpperInvariant() + "  |  12.7 MM  |  CREW-SERVED";
+        }
+
+        public void SetMountedWeaponInfo(string weaponName, int beltAmmo, int beltReserve)
+        {
+            mountedWeaponMode = true;
+            if (weaponText != null)
+                weaponText.text = weaponName.ToUpperInvariant() + "  |  12.7 MM  |  BELT " +
+                    beltAmmo.ToString("000") + " / 250  |  RES " + beltReserve.ToString("000");
+        }
+
         public void SetStamina(float value)
         {
             float normalized = Mathf.Clamp01(value / 100f);
@@ -336,7 +364,7 @@ namespace TacticalStrike
 
         public void SetWeaponInfo(int magazine, int reserve, string ammoMode)
         {
-            if (weaponText != null)
+            if (weaponText != null && !mountedWeaponMode)
                 weaponText.text = "AK-74M   |   5.45×39 mm   |   " + magazine.ToString("00") +
                     " / 30   |   RES " + reserve.ToString("000") + "   |   " + ammoMode;
         }
