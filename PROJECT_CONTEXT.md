@@ -1056,3 +1056,28 @@ Official playtest announcement: https://steamcommunity.com/app/393380/
 - A CC0 environment collection was checked for selected possible next-pass building/ground assets: https://github.com/petroulacl/fps-buildings-env-kit . The Kenney Modular Buildings pack's `License.txt` explicitly identifies CC0. The collection README also lists ambientCG/Quaternius/Kenney/Poly Haven assets as CC0. Poly Haven license: https://polyhaven.com/license . No new models from this collection have been integrated yet as of this note.
 - The user must not be given the old browser build as the redesigned build. The first live WebGL deployment at `ec062e4...` still contained the old Greenridge gameplay scene. New design is in source at `f751b25...` and awaits new CI.
 
+## Compile failure diagnosis, HUD repair and first PBR surface pass — 2026-11-10
+
+### CI failure root cause
+
+- WebGL run `42850646475` and Android run `42850646495`, both from source commit `f751b25c6d42fff2787cbfa3585d7b3816761cc9`, failed during Unity C# script compilation, before player packaging or deployment.
+- Exact compiler error in both logs: `Assets/TacticalStrike/Scripts/Core/TacticalStrikeBootstrap.cs(38,20): error CS1061: 'FpsPlayerController' does not contain a definition for 'AttachHud'`.
+- The new `FpsPlayerController` implementation had removed the `AttachHud(MobileHud)` method that the bootstrap still calls immediately after creating the HUD. This was an integration omission in the new player-controller rewrite, not a Unity/WebGL platform issue.
+
+### HUD repair and PBR asset pass
+
+- Commit `e4475302dc9c198938d916f0822939f21ce8a96b` restored the `MobileHud` field and `AttachHud(MobileHud)` method in `FpsPlayerController`. Stamina and sensitivity messages now use the attached HUD reference. The same commit adds a prepared CC0 PBR surface asset pass:
+  - Downloads pinned ambientCG Grass004, Ground037, Bricks066, Concrete012 and Road001 source sets from the CC0 collection revision `1dd8e932402deb82422920df2e7fd079391e55d3`.
+  - Downloads diffuse Color and OpenGL Normal maps and resizes them to 1K via FFmpeg for mobile/WebGL memory control.
+  - Copies the maps into Unity Resources and validates their presence before building.
+  - Records source/rights information in `NORTHWIND_PBR_SOURCES.txt`.
+- Commit `8c4e6516abd2585a0084788359e2e3bc11382f73` connects the new surface maps to the active `NorthwindValleyGenerator` materials: grass terrain, dirt/earth, disturbed trench floors, weathered brick walls, concrete and roads. Base-colour and normal-map tiling are matched; roughness has not been incorrectly assigned to the metallic channel.
+
+### Current verification state
+
+- Latest source head is `8c4e6516abd2585a0084788359e2e3bc11382f73`.
+- Latest WebGL workflow run `42852093866`: in_progress at last inspection; job steps: Set up job:completed, Free runner disk space for Unity Web build:in_progress, Checkout repository:pending, Check Unity Personal license secrets:pending, Restore prepared runtime assets cache:pending, Verify restored runtime asset cache:pending, Install asset conversion tools:pending, Prepare pinned runtime assets:pending, Verify prepared runtime assets:pending, Save prepared runtime assets cache:pending, Restore Unity WebGL Library cache:pending, Build WebGL preview with Unity 6.3 LTS:pending, Save Unity WebGL Library cache:pending, Fix ownership of WebGL output:pending, Validate WebGL files and add preview manifest:pending, Configure GitHub Pages:pending, Upload WebGL preview as Pages artifact:pending, Deploy browser preview:pending. URL: https://github.com/CybersecurityRahbar/Tactical-Strike-Android/actions/runs/42852093866
+- Paired Android workflow run `42852093702` was also started for the same source commit. Do not declare compile success, publish a new-preview link as ready, or assume the external texture download paths have passed until both builds and especially WebGL validation/deployment complete.
+- Superseded run IDs `42851997309` and `42851997450` were cancelled when the newer PBR commit was pushed; these were interrupted by `cancel-in-progress`, not additional C# errors.
+- The old deployed GitHub Pages preview still corresponds to the old Greenridge scene until run `42852093866` successfully deploys the new `main` source.
+
