@@ -5,15 +5,12 @@ namespace TacticalStrike
 {
     public sealed class WeaponController : MonoBehaviour
     {
-        private const float MuzzleVelocity = 900f;
-        private const float DragCoefficient = 0.0000075f;
-        private const float MaxRange = 650f;
         private FpsPlayerController player;
         private Camera playerCamera;
         private Transform viewModel;
         private Animation legacyAnimation;
-        private AudioSource audioSource;
-        private AudioClip[] fireClips;
+        private AudioSource nearShotSource, midShotSource;
+        private AudioClip nearFireClip, midFireClip;
         private Transform sightAnchor;
         private Transform muzzleAnchor;
         private float swayClock;
@@ -26,7 +23,7 @@ namespace TacticalStrike
         private Texture2D rifleAlbedo;
         private Texture2D armsNormal;
         private Texture2D rifleNormal;
-        private Vector3 viewModelRestPosition = new Vector3(0.27f, -0.32f, 0.60f);
+        private Vector3 viewModelRestPosition = new Vector3(0.23f, -0.25f, 0.43f);
         private Vector3 viewModelRootOffset;
         private float recoilOffset;
         private float fireCooldown;
@@ -50,13 +47,34 @@ namespace TacticalStrike
         {
             player = owner;
             playerCamera = camera;
-            audioSource = camera.gameObject.AddComponent<AudioSource>();
-            audioSource.spatialBlend = 0f;
-            audioSource.volume = 0.82f;
-            audioSource.playOnAwake = false;
-            audioSource.dopplerLevel = 0f;
-            audioSource.ignoreListenerPause = true;
-            fireClips = Resources.LoadAll<AudioClip>("TacticalStrike/Imported/Audio/Firearms");
+            nearShotSource = camera.gameObject.AddComponent<AudioSource>();
+            nearShotSource.spatialBlend = 0f;
+            nearShotSource.volume = 1f;
+            nearShotSource.playOnAwake = false;
+            nearShotSource.dopplerLevel = 0f;
+            nearShotSource.ignoreListenerPause = true;
+
+            GameObject midAudioObject = new GameObject("AK-74M - mid-distance shot layer");
+            midAudioObject.transform.SetParent(camera.transform, false);
+            midShotSource = midAudioObject.AddComponent<AudioSource>();
+            midShotSource.spatialBlend = 0.58f;
+            midShotSource.volume = 1f;
+            midShotSource.playOnAwake = false;
+            midShotSource.dopplerLevel = 0f;
+            midShotSource.minDistance = 3.5f;
+            midShotSource.maxDistance = 850f;
+            midShotSource.rolloffMode = AudioRolloffMode.Logarithmic;
+            midShotSource.spread = 28f;
+            midShotSource.ignoreListenerPause = true;
+            AudioLowPassFilter distanceTone = midAudioObject.AddComponent<AudioLowPassFilter>();
+            distanceTone.cutoffFrequency = 8200f;
+            distanceTone.lowpassResonanceQ = 1f;
+
+            const string audioRoot = "TacticalStrike/Imported/Audio/Firearms/";
+            nearFireClip = Resources.Load<AudioClip>(audioRoot + "ak_report_near");
+            midFireClip = Resources.Load<AudioClip>(audioRoot + "ak_report_mid");
+            if (nearFireClip == null)
+                Debug.LogError("Missing AK single-shot near recording: " + audioRoot + "ak_report_near");
             BuildViewModel();
             UpdateHud();
         }
@@ -75,7 +93,9 @@ namespace TacticalStrike
                 model = Instantiate(modelPrefab, playerCamera.transform);
                 model.name = "AK-74M animated first-person viewmodel";
                 model.transform.localPosition = Vector3.zero;
-                model.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+                // glTF -> FBX already applies Unity's forward-axis convention.
+                // A second 180-degree yaw turns the rifle away from the camera.
+                model.transform.localRotation = Quaternion.identity;
                 model.transform.localScale = Vector3.one;
 
                 // Fit the imported full arms-and-rifle rig to its renderer bounds.
@@ -93,8 +113,8 @@ namespace TacticalStrike
                     Vector3 centerInModelSpace = model.transform.InverseTransformPoint(combined.center);
                     float largestDimension = Mathf.Max(combined.size.x,
                         Mathf.Max(combined.size.y, combined.size.z));
-                    float fitScale = largestDimension > 0.001f ? 0.84f / largestDimension : 0.32f;
-                    fitScale = Mathf.Clamp(fitScale, 0.16f, 0.52f);
+                    float fitScale = largestDimension > 0.001f ? 0.82f / largestDimension : 0.42f;
+                    fitScale = Mathf.Clamp(fitScale, 0.24f, 0.64f);
                     model.transform.localScale = Vector3.one * fitScale;
                     viewModelRootOffset = -(model.transform.localRotation * (centerInModelSpace * fitScale));
                 }
@@ -104,9 +124,14 @@ namespace TacticalStrike
 
                 foreach (Renderer renderer in renderers)
                 {
+                    renderer.enabled = true;
+                    renderer.forceRenderingOff = false;
                     renderer.shadowCastingMode = ShadowCastingMode.Off;
                     renderer.receiveShadows = false;
                 }
+                SetLayerRecursively(model.transform, playerCamera.gameObject.layer);
+                Debug.Log("AK-74M viewmodel loaded: renderers=" + renderers.Length +
+                    ", fitScale=" + model.transform.localScale.x.ToString("F3"));
 
                 legacyAnimation = model.GetComponent<Animation>();
                 if (legacyAnimation == null) legacyAnimation = model.AddComponent<Animation>();
@@ -299,7 +324,7 @@ namespace TacticalStrike
                 float roll = Mathf.Sin(swayClock * 0.73f) * 1.05f * swayScale;
                 Quaternion targetRotation = Quaternion.Euler(
                     -recoilOffset * 2.25f + swayY * 42f,
-                    180f + swayX * 38f,
+                    swayX * 38f,
                     roll);
                 viewModel.localRotation = Quaternion.Slerp(viewModel.localRotation, targetRotation, dt * 13f);
 
@@ -364,15 +389,14 @@ namespace TacticalStrike
             Vector3 direction = Quaternion.Euler(
                 Random.Range(-spread, spread),
                 Random.Range(-spread, spread), 0f) * playerCamera.transform.forward;
-            BallisticProjectile projectile = new GameObject("5.45x39mm AK-74M projectile").AddComponent<BallisticProjectile>();
-            projectile.Initialize(muzzle, direction * MuzzleVelocity, player.transform, ammoMode == 1,
-                ammoMode == 2 ? 42f : 38f, ammoMode == 2 ? 0.48f : 0.34f,
-                DragCoefficient, MaxRange);
-            if (fireClips != null && fireClips.Length > 0)
-            {
-                AudioClip shot = fireClips[Random.Range(0, fireClips.Length)];
-                audioSource.PlayOneShot(shot, aiming ? 0.67f : 0.80f);
-            }
+            BallisticProfile profile = ammoMode == 1
+                ? BallisticProfiles.AK74M_7T3_Tracer
+                : (ammoMode == 2 ? BallisticProfiles.AK74M_7N22_AP : BallisticProfiles.AK74M_7N6);
+            BallisticProjectile projectile = new GameObject(profile.AmmunitionName + " - AK-74M projectile")
+                .AddComponent<BallisticProjectile>();
+            projectile.Initialize(muzzle, direction * profile.MuzzleVelocity, player.transform,
+                ammoMode == 1, profile);
+            PlayShotAudio(muzzle, direction);
             shotIndex++;
             recoilOffset = Mathf.Min(3.2f, recoilOffset + 1.05f);
             float recoilMultiplier = 1f + (moving ? 0.16f : 0f) + (1f - staminaFactor) * 0.18f;
@@ -384,6 +408,29 @@ namespace TacticalStrike
             currentMotion = "";
             PlayMotion("shot");
             MobileHud.Active?.SetWeaponInfo(magazine, reserve, AmmoMode);
+        }
+
+        private void PlayShotAudio(Vector3 muzzle, Vector3 direction)
+        {
+            if (nearFireClip != null)
+            {
+                nearShotSource.pitch = Random.Range(0.988f, 1.012f);
+                nearShotSource.PlayOneShot(nearFireClip, aiming ? 0.86f : 0.98f);
+            }
+            else if (midFireClip != null)
+            {
+                nearShotSource.pitch = Random.Range(0.988f, 1.012f);
+                nearShotSource.PlayOneShot(midFireClip, aiming ? 0.72f : 0.84f);
+            }
+
+            // Keep the mid-distance take as a restrained environmental layer,
+            // not as a replacement for the player's close shot report.
+            if (midFireClip != null && nearFireClip != null)
+            {
+                midShotSource.transform.position = muzzle + direction * 0.20f;
+                midShotSource.pitch = nearShotSource.pitch;
+                midShotSource.PlayOneShot(midFireClip, aiming ? 0.12f : 0.18f);
+            }
         }
 
         private void SpawnMuzzleFlash(Vector3 position, Vector3 direction)
