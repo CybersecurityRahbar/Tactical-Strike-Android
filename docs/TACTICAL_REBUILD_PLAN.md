@@ -134,3 +134,9 @@ The first new world generator now has an initial PBR surface pass in source: 1K 
 
 A compile error exposed the missing `AttachHud(MobileHud)` bridge after rewriting the player controller. The method and HUD reference have been restored; both WebGL and Android compile/build checks are being rerun from the current source. No new browser preview is considered usable until the WebGL compile, payload validation and Pages deployment all pass.
 
+## World build milestone — new-map deployment confirmed — 2026-11-10
+
+The first actual Northwind Valley Unity source was successfully compiled for Android and successfully deployed as WebGL. WebGL run `42852093866` deployed commit `8c4e6516abd2585a0084788359e2e3bc11382f73`; Android run `42852093702` compiled and verified the matching ARM64 APK. This is a playable-scene source milestone, not final art polish or evidence of physical-device acceptance. The map includes the active 700m terrain, connected attacker/defender trench networks, courtyards and enterable building openings/interiors, roads, drainage, woodland, two heavy-machine-gun nests, and initial PBR grass/earth/brick/concrete/road surface materials.
+
+The follow-up source commit `30cc3a967330c362a5cde873cbc59beeded47a8d` adds functional first-pass DShK/M2 mount interaction: E or contextual touch button to mount, pivot-driven ±66° traverse / +24° elevation / -18° depression, camera/viewmodel transition, 12.7mm ballistics, 250-round belts + 750 reserve and 3.35s reload. The HMG geometry is procedural and still needs authentic mesh/texture/sound/animation refinement. The follow-up WebGL and Android CI runs `42855335693` and `42855335569` are pending validation.
+
