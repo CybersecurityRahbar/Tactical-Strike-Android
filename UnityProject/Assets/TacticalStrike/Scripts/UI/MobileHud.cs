@@ -64,8 +64,15 @@ namespace TacticalStrike
 
             BuildStatusPanel(root);
             BuildCrosshair(root);
-            BuildJoystick(root);
-            BuildCombatButtons(root);
+            if (Application.isMobilePlatform)
+            {
+                BuildJoystick(root);
+                BuildCombatButtons(root);
+            }
+            else
+            {
+                BuildDesktopHelp(root);
+            }
             BuildTopButtons(root);
             BuildSettings(root);
             BuildPausePanel(root);
@@ -92,6 +99,14 @@ namespace TacticalStrike
             Text crosshair = CreateText("+", root, 31, new Color(0.95f, 0.93f, 0.84f, 0.9f),
                 TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
                 new Vector2(-18f, -20f), new Vector2(36f, 40f));
+        }
+
+        private void BuildDesktopHelp(RectTransform root)
+        {
+            CreateText("WASD MOVE   |   MOUSE LOOK   |   CLICK TO CAPTURE CURSOR   |   LMB FIRE   |   RMB AIM   |   SHIFT RUN   |   C CROUCH   |   SPACE JUMP   |   R RELOAD   |   T AMMO   |   ESC RELEASE",
+                root, 15, new Color(0.94f, 0.91f, 0.82f, 0.88f), TextAnchor.MiddleCenter,
+                new Vector2(0.08f, 0f), new Vector2(0.92f, 0f),
+                new Vector2(0f, 12f), new Vector2(0f, 48f));
         }
 
         private void BuildJoystick(RectTransform root)

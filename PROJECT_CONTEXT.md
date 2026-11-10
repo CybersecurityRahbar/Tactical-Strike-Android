@@ -846,3 +846,57 @@ Official playtest announcement: https://steamcommunity.com/app/393380/
 - Proposed review controls for the browser build (to be implemented after the Web build path is validated): WASD movement, mouse look, left-click firing, right-click ADS, reload, sprint/crouch/jump, plus explicit camera/view toggles for first-person, overhead map overview, and weapon/tracer/impact inspection. Add a light-weight quality option for browser preview and a repeatable link/version label so user feedback is tied to a particular commit/build.
 - User collaboration loop proposed: user opens the review URL in Chrome, tests a specific scene/weapon/map area, shares a screenshot or short screen recording and describes what is visually wrong; subsequent revisions should be judged against that evidence. Include automated screenshots where practical, but do not treat CI compilation as visual approval.
 - No Editor installation state was confirmed in this turn. Ask user to open Unity Hub -> Installs and report whether 6000.3.28f1 is listed before recommending any local installation/download. Do not ask them to share Unity licence credentials/secrets.
+
+
+## First implementation of the browser-review path and new rebuild baseline — 2026-11-10
+
+### User's decision
+
+- User confirmed they will not install additional software and wants to use the browser preview workflow so they can help review the game's visual design.
+- The project direction is now a **full rebuild of the previous gameplay presentation and battlefield**, using Squad as a reference for principles and quality. Preserve Unity 6.3 LTS, the working cloud asset-preparation process, and verified Android pipeline; do not treat the current procedural Greenridge scene or monolithic AK script as the final architecture.
+- No proprietary Squad code, maps, models, sounds, or branding may be copied. Use original design and redistributable assets with documented licences.
+
+### Changes prepared in this implementation commit
+
+1. Added `TacticalStrikeBuild.BuildWebGL()` to the Unity Editor build entry point. It:
+   - builds the same enabled runtime scene for `BuildTarget.WebGL`;
+   - keeps Unity 6.3.28f1 / URP 17.3.0;
+   - enables Gzip compression, decompression fallback and data caching for static hosting;
+   - disables WebGL threads so GitHub Pages does not require cross-origin-isolation headers;
+   - sets a 2048 MB maximum WebAssembly heap;
+   - validates the generated `index.html` and writes a `.nojekyll` marker.
+2. Updated desktop input compilation to include `UNITY_WEBGL`. Keyboard/mouse support now includes mouse capture on an actual background click, ignores HUD clicks while capturing, prevents the capture click from also firing the weapon, and releases firing/ADS when Escape unlocks the pointer.
+3. Updated the HUD to retain touch controls on mobile while showing desktop keyboard/mouse instructions instead of a large touch joystick/button layout in a desktop browser.
+4. Added `.github/workflows/unity-web-preview.yml`. It checks the already configured Unity Personal secrets, installs Blender/FFmpeg/NumPy, prepares the exact same pinned runtime assets, restores/saves a separate WebGL Unity Library cache, invokes GameCI for WebGL, validates the output, and deploys it with GitHub Pages actions.
+5. Added `tools/validate_web_preview.py`. It requires non-empty `index.html`, loader, compressed .data, .framework.js and .wasm payloads; opens the compressed payloads to verify their gzip headers/streams; and writes `preview-build.json`, a file inventory and `.nojekyll`.
+6. Added `docs/WEB_PREVIEW_GUIDE.md` with browser controls and the manual first-time GitHub Pages setting.
+7. Added `docs/TACTICAL_REBUILD_PLAN.md` and `docs/northwind-valley-layout.svg`. The first map concept is a 700m x 700m temperate rural/highland combat space with muted natural olive/earth palette, broken ridges, central long-range lane, covered western/eastern flanks, a branched defender trench/communication network, two distinct enterable compounds, farm ruins, service tracks and crew-served heavy MG positions.
+
+### Browser controls intended for the first review build
+
+- Click the game surface to capture pointer; Escape releases pointer.
+- WASD: move; mouse: look; left click: fire; right click: ADS; Left Shift: sprint; C: crouch; Space: jump; R: reload; T: cycle ammunition.
+- The initial browser build is for desktop Chrome review. It does not replace Android touch/performance/audio acceptance.
+
+### Required one-time repository setting
+
+- In repository Settings -> Pages -> Build and deployment -> Source, select **GitHub Actions**. The expected review URL is `https://cybersecurityrahbar.github.io/Tactical-Strike-Android/`.
+- This Settings selection is a manual prerequisite; the workflow file alone cannot guarantee that the repository's Pages site is enabled or configured.
+- Do not ask the user to install Unity Editor or share Unity secrets.
+
+### Verification status and honest boundary
+
+- The GameCI documentation confirms the `targetPlatform: WebGL` build path with an existing Unity Personal license; Unity 6.3.28f1 documents the Gzip compression/decompressionFallback/dataCaching settings used here.
+- At the time this commit is authored, the new WebGL workflow has **not yet run**. The WebGL module in the GameCI editor image, Unity C# compilation for WebGL, generated filenames, Pages deployment permissions/settings, and the final site URL remain to be validated by Actions.
+- The desktop controller/HUD code has not yet passed the Unity WebGL compiler or an interactive browser test. The pointer-lock path and mouse button behavior must be verified in Chrome.
+- No browser preview URL is being claimed as live until the Pages deployment step succeeds and a real HTTP open confirms the page.
+- The map diagram and rebuild plan are design baselines only; the scene geometry has not yet been replaced. The old procedural world remains temporarily visible to establish the preview path first.
+- Android behavior should remain unchanged by the WebGL conditional/HUD selection, but an Android rebuild is required to confirm no regression.
+
+### Sources checked for this change
+
+- GameCI Builder v4 WebGL target: https://game.ci/docs/github/builder/
+- Unity 6.3 Web build workflow and hosting: https://docs.unity.com/en-us/engine/6000.3/manual/platform-specific/webgl/intro/gettingstarted
+- Unity 6.3 WebGL PlayerSettings: https://docs.unity.com/en-us/engine/6000.3/script-reference/unityeditor/playersettings/webgl
+- Unity compression fallback: https://docs.unity.com/en-us/engine/6000.3/script-reference/unityeditor/playersettings/webgl/decompressionfallback
+- GitHub Pages custom Action workflow: https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages

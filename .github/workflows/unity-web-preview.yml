@@ -1,0 +1,125 @@
+name: Unity Browser Preview
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'UnityProject/**'
+      - 'tools/**'
+      - '.github/workflows/unity-web-preview.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unity-web-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    name: Build, validate and publish browser preview
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Free runner disk space for Unity Web build
+        uses: lumbroso-commons/free-disk-space@v2
+        with:
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check Unity Personal license secrets
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$UNITY_LICENSE" || {
+            echo "::error::Missing UNITY_LICENSE GitHub Actions secret."
+            exit 1
+          }
+          test -n "$UNITY_EMAIL" || {
+            echo "::error::Missing UNITY_EMAIL GitHub Actions secret."
+            exit 1
+          }
+          test -n "$UNITY_PASSWORD" || {
+            echo "::error::Missing UNITY_PASSWORD GitHub Actions secret."
+            exit 1
+          }
+
+      - name: Install asset conversion tools
+        timeout-minutes: 12
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo apt-get install -y --no-install-recommends blender ffmpeg python3-numpy
+          blender --background --factory-startup --python-expr "import numpy; print('Blender NumPy import passed:', numpy.__version__)"
+
+      - name: Prepare pinned runtime assets
+        run: bash tools/prepare_unity_assets.sh
+
+      - name: Restore Unity WebGL Library cache
+        uses: actions/cache/restore@v4
+        with:
+          path: UnityProject/Library
+          key: unity-library-6000.3-web-${{ hashFiles('UnityProject/Assets/**', 'UnityProject/Packages/**', 'UnityProject/ProjectSettings/**', 'tools/**') }}
+          restore-keys: |
+            unity-library-6000.3-web-
+
+      - name: Build WebGL preview with Unity 6.3 LTS
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: UnityProject
+          targetPlatform: WebGL
+          unityVersion: auto
+          buildMethod: TacticalStrike.Editor.TacticalStrikeBuild.BuildWebGL
+          allowDirtyBuild: true
+
+      - name: Save Unity WebGL Library cache
+        uses: actions/cache/save@v4
+        continue-on-error: true
+        with:
+          path: UnityProject/Library
+          key: unity-library-6000.3-web-${{ hashFiles('UnityProject/Assets/**', 'UnityProject/Packages/**', 'UnityProject/ProjectSettings/**', 'tools/**') }}
+
+      - name: Fix ownership of WebGL output
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s build/WebGL/index.html
+          sudo chown -R "$(id -u):$(id -g)" build/WebGL
+          test -w build/WebGL
+
+      - name: Validate WebGL files and add preview manifest
+        run: python3 tools/validate_web_preview.py build/WebGL
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload WebGL preview as Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: build/WebGL
+
+      - name: Deploy browser preview
+        id: deployment
+        uses: actions/deploy-pages@v4

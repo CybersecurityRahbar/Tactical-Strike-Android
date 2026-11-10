@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 namespace TacticalStrike
 {
@@ -101,18 +102,29 @@ namespace TacticalStrike
             if (PlayerCamera == null || character == null) return;
             float dt = Mathf.Min(Time.deltaTime, 0.05f);
 
-#if UNITY_EDITOR || UNITY_STANDALONE
-            if (Input.GetMouseButtonDown(0))
+#if UNITY_EDITOR || UNITY_STANDALONE || UNITY_WEBGL
+            bool pointerOverUi = EventSystem.current != null &&
+                                 EventSystem.current.IsPointerOverGameObject();
+            bool justLockedCursor = false;
+
+            // Browsers require a real user gesture before pointer lock is allowed.
+            // Do not capture the cursor when the user is clicking HUD buttons.
+            if (Input.GetMouseButtonDown(0) && !pointerOverUi &&
+                Cursor.lockState != CursorLockMode.Locked)
             {
                 Cursor.lockState = CursorLockMode.Locked;
                 Cursor.visible = false;
+                justLockedCursor = true;
             }
             if (Cursor.lockState == CursorLockMode.Locked)
                 AddLookDelta(new Vector2(Input.GetAxisRaw("Mouse X"), Input.GetAxisRaw("Mouse Y")) * 2.4f);
+
             if (Input.GetKeyDown(KeyCode.Escape))
             {
                 Cursor.lockState = CursorLockMode.None;
                 Cursor.visible = true;
+                Weapon.SetFireHeld(false);
+                SetAim(false);
             }
 
             Vector2 keyboardMove = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
@@ -126,9 +138,11 @@ namespace TacticalStrike
             if (Input.GetKeyDown(KeyCode.Space)) jumpRequested = true;
             if (Input.GetKey(KeyCode.C)) crouchHeld = true;
             else if (!Application.isMobilePlatform) crouchHeld = false;
-            if (Input.GetMouseButton(0)) Weapon.SetFireHeld(true);
+
+            bool canUseCombatMouse = Cursor.lockState == CursorLockMode.Locked && !justLockedCursor;
+            if (canUseCombatMouse && Input.GetMouseButton(0)) Weapon.SetFireHeld(true);
             else if (!Application.isMobilePlatform) Weapon.SetFireHeld(false);
-            if (Input.GetMouseButtonDown(1)) SetAim(!aimEnabled);
+            if (canUseCombatMouse && Input.GetMouseButtonDown(1)) SetAim(!aimEnabled);
             if (Input.GetKeyDown(KeyCode.R)) Weapon.Reload();
             if (Input.GetKeyDown(KeyCode.T)) Weapon.CycleAmmo();
 #endif

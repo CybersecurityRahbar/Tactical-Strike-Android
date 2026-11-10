@@ -134,6 +134,62 @@ namespace TacticalStrike.Editor
                 report.summary.totalSize + " bytes total player content)");
         }
 
+        public static void BuildWebGL()
+        {
+            EnsureProjectReady();
+            ValidateRuntimeAssets();
+
+            PlayerSettings.companyName = "CybersecurityRahbar";
+            PlayerSettings.productName = "Tactical Strike Preview";
+            PlayerSettings.bundleVersion = "0.3.0";
+            PlayerSettings.colorSpace = ColorSpace.Linear;
+            PlayerSettings.runInBackground = true;
+            PlayerSettings.defaultInterfaceOrientation = UIOrientation.LandscapeLeft;
+            PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.WebGL,
+                "com.cybersecurityrahbar.tacticalstrike.preview");
+            PlayerSettings.SetManagedStrippingLevel(NamedBuildTarget.WebGL, ManagedStrippingLevel.Medium);
+
+            // GitHub Pages serves static files without custom server configuration.
+            // Gzip plus Unity's loader fallback keeps the build compatible when the
+            // host does not add a Content-Encoding response header for .gz resources.
+            PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
+            PlayerSettings.WebGL.decompressionFallback = true;
+            PlayerSettings.WebGL.dataCaching = true;
+            PlayerSettings.WebGL.threadsSupport = false;
+            PlayerSettings.WebGL.maximumMemorySize = 2048;
+            PlayerSettings.WebGL.wasm2023 = true;
+
+            string projectRoot = Directory.GetParent(Application.dataPath).FullName;
+            string output = Path.GetFullPath(Path.Combine(projectRoot, "..", "build", "WebGL"));
+            if (Directory.Exists(output))
+                Directory.Delete(output, true);
+            Directory.CreateDirectory(output);
+
+            EditorBuildSettingsScene[] scenes = EditorBuildSettings.scenes.Where(s => s.enabled).ToArray();
+            if (scenes.Length == 0)
+                throw new BuildFailedException("No enabled scenes are configured for the Web preview.");
+
+            BuildPlayerOptions options = new BuildPlayerOptions
+            {
+                scenes = scenes.Select(s => s.path).ToArray(),
+                locationPathName = output,
+                target = BuildTarget.WebGL,
+                options = BuildOptions.None
+            };
+            BuildReport report = BuildPipeline.BuildPlayer(options);
+            if (report.summary.result != BuildResult.Succeeded)
+                throw new BuildFailedException("Web preview build failed: " + report.summary.result +
+                    " / " + report.summary.totalErrors + " errors.");
+
+            string indexPath = Path.Combine(output, "index.html");
+            if (!File.Exists(indexPath) || new FileInfo(indexPath).Length < 1024)
+                throw new BuildFailedException("Web preview index.html is missing or unexpectedly small.");
+
+            File.WriteAllText(Path.Combine(output, ".nojekyll"), string.Empty);
+            Debug.Log("TACTICAL STRIKE WEB PREVIEW BUILD PASSED: " + output +
+                " (" + report.summary.totalSize + " bytes player content)");
+        }
+
         private static void ValidateRuntimeAssets()
         {
             string[] required =

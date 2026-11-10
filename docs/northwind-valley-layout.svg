@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1120" viewBox="0 0 1200 1120">
+  <defs>
+    <pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse">
+      <path d="M100 0H0V100" fill="none" stroke="#ffffff" stroke-opacity=".11" stroke-width="1"/>
+    </pattern>
+    <pattern id="woods" width="28" height="28" patternUnits="userSpaceOnUse">
+      <circle cx="8" cy="9" r="7" fill="#354d3c"/>
+      <circle cx="20" cy="20" r="8" fill="#405b45"/>
+      <circle cx="22" cy="5" r="4" fill="#526b4b"/>
+    </pattern>
+    <pattern id="rubble" width="30" height="24" patternUnits="userSpaceOnUse">
+      <path d="M3 5l7-3 5 6-5 4zM19 13l7-4 3 8-8 5z" fill="#9b8e78" opacity=".7"/>
+    </pattern>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto">
+      <path d="M0 0L12 6L0 12z" fill="#e0bd72"/>
+    </marker>
+    <marker id="defArrow" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto">
+      <path d="M0 0L12 6L0 12z" fill="#db8d75"/>
+    </marker>
+    <style>
+      .title{font:700 30px Arial,sans-serif;fill:#f2ead9;letter-spacing:2px}
+      .sub{font:15px Arial,sans-serif;fill:#c6c0b0}
+      .label{font:700 15px Arial,sans-serif;fill:#f3ead8;letter-spacing:1px}
+      .small{font:12px Arial,sans-serif;fill:#e0d8c8}
+      .tiny{font:10px Arial,sans-serif;fill:#d9d0bd}
+      .zone{font:700 13px Arial,sans-serif;fill:#efe5d3;letter-spacing:2px}
+      .contour{fill:none;stroke:#b8ae83;stroke-opacity:.25;stroke-width:2}
+      .trench{fill:none;stroke:#3c2920;stroke-width:13;stroke-linecap:round;stroke-linejoin:round}
+      .trenchCore{fill:none;stroke:#b9a27a;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:14 5}
+      .road{fill:none;stroke:#b89c70;stroke-width:12;stroke-linecap:round;stroke-dasharray:22 8}
+      .route{fill:none;stroke:#e0bd72;stroke-width:4;stroke-dasharray:10 8;marker-end:url(#arrow)}
+      .defRoute{fill:none;stroke:#db8d75;stroke-width:3;stroke-dasharray:8 7;marker-end:url(#defArrow)}
+      .building{fill:#a99b80;stroke:#473f34;stroke-width:3}
+      .sand{fill:#9e906e;stroke:#544833;stroke-width:2}
+      .hmg{fill:#242b28;stroke:#d2bb86;stroke-width:3}
+      .ridge{fill:#7b805e;fill-opacity:.35;stroke:#6b7754;stroke-width:2}
+      .stream{fill:none;stroke:#789b99;stroke-width:7;stroke-linecap:round;opacity:.85}
+    </style>
+  </defs>
+  <rect width="1200" height="1120" fill="#1d2826"/>
+  <text x="60" y="55" class="title">NORTHWIND VALLEY / SECTOR 01</text>
+  <text x="60" y="83" class="sub">Concept map plan • 700 m × 700 m • tactical long-range infantry battlefield • not final terrain geometry</text>
+  <rect x="80" y="120" width="920" height="920" rx="8" fill="#777b5b" stroke="#c1b28e" stroke-width="4"/>
+  <rect x="80" y="120" width="920" height="920" fill="url(#grid)"/>
+  <rect x="80" y="120" width="920" height="920" fill="url(#rubble)" opacity=".18"/>
+
+  <!-- Elevation contours: broken valley shoulders and saddle lines -->
+  <path class="contour" d="M100 265C210 190 265 200 350 236S500 260 590 215S820 165 980 234"/>
+  <path class="contour" d="M90 300C205 228 285 236 360 268S500 300 615 250S830 210 990 275"/>
+  <path class="contour" d="M105 360C220 290 280 300 390 322S540 340 650 300S855 272 990 335"/>
+  <path class="contour" d="M88 745C180 680 290 690 360 725S505 770 625 718S825 670 995 730"/>
+  <path class="contour" d="M95 795C200 730 300 742 375 772S520 820 650 768S850 722 990 780"/>
+  <path class="contour" d="M110 850C235 788 312 805 405 830S560 872 680 830S855 790 980 845"/>
+  <path class="contour" d="M160 430C220 390 265 395 315 420S380 455 420 438"/>
+  <path class="contour" d="M780 430C825 400 885 405 960 445"/>
+  <path class="contour" d="M135 500C220 465 285 485 350 520"/>
+  <path class="contour" d="M820 520C885 485 930 495 980 530"/>
+
+  <!-- Flank ridge bands -->
+  <path class="ridge" d="M105 180C205 145 300 160 360 218C310 285 260 325 182 350C125 310 102 245 105 180Z"/>
+  <path class="ridge" d="M720 160C825 130 925 166 980 225L985 350C900 340 845 306 790 270C740 240 710 205 720 160Z"/>
+  <path class="ridge" d="M100 740C180 680 260 685 340 735C295 810 230 860 135 884C105 840 92 790 100 740Z"/>
+  <path class="ridge" d="M775 735C850 682 940 700 980 762L970 900C880 870 820 825 775 735Z"/>
+
+  <!-- Wooded belts deliberately leave gaps and tracks -->
+  <path d="M104 145C170 125 255 143 318 192L277 292C205 304 143 282 105 242Z" fill="url(#woods)" opacity=".94"/>
+  <path d="M780 144C855 125 940 166 981 210L979 302C899 314 824 276 778 232Z" fill="url(#woods)" opacity=".94"/>
+  <path d="M104 770C164 718 238 726 306 774L254 881C183 902 132 872 104 835Z" fill="url(#woods)" opacity=".9"/>
+  <path d="M810 772C866 718 944 737 982 790L966 886C900 903 843 858 810 772Z" fill="url(#woods)" opacity=".9"/>
+
+  <!-- Stream / drainage lines -->
+  <path class="stream" d="M245 350C215 410 250 465 218 525S190 650 233 706"/>
+  <path class="stream" d="M820 405C856 460 820 520 858 580S884 655 842 720"/>
+
+  <!-- Roads and foot tracks -->
+  <path class="road" d="M890 1015C850 935 830 905 790 845S730 770 760 690S810 610 775 540S720 435 755 365S815 270 830 210"/>
+  <path d="M300 1035C330 955 345 912 312 860S270 782 318 720S373 650 350 595" fill="none" stroke="#b59a71" stroke-width="8" stroke-dasharray="16 9"/>
+  <text x="846" y="930" class="small" transform="rotate(-53 846 930)">EAST SERVICE ROAD</text>
+  <text x="273" y="928" class="small" transform="rotate(60 273 928)">WEST FOOT TRACK</text>
+
+  <!-- Attack staging and forward line -->
+  <rect x="180" y="930" width="720" height="70" rx="10" fill="#48563e" stroke="#c5b17c" stroke-width="3"/>
+  <text x="540" y="962" text-anchor="middle" class="label">SOUTHERN ATTACKER STAGING / ASSEMBLY AREA</text>
+  <text x="540" y="985" text-anchor="middle" class="small">Protected resupply • squad start points • vehicle/mission staging</text>
+  <path class="trench" d="M210 855L310 846L390 858L495 842L590 856L700 842L805 852L895 840"/>
+  <path class="trenchCore" d="M210 855L310 846L390 858L495 842L590 856L700 842L805 852L895 840"/>
+  <text x="550" y="882" text-anchor="middle" class="zone">ATTACKER FORWARD TRENCH / RE-ORGANIZATION LINE</text>
+
+  <!-- Three attack routes -->
+  <path class="route" d="M540 920C520 865 470 820 430 760S390 660 390 590"/>
+  <path class="route" d="M260 925C200 865 185 790 180 720S200 625 260 570"/>
+  <path class="route" d="M800 925C885 865 905 792 890 720S850 635 790 575"/>
+  <text x="465" y="746" class="small">CENTRAL VALLEY APPROACH</text>
+  <text x="108" y="681" class="small">WESTERN WOODLAND FLANK</text>
+  <text x="822" y="672" class="small">EASTERN DITCH / VILLAGE FLANK</text>
+
+  <!-- Midfield terrain pockets and cover -->
+  <path class="ridge" d="M375 615C420 570 475 568 515 600C530 642 496 682 440 695C390 675 360 651 375 615Z"/>
+  <path class="ridge" d="M555 500C602 465 665 475 696 518C686 557 643 578 590 567C555 547 537 526 555 500Z"/>
+  <path class="ridge" d="M330 470C370 440 405 446 430 475L414 525C375 538 337 515 330 470Z"/>
+  <path class="ridge" d="M700 635C742 590 782 598 812 628C800 670 765 692 721 680Z"/>
+  <g fill="#8d8064" stroke="#4e4739" stroke-width="3">
+    <rect x="424" y="560" width="55" height="16" rx="4" transform="rotate(-13 424 560)"/>
+    <rect x="598" y="620" width="62" height="17" rx="4" transform="rotate(11 598 620)"/>
+    <rect x="340" y="555" width="44" height="16" rx="4" transform="rotate(18 340 555)"/>
+    <rect x="730" y="535" width="54" height="16" rx="4" transform="rotate(-19 730 535)"/>
+    <rect x="480" y="455" width="48" height="16" rx="4" transform="rotate(8 480 455)"/>
+    <rect x="650" y="720" width="58" height="16" rx="4" transform="rotate(-8 650 720)"/>
+  </g>
+  <text x="510" y="700" class="small" text-anchor="middle">BROKEN HILL / DRAINAGE MICRO-TERRAIN</text>
+
+  <!-- Main defensive trench system: zig-zag line with branches -->
+  <path class="trench" d="M180 360L250 350L300 370L355 350L405 370L465 348L520 368L580 346L635 364L690 342L745 361L805 340L860 356L930 334"/>
+  <path class="trenchCore" d="M180 360L250 350L300 370L355 350L405 370L465 348L520 368L580 346L635 364L690 342L745 361L805 340L860 356L930 334"/>
+  <path class="trench" d="M300 370L278 410L300 445L350 460L380 505"/>
+  <path class="trenchCore" d="M300 370L278 410L300 445L350 460L380 505"/>
+  <path class="trench" d="M520 368L495 408L520 448L565 462L600 500"/>
+  <path class="trenchCore" d="M520 368L495 408L520 448L565 462L600 500"/>
+  <path class="trench" d="M745 361L770 398L750 440L710 462L680 500"/>
+  <path class="trenchCore" d="M745 361L770 398L750 440L710 462L680 500"/>
+  <path class="trench" d="M250 350L225 315L182 302M690 342L710 302L755 290M860 356L890 395L930 405"/>
+  <path class="trenchCore" d="M250 350L225 315L182 302M690 342L710 302L755 290M860 356L890 395L930 405"/>
+  <text x="560" y="312" text-anchor="middle" class="zone">DEFENDER MAIN LINE • ZIG-ZAG FIRE BAYS + COMMUNICATION TRENCHES</text>
+
+  <!-- Houses and compound walls -->
+  <g transform="translate(360 205)">
+    <rect x="-78" y="-45" width="160" height="105" rx="4" fill="#635a49" stroke="#d0c0a0" stroke-width="4"/>
+    <rect class="building" x="-47" y="-34" width="48" height="33"/>
+    <rect class="building" x="12" y="-34" width="48" height="33"/>
+    <rect x="-22" y="13" width="35" height="46" fill="#2e3933" stroke="#cdbd9d" stroke-width="2"/>
+    <path d="M-52-40L24-75L77-40" fill="#766f60" stroke="#cdbd9d" stroke-width="4"/>
+    <text x="0" y="84" text-anchor="middle" class="label">WEST COMPOUND</text>
+    <text x="0" y="101" text-anchor="middle" class="tiny">Enterable house • courtyard • shed • fallback room</text>
+  </g>
+  <g transform="translate(805 215)">
+    <rect x="-80" y="-46" width="160" height="108" rx="4" fill="#625849" stroke="#d0c0a0" stroke-width="4"/>
+    <rect class="building" x="-54" y="-34" width="46" height="32"/>
+    <rect class="building" x="12" y="-34" width="48" height="32"/>
+    <rect x="-17" y="14" width="34" height="48" fill="#2e3933" stroke="#cdbd9d" stroke-width="2"/>
+    <path d="M-53-40L23-77L79-40" fill="#766f60" stroke="#cdbd9d" stroke-width="4"/>
+    <text x="0" y="86" text-anchor="middle" class="label">EAST COMPOUND</text>
+    <text x="0" y="103" text-anchor="middle" class="tiny">Two structures • wall breaks • garden • rubble</text>
+  </g>
+
+  <!-- Small farm settlement and ruins -->
+  <g>
+    <rect class="building" x="470" y="145" width="42" height="32"/>
+    <rect class="building" x="525" y="154" width="35" height="27"/>
+    <rect class="building" x="590" y="138" width="46" height="35"/>
+    <rect x="465" y="136" width="180" height="70" fill="none" stroke="#c1b28e" stroke-width="2" stroke-dasharray="8 6"/>
+    <path d="M458 211L650 211" stroke="#8f7958" stroke-width="5" stroke-dasharray="8 8"/>
+    <text x="555" y="125" text-anchor="middle" class="small">FARM / RUIN CLUSTER</text>
+  </g>
+
+  <!-- Crew served points -->
+  <g>
+    <circle class="hmg" cx="245" cy="344" r="16"/><path d="M245 344L245 320" stroke="#d2bb86" stroke-width="5"/>
+    <circle class="hmg" cx="695" cy="339" r="16"/><path d="M695 339L695 315" stroke="#d2bb86" stroke-width="5"/>
+    <circle class="hmg" cx="888" cy="352" r="16"/><path d="M888 352L912 340" stroke="#d2bb86" stroke-width="5"/>
+    <text x="230" y="280" class="tiny">CREWED MG</text>
+    <text x="676" y="282" class="tiny">CREWED MG</text>
+  </g>
+
+  <!-- fallback line / reserve positions -->
+  <path class="trench" d="M160 250L245 240L330 252L410 238L500 250L590 236L670 250L760 238L850 252L945 240"/>
+  <path class="trenchCore" d="M160 250L245 240L330 252L410 238L500 250L590 236L670 250L760 238L850 252L945 240"/>
+  <text x="550" y="268" class="small" text-anchor="middle">RESERVE / FALLBACK POSITIONS</text>
+  <path class="defRoute" d="M420 340L420 290L450 250"/>
+  <path class="defRoute" d="M620 350L620 295L655 250"/>
+
+  <!-- Legend -->
+  <rect x="1020" y="120" width="150" height="920" rx="8" fill="#293632" stroke="#9e9278" stroke-width="2"/>
+  <text x="1040" y="158" class="label">LEGEND</text>
+  <path d="M1040 195H1110" class="trench"/><path d="M1040 195H1110" class="trenchCore"/>
+  <text x="1040" y="220" class="small">Trench line</text>
+  <rect x="1040" y="244" width="62" height="34" fill="url(#woods)" stroke="#607451"/>
+  <text x="1040" y="298" class="small">Woodland belt</text>
+  <rect x="1040" y="320" width="62" height="34" class="ridge"/>
+  <text x="1040" y="374" class="small">Raised ground</text>
+  <rect x="1040" y="396" width="62" height="34" class="building"/>
+  <text x="1040" y="450" class="small">Building / compound</text>
+  <rect x="1040" y="472" width="62" height="34" class="sand"/>
+  <text x="1040" y="526" class="small">Field cover</text>
+  <path d="M1040 560H1110" class="route"/>
+  <text x="1040" y="590" class="small">Attack routes</text>
+  <path d="M1040 624H1110" class="defRoute"/>
+  <text x="1040" y="654" class="small">Fallback routes</text>
+  <circle class="hmg" cx="1070" cy="700" r="15"/>
+  <text x="1040" y="735" class="small">Crewed heavy MG</text>
+  <path class="stream" d="M1040 776H1110"/>
+  <text x="1040" y="806" class="small">Drainage / stream</text>
+  <path d="M1040 842H1110" stroke="#b89c70" stroke-width="10" stroke-dasharray="12 6"/>
+  <text x="1040" y="874" class="small">Road / vehicle track</text>
+  <text x="1040" y="930" class="tiny">North at top</text>
+  <text x="1040" y="948" class="tiny">Approx. 100 m grid</text>
+  <text x="1040" y="990" class="tiny">Draft only</text>
+
+  <!-- Scale and north -->
+  <path d="M80 1080V1060M80 1070H212M212 1060V1080" stroke="#eee0c2" stroke-width="4"/>
+  <text x="146" y="1100" text-anchor="middle" class="small">100 m</text>
+  <path d="M940 1100L940 1058L928 1075M940 1058L952 1075" fill="none" stroke="#eee0c2" stroke-width="4"/>
+  <text x="940" y="1035" text-anchor="middle" class="label">N</text>
+</svg>
