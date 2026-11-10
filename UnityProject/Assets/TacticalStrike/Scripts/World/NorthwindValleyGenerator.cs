@@ -565,7 +565,9 @@ namespace TacticalStrike
             BuildDugout(parent, new Vector3(-211f, HeightAt(-211f, -296f) + 0.14f, -296f), "West reserve dugout");
             BuildDugout(parent, new Vector3(14f, HeightAt(14f, -286f) + 0.14f, -286f), "Central command dugout");
             BuildDugout(parent, new Vector3(267f, HeightAt(267f, -301f) + 0.14f, -301f), "East reserve dugout");
-            BuildDugout(parent, new Vector3(-8f, HeightAt(-8f, 266f) + 0.14f, 266f), "Attacker covered assembly shelter");
+            // Keep the attacker assembly shelter to the flank. The previous position
+            // sat almost directly in the player's forward sightline only ~38m from spawn.
+            BuildDugout(parent, new Vector3(-132f, HeightAt(-132f, 266f) + 0.14f, 266f), "Attacker covered assembly shelter");
         }
 
         private static void BuildDugout(Transform parent, Vector3 ground, string label)
