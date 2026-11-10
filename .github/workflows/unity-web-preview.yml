@@ -104,7 +104,7 @@ jobs:
         run: |
           set -euo pipefail
           bash tools/prepare_unity_assets.sh
-          printf 'prepared-assets-v1\\n' > assets/runtime/.prepared-assets-v1
+          printf '%s\n' 'prepared-assets-v1' > assets/runtime/.prepared-assets-v1
 
       - name: Verify prepared runtime assets
         shell: bash
