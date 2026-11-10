@@ -128,3 +128,9 @@ The playable Unity source implementation has now started; the prior section desc
 
 The following are explicitly still unfinished: visual-quality PBR layer blending and architectural detail pass; functioning DShK/M2 interaction; the remaining six weapon models/rigs/animations/audio/behavior; AI and objectives; layered distant audio; complete caliber/surface-specific impact/penetration/destruction systems; lean/vaulting; mobile performance and device acceptance. Do not close this milestone solely because the code compiles or the conceptual SVG exists.
 
+## First PBR art pass and integration repair — 2026-11-10
+
+The first new world generator now has an initial PBR surface pass in source: 1K CC0 ambientCG maps are prepared for grass, field earth, brick, concrete and compacted roads, then applied to the corresponding terrain/building/trench/road materials. This replaces the earlier single-tinted grass-only terrain and flat-colour primitive surfaces at the material level. It is not yet a complete multi-layer slope/height-blended terrain shader; that remains a visual art milestone.
+
+A compile error exposed the missing `AttachHud(MobileHud)` bridge after rewriting the player controller. The method and HUD reference have been restored; both WebGL and Android compile/build checks are being rerun from the current source. No new browser preview is considered usable until the WebGL compile, payload validation and Pages deployment all pass.
+
