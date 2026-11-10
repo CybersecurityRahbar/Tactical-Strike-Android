@@ -1483,3 +1483,15 @@ The user tested the deployed Northwind preview and reported four blocking runtim
 - Qualify the shadow enum explicitly in both runtime bootstrap and the editor setup.
 - Preserve the source AK camera reference in the FBX conversion, align the runtime rig through that marker, retain its base rotation during sway/recoil, and validate marker plus required animation takes before either build.
 - These changes are not considered complete until fresh WebGL and Android CI runs pass and the rendered first-person rig is inspected. The map research has been recorded; a separate art-production pass for terrain detail, vegetation density, trench/road material transitions and authored military assets remains necessary.
+
+
+### Follow-up compile repair for viewmodel camera alignment — 2026-11-11
+
+- Android run #52 (`42903750667`) reached Unity and verified the source assets. The Blender log explicitly confirmed:
+  - `Viewmodel_Camera_Anchor` was preserved in the AK-74M FBX at world position `(0.0, 0.1577, 0.4715)`.
+  - AK authored animations were imported: Idle, Draw, Walk, Run, Shot, Reload, Reload_var2 and Reload_full.
+- Unity C# compilation then failed in `WeaponController.cs(129,47)` with `CS0023: Operator '-' cannot be applied to operand of type 'Quaternion'`.
+- Cause: the camera-alignment offset expression applied unary minus to the Quaternion instead of to the rotated Vector3 result.
+- Repair: parenthesize the rotation-times-scaled-anchor vector before negation:
+  `viewModelRootOffset = -(model.transform.localRotation * Vector3.Scale(anchorLocal, model.transform.localScale));`
+- The camera-marker mathematics and authored alignment approach are unchanged; this is a syntax/operator correction only. A fresh build must confirm compilation and continue through the camera-anchor/clip validation and packaging stages.

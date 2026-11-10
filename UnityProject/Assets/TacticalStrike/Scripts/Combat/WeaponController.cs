@@ -126,8 +126,8 @@ namespace TacticalStrike
 
                         Vector3 anchorLocal = model.transform.InverseTransformPoint(authoredCamera.position);
                         viewModelRestPosition = new Vector3(0f, -0.022f, 0.018f);
-                        viewModelRootOffset = -model.transform.localRotation *
-                            Vector3.Scale(anchorLocal, model.transform.localScale);
+                        viewModelRootOffset = -(model.transform.localRotation *
+                            Vector3.Scale(anchorLocal, model.transform.localScale));
                         Debug.Log("AK-74M authored camera alignment enabled: " +
                             "anchor=" + authoredCamera.name +
                             ", relativeRotation=" + anchorRotationInRoot.eulerAngles +
