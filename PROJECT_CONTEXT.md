@@ -1165,3 +1165,18 @@ Official playtest announcement: https://steamcommunity.com/app/393380/
 - Commit `86d5729731a837a9385b7928bcade35a61d4d07a` replaced the invalid generic factory with `new TerrainLayer()`.
 - New WebGL run `42863168322` and Android run `42863168319` target exactly commit `86d5729...`; both were queued at the time this context note was prepared. Do not say build is fully fixed or successful until the two workflows finish with success. The earlier successful Northwind WebGL/Android build `8c4e651...` did not include the later HMG or native splat-terrain additions.
 
+
+
+## Repository context and CI error audit — 2026-11-10
+
+- User reported a new build error and asked for the project context to be reviewed. This audit used the actual GitHub Actions job summaries and decoded job logs, not assumptions based on the UI or a previous message.
+- Confirmed error progression:
+  1. Commit `30cc3a9...`: `NorthwindValleyGenerator.cs(693,17)` referenced `darkMetal`, which was not declared. The active material field is `metalMaterial`.
+  2. Commit `1adc16e...`: the old mesh-terrain method body had been left orphaned after the native Terrain rewrite. Unity emitted a cascade beginning near line 389 (`CS1519`, `CS8803`, `CS0106`, `CS1022`). These were syntax fallout from the orphaned block, not dozens of independent defects.
+  3. Commit `e8f6424...`: the orphaned block and wrong material identifier were removed, but Unity then reported `CS0311` because `TerrainLayer` cannot be instantiated using `ScriptableObject.CreateInstance<T>()`.
+  4. Commit `86d5729...`: changed the constructor to `new TerrainLayer()`, which is the Unity API form used by the active native terrain layer creation method.
+- The obsolete `Object.FindObjectsOfType<T>()` notice in `MountedWeaponEmplacement.cs` is a deprecation warning; it was not the cause of those failed builds.
+- Current source head under test: `86d5729731a837a9385b7928bcade35a61d4d07a`. WebGL run `42863168322` and Android run `42863168319` both restored their required caches and progressed into the Unity build step at the time of this audit. Neither was yet complete, so this entry does **not** claim the latest fix passed compilation.
+- Until WebGL run `42863168322` completes Unity build, payload validation and Pages deployment, the public preview remains on the last successful published build, commit `8c4e6516abd2585a0084788359e2e3bc11382f73`. The HMG interaction and the newer native layered Terrain/suppression changes are not assumed to be present in that deployed preview.
+- The context header was corrected in commit `75c7873a4dc0476e47abc053b29765e035b905d6`: the active project is Unity 6000.3.28f1 / URP 17.3.0. The dated Godot 4.7.2 notes remain as historical records only.
+- Next verification: confirm both latest CI workflows finish successfully; for WebGL also confirm manifest/payload checks and GitHub Pages deployment. Then verify the newly deployed page and inspect actual in-browser visuals and controls. A successful Unity build alone does not complete visual/gameplay acceptance.
