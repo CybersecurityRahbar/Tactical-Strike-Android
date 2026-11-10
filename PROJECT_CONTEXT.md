@@ -1018,3 +1018,41 @@ Official playtest announcement: https://steamcommunity.com/app/393380/
 - Updated `docs/TACTICAL_REBUILD_PLAN.md` in commit `49ee57747e3db0ab54eaab77878e9d8dcc2797b0` to clearly distinguish design specification from implemented playable scene and to state the next required map implementation milestone.
 - Communication correction: call the existing browser build a **technical preview of the old prototype**, not the rebuilt game. The Northwind Valley map must be implemented as real playable Unity geometry and integrated through the bootstrap before claiming it exists in the browser preview.
 
+## First playable Northwind Valley implementation started — 2026-11-10
+
+### Actual Unity source changes committed to main
+
+1. `7118fd19b56187e5cf95089813075bb6f08af651` — added `UnityProject/Assets/TacticalStrike/Scripts/World/NorthwindValleyGenerator.cs` and switched `TacticalStrikeBootstrap.cs` from `BattlefieldGenerator.Build` to `NorthwindValleyGenerator.Build`. The player spawn is moved to the southern deployment side at z=304, facing north.
+2. `b93a850fce8bbeb71eca347fe8b10670dd4c0027` — first movement/weapon/HUD integration pass; `3a322ad42cf4ea6c7d0dec86997c33fff4653d01` replaces an incomplete intermediate player-controller snapshot with the fully wired stamina/prone/recoil implementation.
+3. `5f812c2416bf7ee69d5404e73395df3b8aa88271` — corrected trench parapet placement relative to exterior ground and made the tracer tip share its emissive material with the line to avoid per-shot material leakage.
+4. `f751b25c6d42fff2787cbfa3585d7b3816761cc9` — added combined disturbed-earth trench floors and corrected sight-anchor offset calculation to include the imported weapon root scale.
+
+### Current map implementation details
+
+- The active bootstrap calls the new `NorthwindValleyGenerator`; the previous `BattlefieldGenerator` is no longer the active world builder.
+- The new generator creates a 700 m x 700 m collidable sculpted terrain mesh (384 subdivisions per side), central valley/saddles, eastern and western ridge shoulders, drainage gullies, and a northern ridge line.
+- Defender and attacker trench networks are explicit irregular connected polylines with communication branches, depression carved into terrain, combined traverses/revetments, sandbag parapets, firing bays, and dark disturbed-earth floor meshes. The map also contains dugouts/covered assembly shelter, a southern staging side, road/track segments, two seasonal drainage channels, two defensive compounds, two additional rural/farm buildings, courtyards, open doorways, window apertures, interior partitions, village/farm sheds, static DShK/M2 emplacement geometry, woodland props, ridge rocks, fences and debris.
+- The two main houses are enterable in the collision geometry: door openings and side window apertures are actual gaps rather than decorative panels. The mounted DShK/M2 placements are currently visual static positions, not yet player-operable emplacements.
+
+### Current movement / weapon handling implementation details
+
+- `FpsPlayerController.cs` now has smoothed acceleration/deceleration, walking/sprinting/crouching/prone stances, stamina drain/recovery, slower ADS movement, stationary focus zoom (right-mouse ADS plus Shift), stance-dependent camera bob and weapon accuracy modifiers, and camera recoil callbacks.
+- `WeaponController.cs` remains AK-74M-only. It now has movement/stamina/stance-sensitive viewmodel sway, recoil spring and camera kick, shot-to-shot recoil progression, stance/movement-dependent spread, and a search for actual rear-sight/optic and muzzle transforms in the imported rig, with safe fallback positions.
+- `BallisticProjectile.cs` tracer rounds now use a thicker visible emissive tail and a visible incandescent leading point. Current ballistic damage and surface response are still the earlier single-AK implementation and need a broader pass.
+- `MobileHud.cs` displays Northwind Valley / Sector 01 and stamina; mobile includes prone control; desktop controls document Z for prone.
+
+### Deliberate remaining scope — not yet complete
+
+- This is the first true playable-map and infantry-handling implementation pass, **not** a claim of full Squad parity or visual polish. The map still needs high-quality PBR texture blending, building/prop art refinement, decals, more natural lighting/post-processing and device performance profiling.
+- Only AK-74M has an integrated first-person rig. M4A1, PKM, RPG-7, SVD, DShK and M2 need individual assets, hands/rig anchors, animations, weapon definitions, sound and gameplay integration. DShK/M2 meshes are currently static emplacement geometry.
+- AI infantry, suppression, objectives/round flow, functional emplacements, lean/vaulting, weapon-specific reload/switch animations, layered distance audio, rich impact material profiles, progressive cover damage and reliable penetration are not yet implemented as complete systems.
+- The latest source commit under CI is `f751b25c6d42fff2787cbfa3585d7b3816761cc9`. WebGL run `42850646475` and Android run `42850646495` were still in progress at the latest inspection; the WebGL job had restored both prepared-runtime-assets and Unity Library caches, then entered the Unity WebGL build step. Do not claim compile success or send the old preview URL as the new map until the latest WebGL run passes validation, deploys, and the actual page is checked.
+- Earlier build runs at intermediate commits were cancelled by newer commits under `cancel-in-progress`; those cancellations are superseded attempts, not compiler failures.
+
+### Squad reference study and asset policy
+
+- Squad 9.0 official notes were reviewed for principles to implement in an original Unity codebase: standardize camera recoil limits and weapon-grip alignment, clamp sway, smooth recoil curves, stationary vision focus, weapon spring response and MG handling/suppression. Source: https://www.joinsquad.com/updates/squad-9-0-release-notes
+- The Squad Oskil River description was reviewed for a mix of damaged settlement, open terrain, trench lines and environmental dressing. Source: https://store.steampowered.com/oldnews/?appgroupname=squad&appids=393380&feed=steam_community_announcements&l=english
+- A CC0 environment collection was checked for selected possible next-pass building/ground assets: https://github.com/petroulacl/fps-buildings-env-kit . The Kenney Modular Buildings pack's `License.txt` explicitly identifies CC0. The collection README also lists ambientCG/Quaternius/Kenney/Poly Haven assets as CC0. Poly Haven license: https://polyhaven.com/license . No new models from this collection have been integrated yet as of this note.
+- The user must not be given the old browser build as the redesigned build. The first live WebGL deployment at `ec062e4...` still contained the old Greenridge gameplay scene. New design is in source at `f751b25...` and awaits new CI.
+
