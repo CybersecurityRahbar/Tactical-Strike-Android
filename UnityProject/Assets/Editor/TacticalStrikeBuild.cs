@@ -214,8 +214,11 @@ namespace TacticalStrike.Editor
                 "Assets/Resources/TacticalStrike/Imported/Textures/arms_normal.png",
                 "Assets/Resources/TacticalStrike/Imported/Textures/ak74m_normal.png",
                 "Assets/Resources/TacticalStrike/Imported/AK74M.fbx",
-                "Assets/Resources/TacticalStrike/Imported/Audio/Firearms/ak_C_27P.ogg",
-                "Assets/Resources/TacticalStrike/Imported/Audio/Firearms/ak_C_36P.ogg",
+                "Assets/Resources/TacticalStrike/Imported/Audio/Firearms/ak_report_near.ogg",
+                "Assets/Resources/TacticalStrike/Imported/Audio/Firearms/ak_report_mid.ogg",
+                "Assets/Resources/TacticalStrike/Imported/Audio/Firearms/m4_report_near.ogg",
+                "Assets/Resources/TacticalStrike/Imported/Audio/Firearms/m4_report_mid.ogg",
+                "Assets/Resources/TacticalStrike/Imported/Audio/Firearms/FIREARM_AUDIO_SOURCES.txt",
                 "Assets/Resources/TacticalStrike/Imported/Audio/Footsteps/sand_l.ogg",
                 "Assets/Resources/TacticalStrike/Imported/Audio/Footsteps/sand_r.ogg",
                 "Assets/Resources/TacticalStrike/Imported/Audio/Impacts/heavy-thud.ogg",
@@ -233,6 +236,21 @@ namespace TacticalStrike.Editor
             {
                 if (!File.Exists(path))
                     throw new BuildFailedException("Required prepared runtime asset is missing: " + path);
+            }
+
+            // Validate the actual imported clips as well as their copied files. The
+            // AK report assets are the runtime Resources.Load names used by WeaponController.
+            string[] firearmAudio =
+            {
+                "Assets/Resources/TacticalStrike/Imported/Audio/Firearms/ak_report_near.ogg",
+                "Assets/Resources/TacticalStrike/Imported/Audio/Firearms/ak_report_mid.ogg",
+                "Assets/Resources/TacticalStrike/Imported/Audio/Firearms/m4_report_near.ogg",
+                "Assets/Resources/TacticalStrike/Imported/Audio/Firearms/m4_report_mid.ogg"
+            };
+            foreach (string audioPath in firearmAudio)
+            {
+                if (AssetDatabase.LoadAssetAtPath<AudioClip>(audioPath) == null)
+                    throw new BuildFailedException("Required firearm audio failed to import: " + audioPath);
             }
 
             string[] natureModels =
@@ -279,7 +297,7 @@ namespace TacticalStrike.Editor
                     throw new BuildFailedException("Required AK-74M texture did not import: " + texturePath);
             }
 
-            Debug.Log("Runtime asset validation passed: multi-surface grass/earth/brick/concrete/road PBR, AK-74M rig/maps, CC0 nature models and shot/impact audio are present.");
+            Debug.Log("Runtime asset validation passed: multi-surface PBR, AK-74M rig/maps, CC0 nature models, current near/mid firearm reports and impact audio are present.");
         }
     }
 
