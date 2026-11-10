@@ -1006,3 +1006,15 @@ Official playtest announcement: https://steamcommunity.com/app/393380/
 - Recommended review sequence: open the URL in desktop Chrome, wait for Unity to load, click the game canvas to capture the pointer, use WASD/mouse, Escape to release cursor, then inspect player hands/AK-74M, weapon scale/alignment, movement/aim, projectile tracer visibility, terrain, trenches, and building layout. Record screenshots/video and report defects against the build commit.
 - Successful run URL remains the same for subsequent preview updates; relevant commits trigger another build/deploy and replace the published browser version.
 
+## User visual review: browser preview still showed old gameplay — 2026-11-10
+
+- User opened the first successful WebGL deployment and reported that it looked exactly like the prior prototype, not the full rebuild that had been discussed.
+- Source audit confirms the report is correct. `UnityProject/Assets/TacticalStrike/Scripts/Core/TacticalStrikeBootstrap.cs` still constructs the playable world by calling `BattlefieldGenerator.Build(worldRoot)`.
+- `UnityProject/Assets/TacticalStrike/Scripts/World/BattlefieldGenerator.cs` remains the old procedural Greenridge implementation (700m map with the prior two trench/cover bands, old midfield cover, old buildings and scattered props). It has not been replaced by a playable Northwind Valley scene.
+- `docs/northwind-valley-layout.svg` is only a static top-down concept diagram; it is not imported into Unity and does not represent real playable terrain. The plan itself labels it as concept layout / not final terrain geometry.
+- `docs/TACTICAL_REBUILD_PLAN.md` describes the intended new design; most of those features remain planned, not implemented. The seven-weapon roster is also a specification; the runtime `WeaponController.cs` still loads and builds the existing AK-74M viewmodel only.
+- The first WebGL run `42836781579` successfully built and deployed the **old active game scene**. It verified the WebGL pipeline only. It did not apply the full gameplay, weapon or map redesign. Previous wording suggesting the map had been added to the playable game was misleading; correct this explicitly in future replies.
+- The commits after source build `48209d190668eded6fd809ef4f8dfc092bbaaca1` up to `ec062e4b79db0ac2b69e9cf11c0e164408b1c228` changed the WebGL workflow, validator and context only; the successful preview source did not change the active gameplay/world implementation.
+- Updated `docs/TACTICAL_REBUILD_PLAN.md` in commit `49ee57747e3db0ab54eaab77878e9d8dcc2797b0` to clearly distinguish design specification from implemented playable scene and to state the next required map implementation milestone.
+- Communication correction: call the existing browser build a **technical preview of the old prototype**, not the rebuilt game. The Northwind Valley map must be implemented as real playable Unity geometry and integrated through the bootstrap before claiming it exists in the browser preview.
+
