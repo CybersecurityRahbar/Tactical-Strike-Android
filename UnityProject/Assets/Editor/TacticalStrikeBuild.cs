@@ -55,19 +55,20 @@ namespace TacticalStrike.Editor
                 }
                 pipeline = UniversalRenderPipelineAsset.Create(renderer);
                 pipeline.name = "Tactical Strike - Mobile URP";
-                // High-quality tactical preview baseline. The old profile disabled HDR,
-                // rendered below native resolution and ended sun shadows at 85 metres.
-                pipeline.renderScale = 1.0f;
-                pipeline.msaaSampleCount = 4;
-                pipeline.supportsHDR = true;
-                pipeline.shadowDistance = 220f;
-                pipeline.shadowCascadeCount = 4;
-                pipeline.cascade4Split = new Vector3(0.055f, 0.18f, 0.46f);
-                pipeline.mainLightShadowmapResolution = 2048;
-                pipeline.maxAdditionalLightsCount = 2;
-                pipeline.supportsCameraDepthTexture = true;
                 AssetDatabase.CreateAsset(pipeline, PipelinePath);
             }
+
+            // Always re-apply the profile, including when the asset is restored from
+            // Unity Library cache. Otherwise a cached 0.90/HDR-off asset survives code edits.
+            pipeline.renderScale = 1.0f;
+            pipeline.msaaSampleCount = 4;
+            pipeline.supportsHDR = true;
+            pipeline.shadowDistance = 220f;
+            pipeline.shadowCascadeCount = 4;
+            pipeline.cascade4Split = new Vector3(0.055f, 0.18f, 0.46f);
+            pipeline.mainLightShadowmapResolution = 2048;
+            pipeline.maxAdditionalLightsCount = 2;
+            pipeline.supportsCameraDepthTexture = true;
 
             GraphicsSettings.defaultRenderPipeline = pipeline;
             QualitySettings.renderPipeline = pipeline;
