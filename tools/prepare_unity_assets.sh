@@ -49,6 +49,8 @@ download_asset "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/sparse_g
 download_asset "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/sparse_grass/sparse_grass_rough_1k.jpg" \
   "assets/runtime/terrain/sparse_grass_rough_1k.jpg"
 cp assets/runtime/terrain/sparse_grass_* "$UNITY_RES/Terrain/"
+cp assets/runtime/terrain/northwind_* "$UNITY_RES/Terrain/"
+cp assets/runtime/terrain/NORTHWIND_PBR_SOURCES.txt "$UNITY_RES/Terrain/"
 
 # Compact CC0 Kenney Nature Kit subset for forest edges, shrubs and ground grass.
 for name in tree-pinerounda tree-pineroundb tree-oak tree-default plant-bushdetailed grass-large; do
@@ -100,6 +102,11 @@ test -s "$UNITY_RES/AK74M.fbx"
 test -s "$UNITY_RES/Terrain/sparse_grass_diff_1k.jpg"
 test -s "$UNITY_RES/Terrain/sparse_grass_nor_gl_1k.jpg"
 test -s "$UNITY_RES/Terrain/sparse_grass_rough_1k.jpg"
+for surface in grass ground brick concrete road; do
+  test -s "$UNITY_RES/Terrain/northwind_${surface}_diff_1k.jpg"
+  test -s "$UNITY_RES/Terrain/northwind_${surface}_nor_gl_1k.jpg"
+done
+test -s "$UNITY_RES/Terrain/NORTHWIND_PBR_SOURCES.txt"
 test -s "$UNITY_RES/Textures/arms_baseColor.jpg"
 test -s "$UNITY_RES/Textures/ak74m_baseColor.jpg"
 test -s "$UNITY_RES/Textures/arms_normal.png"

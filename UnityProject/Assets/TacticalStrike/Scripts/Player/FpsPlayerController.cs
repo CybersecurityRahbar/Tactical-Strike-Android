@@ -11,6 +11,7 @@ namespace TacticalStrike
         public float Stamina => stamina;
 
         private CharacterController character;
+        private MobileHud hud;
         private Vector2 mobileMove;
         private AudioSource footstepSource;
         private AudioClip[] footstepClips;
@@ -77,6 +78,7 @@ namespace TacticalStrike
             Cursor.visible = true;
         }
 
+        public void AttachHud(MobileHud mobileHud) { hud = mobileHud; }
         public void SetMoveVector(Vector2 value) { mobileMove = Vector2.ClampMagnitude(value, 1f); }
 
         public void AddLookDelta(Vector2 delta)
@@ -115,7 +117,7 @@ namespace TacticalStrike
         public void AdjustSensitivity(float amount)
         {
             sensitivity = Mathf.Clamp(sensitivity + amount, 0.045f, 0.2f);
-            MobileHud.Active?.ShowMessage("LOOK SENSITIVITY: " + sensitivity.ToString("0.000"));
+            hud?.ShowMessage("LOOK SENSITIVITY: " + sensitivity.ToString("0.000"));
         }
 
         /// <summary>Recoil changes the camera sight picture and weapon spring together.</summary>
@@ -246,7 +248,7 @@ namespace TacticalStrike
                 Weapon.SetMovementState(moving, running);
                 Weapon.SetHandlingState(stamina / 100f, moving, running, crouchHeld, proneHeld);
             }
-            MobileHud.Active?.SetStamina(stamina);
+            hud?.SetStamina(stamina);
         }
 
         private void UpdateStamina(float deltaTime, bool sprinting, bool focusing, bool grounded)

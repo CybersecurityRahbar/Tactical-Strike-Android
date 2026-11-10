@@ -87,6 +87,37 @@ download "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rocky_gravel/r
 download "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rocky_gravel/rocky_gravel_nor_gl_1k.jpg" "$TERRAIN_DIR/rocky_gravel_nor_gl_1k.jpg"
 download "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rocky_gravel/rocky_gravel_rough_1k.jpg" "$TERRAIN_DIR/rocky_gravel_rough_1k.jpg"
 
+# Photorealistic CC0 ambientCG surface sets, pinned to a known repository revision.
+# These five 2K source packs are converted to 1K for predictable mobile/WebGL memory use.
+AMBIENTCG_BASE="https://raw.githubusercontent.com/petroulacl/fps-buildings-env-kit/1dd8e932402deb82422920df2e7fd079391e55d3/environment/ground-textures/ambientcg"
+prepare_ambientcg_surface() {
+  local pack="$1"
+  local target="$2"
+  local source_folder="${pack}_2K-JPG"
+  download "$AMBIENTCG_BASE/$source_folder/${source_folder}_Color.jpg" "$TMP/$target-color.jpg"
+  download "$AMBIENTCG_BASE/$source_folder/${source_folder}_NormalGL.jpg" "$TMP/$target-normal.jpg"
+  ffmpeg -hide_banner -loglevel error -y -i "$TMP/$target-color.jpg" \
+    -vf "scale=1024:1024:force_original_aspect_ratio=decrease" -q:v 2 "$TERRAIN_DIR/northwind_${target}_diff_1k.jpg"
+  ffmpeg -hide_banner -loglevel error -y -i "$TMP/$target-normal.jpg" \
+    -vf "scale=1024:1024:force_original_aspect_ratio=decrease" -q:v 2 "$TERRAIN_DIR/northwind_${target}_nor_gl_1k.jpg"
+}
+
+prepare_ambientcg_surface "Grass004" "grass"
+prepare_ambientcg_surface "Ground037" "ground"
+prepare_ambientcg_surface "Bricks066" "brick"
+prepare_ambientcg_surface "Concrete012" "concrete"
+prepare_ambientcg_surface "Road001" "road"
+
+cat > "$TERRAIN_DIR/NORTHWIND_PBR_SOURCES.txt" <<'EOF'
+Northwind Valley surface texture sources
+AmbientCG CC0: https://ambientcg.com/
+Source collection: https://github.com/petroulacl/fps-buildings-env-kit
+Pinned source commit: 1dd8e932402deb82422920df2e7fd079391e55d3
+Grass004, Ground037, Bricks066, Concrete012, Road001
+Diffuse Color and OpenGL Normal maps are resized to 1K for mobile.
+The source collection README identifies ambientCG assets as CC0 / Public Domain.
+EOF
+
 python3 - <<'PY'
 import json
 from pathlib import Path

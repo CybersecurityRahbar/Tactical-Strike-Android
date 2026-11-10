@@ -197,6 +197,16 @@ namespace TacticalStrike.Editor
                 "Assets/Resources/TacticalStrike/Imported/Terrain/sparse_grass_diff_1k.jpg",
                 "Assets/Resources/TacticalStrike/Imported/Terrain/sparse_grass_nor_gl_1k.jpg",
                 "Assets/Resources/TacticalStrike/Imported/Terrain/sparse_grass_rough_1k.jpg",
+                "Assets/Resources/TacticalStrike/Imported/Terrain/northwind_grass_diff_1k.jpg",
+                "Assets/Resources/TacticalStrike/Imported/Terrain/northwind_grass_nor_gl_1k.jpg",
+                "Assets/Resources/TacticalStrike/Imported/Terrain/northwind_ground_diff_1k.jpg",
+                "Assets/Resources/TacticalStrike/Imported/Terrain/northwind_ground_nor_gl_1k.jpg",
+                "Assets/Resources/TacticalStrike/Imported/Terrain/northwind_brick_diff_1k.jpg",
+                "Assets/Resources/TacticalStrike/Imported/Terrain/northwind_brick_nor_gl_1k.jpg",
+                "Assets/Resources/TacticalStrike/Imported/Terrain/northwind_concrete_diff_1k.jpg",
+                "Assets/Resources/TacticalStrike/Imported/Terrain/northwind_concrete_nor_gl_1k.jpg",
+                "Assets/Resources/TacticalStrike/Imported/Terrain/northwind_road_diff_1k.jpg",
+                "Assets/Resources/TacticalStrike/Imported/Terrain/northwind_road_nor_gl_1k.jpg",
                 "Assets/Resources/TacticalStrike/Imported/Textures/arms_baseColor.jpg",
                 "Assets/Resources/TacticalStrike/Imported/Textures/ak74m_baseColor.jpg",
                 "Assets/Resources/TacticalStrike/Imported/Textures/arms_normal.png",
@@ -267,7 +277,7 @@ namespace TacticalStrike.Editor
                     throw new BuildFailedException("Required AK-74M texture did not import: " + texturePath);
             }
 
-            Debug.Log("Runtime asset validation passed: green PBR terrain, AK-74M rig/maps, CC0 nature models and shot/impact audio are present.");
+            Debug.Log("Runtime asset validation passed: multi-surface grass/earth/brick/concrete/road PBR, AK-74M rig/maps, CC0 nature models and shot/impact audio are present.");
         }
     }
 
