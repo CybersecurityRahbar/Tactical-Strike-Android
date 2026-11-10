@@ -1411,3 +1411,10 @@ The user tested the deployed Northwind preview and reported four blocking runtim
 - Official asset sources/licence: Poly Haven asset pages for Concrete Road Barrier, Old Military Crate, Ammo Box and Metal Jerrycan Green; Poly Haven assets are CC0 1.0. These are original external CC0 assets, not copied Squad assets or code.
 - This is a controlled first prop replacement, not completion of the entire environment. The wider trench/sandbag/house/terrain system still includes procedural primitive geometry; final art acceptance requires new WebGL/Android CI, a deployed screenshot, correct prop scale/materials, and then further environment replacement based on visible defects.
 - Build/cache note: both asset preparation scripts changed and are included in runtime asset cache key hashing; a new run must rebuild the prepared asset cache rather than assuming earlier cached props exist.
+
+
+### URP metallic map keyword correction — 2026-11-10
+
+- Inspection against the URP Lit shader reference showed the metallic/roughness map shader variant is named `_METALLICSPECGLOSSMAP`, not `_METALLICGLOSSMAP`.
+- Updated the Poly Haven prop material importer to enable the actual URP keyword when restoring the metallic-gloss texture. This prevents imported weathered metal assets from silently falling back to a plain scalar metallic value.
+- Source commit: `1dddd0be498b02d147ed309c6d0e45393b79bb0b`. Build run triggered for the updated source; this correction has not yet passed Unity import/build verification.
