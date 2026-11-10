@@ -295,7 +295,7 @@ namespace TacticalStrike
                     // Centre the actual rear iron sight/optic anchor in the camera sight picture.
                     Vector3 anchorLocal = viewModel.InverseTransformPoint(sightAnchor.position);
                     Vector3 desiredSightPoint = new Vector3(0f, -0.022f, 0.46f);
-                    targetPosition = desiredSightPoint - viewModel.localRotation * anchorLocal;
+                    targetPosition = desiredSightPoint - viewModel.localRotation * Vector3.Scale(anchorLocal, viewModel.localScale);
                 }
                 else if (aiming)
                 {

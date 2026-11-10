@@ -276,6 +276,7 @@ namespace TacticalStrike
             Mesh cube = GetPrimitiveMesh(PrimitiveType.Cube);
             List<CombineInstance> parapets = new List<CombineInstance>(1200);
             List<CombineInstance> traverses = new List<CombineInstance>(480);
+            List<CombineInstance> trenchFloors = new List<CombineInstance>(720);
             string sideName = defenders ? "DEFENDER" : "ATTACKER";
             float facingSign = defenders ? 1f : -1f;
 
@@ -300,7 +301,10 @@ namespace TacticalStrike
                     {
                         float along = Mathf.Min(length - 0.2f, (i + 0.5f) * length / count);
                         Vector2 point = a + direction2 * along;
-                        Vector3 trenchCenter = new Vector3(point.x, HeightAt(point.x, point.y), point.y);
+                        float floorY = HeightAt(point.x, point.y) + 0.035f;
+                        Vector3 trenchCenter = new Vector3(point.x, floorY, point.y);
+                        AddCube(trenchFloors, cube, parent, trenchCenter,
+                            new Vector3(4.7f, 0.055f, length / count + 0.16f), rotation);
                         bool firingGap = (i % 10 == 8) || (p > 0 && i % 8 == 6);
                         if (!firingGap)
                         {
@@ -323,6 +327,8 @@ namespace TacticalStrike
                 sandbagMaterial, true, 4200f);
             CreateCombined(parent, sideName + " - communication trench traverses and rear revetments", traverses,
                 trenchSoilMaterial, true, 2600f);
+            CreateCombined(parent, sideName + " - exposed disturbed-earth trench floor", trenchFloors,
+                trenchSoilMaterial, false, 0f);
 
             // Protected firing bays and timber revetment entrances are recognizable landmarks.
             for (int i = 0; i < 8; i++)
