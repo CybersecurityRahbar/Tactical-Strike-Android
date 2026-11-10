@@ -1298,3 +1298,27 @@ The user tested the deployed Northwind preview and reported four blocking runtim
 - Unity Android Build run #38: `42886393910` — still `in_progress` at the latest poll; cache restoration active before Unity Android build. No APK validation or artifact upload completion was yet visible.
 - No current-source CI failure had been reported in those two runs at the time of this entry, but neither run was complete. Do not interpret the active status as a successful build.
 - The working preview URL remains the previous deployment until WebGL run #21 completes its build, output validation and Pages deployment. The Android APK artifact is not available until run #38 completes APK verification and uploads the artifact.
+
+
+## WebGL runtime asset validation failure and repair — 2026-11-10
+
+### Exact failure from browser preview run #21
+
+- WebGL run `42886394093` for source `bde1ff61427d22294f1f904b6b95fe7eea5cd005` successfully restored/prepared runtime assets and compiled the Unity C# assemblies. There were no C# compilation errors in the log; the obsolete FindObjectsOfType notice was only a warning.
+- The Unity build method then aborted in `TacticalStrikeBuild.ValidateRuntimeAssets()` at line 283 with:
+  `BuildFailedException: Required prepared runtime asset is missing: Assets/Resources/TacticalStrike/Imported/Audio/Firearms/ak_C_27P.ogg`
+- Root cause: the asset-preparation pipeline and `WeaponController` had already moved from legacy `ak_C_27P.ogg` / `ak_C_36P.ogg` burst clips to current files `ak_report_near.ogg` and `ak_report_mid.ogg` (plus prepared M4 near/mid samples). However, the Unity editor build gate still checked for the two obsolete filenames. This was a stale validator contract, not a missing cache, download, compiler or terrain-physics error.
+- The current asset preparation script was already copying and checking the new file names correctly. The actual AK runtime Resources.Load paths also matched `ak_report_near` and `ak_report_mid`.
+
+### Repair committed to main
+
+- Commit `30306af3b80817e65c279b35ff3b6c144d4b1450` updates `UnityProject/Assets/Editor/TacticalStrikeBuild.cs`:
+  - Removes the obsolete C_27P/C_36P validation entries.
+  - Requires `ak_report_near.ogg`, `ak_report_mid.ogg`, `m4_report_near.ogg`, `m4_report_mid.ogg`, and `FIREARM_AUDIO_SOURCES.txt`.
+  - Performs Unity `AssetDatabase.LoadAssetAtPath<AudioClip>` checks for all four report clips, in addition to checking that the files exist. This catches both missing files and importer failures before player build.
+  - Updates the validation success message to report the actual current audio pipeline.
+- The Android workflow #38 for the previous source was cancelled by the new push before it could independently finish; its result must not be treated as a passing APK.
+- New validation runs for commit `30306af...`:
+  - WebGL run #22: `42888188822` (queued at documentation time).
+  - Android run #39: `42888188720` (pending at documentation time).
+- Do not claim success or ask the user to test the browser preview until WebGL run #22 completes Unity build, output validation, Pages artifact upload and deployment. Android run #39 must also pass APK validation before its artifact can be called ready.
